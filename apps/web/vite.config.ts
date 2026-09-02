@@ -17,6 +17,13 @@ export default defineConfig({
   server: {
     port: webPort,
     strictPort: !!process.env.E2E_WEB_PORT,
+    // Lets the dev server answer to the cloudflared tunnel hostname (see
+    // patchpilot-licensing's vite.config.ts for the same pattern) — Vite
+    // rejects unrecognized Host headers by default as a DNS-rebinding guard.
+    // Leading dot allows any subdomain of patchpilot365.com, not just the
+    // current dev./admin. split, so a future tunnel hostname doesn't need
+    // another restart.
+    allowedHosts: [".patchpilot365.com"],
     proxy: {
       // Proxy API + auth to the Fastify backend in dev so cookies are same-origin.
       "/api": { target: `http://localhost:${apiPort}`, changeOrigin: true },
