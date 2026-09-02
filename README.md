@@ -1,5 +1,7 @@
 # PatchPilot
 
+[![CI](https://github.com/mkheagerty-lab/PatchPilot/actions/workflows/ci.yml/badge.svg)](https://github.com/mkheagerty-lab/PatchPilot/actions/workflows/ci.yml)
+
 Self-hostable, multi-tenant **MSP patch management console**. PatchPilot bridges
 Microsoft Defender Vulnerability Management (MDVM) findings to actual remediation
 via **Winget** (third-party apps) and the **Windows Update Agent** (OS patches),
