@@ -1591,7 +1591,7 @@ export interface EntitlementView {
   /** True only for a verified, currently-valid pro/unlimited token. */
   valid: boolean;
   invalidReason: string | null;
-  /** Tenants with `consentStatus === "consented"` only — a merely-discovered GDAP relationship never counts against the tenant limit. */
+  /** Tenants with `reachability === "reachable"` only — a merely-discovered GDAP relationship never counts against the tenant limit; only a tenant PatchPilot's own app can actually reach does. */
   consentedTenantCount: number;
   perTenantDeviceUsage: EntitlementTenantUsage[];
   trialStartedAt: string | null;

@@ -36,14 +36,23 @@ export async function assertWritesAllowed(tenant: {
   };
 
   // Discovering a GDAP relationship never counts against the tenant limit —
-  // only tenants actually consented into PatchPilot do. Without this filter,
-  // a 5-tenant free/trial cap would be blown out by a single discovery run
-  // that finds every GDAP relationship the MSP happens to hold.
+  // only tenants actually consented into PatchPilot do. `consentStatus` is
+  // NOT that signal: it's mapped straight from the GDAP relationship's own
+  // status (see mapRelationshipStatus in apps/api/src/graph/sync.ts) and
+  // flips to "consented" the moment the customer approves the GDAP
+  // invitation on Microsoft's side — before PatchPilot's own app has ever
+  // been granted admin consent in that tenant. `reachability === "reachable"`
+  // is the real signal: it's only set after a probe successfully calls Graph
+  // for that tenant, which requires PatchPilot's app to have actually been
+  // consented into it (see apps/api/src/graph/licensing.ts's probeTenant —
+  // 401/403 there means "consent-needed", not reachable). Without this
+  // filter, a 5-tenant free/trial cap would be blown out by a single
+  // discovery run that finds every GDAP relationship the MSP happens to hold.
   const consentedTenantCount = (
     await db
       .select({ tenantId: tables.tenants.tenantId })
       .from(tables.tenants)
-      .where(eq(tables.tenants.consentStatus, "consented"))
+      .where(eq(tables.tenants.reachability, "reachable"))
   ).length;
 
   return evaluateWriteGate({ tenantReadOnly: tenant.readOnly, entitlement, consentedTenantCount });

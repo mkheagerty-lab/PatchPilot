@@ -24,10 +24,12 @@ export interface WriteGateInput {
   tenantReadOnly: boolean;
   entitlement: WriteGateEntitlement;
   /**
-   * Tenants with `consentStatus === "consented"` only — a merely-discovered
-   * GDAP relationship (found by tenant discovery but never consented into
-   * PatchPilot) never counts against the tenant limit. tenantLimit is a
-   * write-only cap on top of that, never a read/discovery cap.
+   * Tenants with `reachability === "reachable"` only — i.e. tenants
+   * PatchPilot's own app has actually been granted admin consent in and can
+   * call Graph for. A merely-discovered GDAP relationship (found by tenant
+   * discovery, reflected in `consentStatus`, but never consented into
+   * PatchPilot itself) never counts against the tenant limit. tenantLimit is
+   * a write-only cap on top of that, never a read/discovery cap.
    */
   consentedTenantCount: number;
 }
