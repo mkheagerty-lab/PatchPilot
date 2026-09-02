@@ -1,0 +1,147 @@
+{
+  "displayName": "PatchPilot",
+  "description": "Multi-tenant MSP patch management console for Microsoft 365, Defender for Business, and Intune.",
+  "signInAudience": "AzureADMultipleOrgs",
+  "isFallbackPublicClient": false,
+  "web": {
+    "redirectUris": [
+      "https://<your-msp-tenant>.cloud.microsoft/patchpilot/auth/callback",
+      "https://teams.microsoft.com/api/platform/v1.0/preAuth"
+    ],
+    "implicitGrantSettings": {
+      "enableAccessTokenIssuance": false,
+      "enableIdTokenIssuance": true
+    }
+  },
+  "spa": {
+    "redirectUris": [
+      "https://<your-msp-tenant>.cloud.microsoft/patchpilot/"
+    ]
+  },
+  "requiredResourceAccess": [
+    {
+      "resourceAppId": "00000003-0000-0000-c000-000000000000",
+      "resourceDisplayName": "Microsoft Graph",
+      "resourceAccess": [
+        {
+          "id": "DelegatedAdminRelationship.Read.All",
+          "type": "Scope"
+        },
+        {
+          "id": "DeviceManagementManagedDevices.ReadWrite.All",
+          "type": "Scope"
+        },
+        {
+          "id": "DeviceManagementManagedDevices.PrivilegedOperations.All",
+          "type": "Scope"
+        },
+        {
+          "id": "DeviceManagementConfiguration.ReadWrite.All",
+          "type": "Scope"
+        },
+        {
+          "id": "DeviceManagementApps.ReadWrite.All",
+          "type": "Scope"
+        },
+        {
+          "id": "SecurityEvents.Read.All",
+          "type": "Scope"
+        },
+        {
+          "id": "Vulnerability.Read.All",
+          "type": "Scope"
+        },
+        {
+          "id": "WindowsUpdates.ReadWrite.All",
+          "type": "Scope"
+        },
+        {
+          "id": "Organization.Read.All",
+          "type": "Scope"
+        },
+        {
+          "id": "Group.Read.All",
+          "type": "Scope"
+        },
+        {
+          "id": "Sites.ReadWrite.All",
+          "type": "Scope"
+        },
+        {
+          "id": "User.Read",
+          "type": "Scope"
+        }
+      ]
+    },
+    {
+      "resourceAppId": "fc780465-2017-40d4-a0c5-307022471b92",
+      "resourceDisplayName": "Microsoft Threat Protection (Defender)",
+      "resourceAccess": [
+        {
+          "id": "Machine.LiveResponse",
+          "type": "Scope"
+        },
+        {
+          "id": "Library.Manage",
+          "type": "Scope"
+        },
+        {
+          "id": "Machine.Read.All",
+          "type": "Scope"
+        },
+        {
+          "id": "Vulnerability.Read.All",
+          "type": "Scope"
+        },
+        {
+          "id": "SecurityRecommendation.Read.All",
+          "type": "Scope"
+        },
+        {
+          "id": "Software.Read.All",
+          "type": "Scope"
+        }
+      ]
+    },
+    {
+      "resourceAppId": "fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd",
+      "resourceDisplayName": "Microsoft Partner Center API",
+      "resourceAccess": [
+        {
+          "id": "user_impersonation",
+          "type": "Scope"
+        }
+      ]
+    }
+  ],
+  "optionalClaims": {
+    "idToken": [
+      {
+        "name": "tid"
+      },
+      {
+        "name": "upn"
+      },
+      {
+        "name": "groups"
+      }
+    ],
+    "accessToken": [
+      {
+        "name": "tid"
+      },
+      {
+        "name": "upn"
+      }
+    ]
+  },
+  "api": {
+    "requestedAccessTokenVersion": 2
+  },
+  "tags": [
+    "PatchPilot",
+    "MSP",
+    "GDAP",
+    "PatchManagement"
+  ]
+}

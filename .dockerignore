@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.turbo
+**/.vite
+**/*.log
+.git
+.env
+.env.*
+!.env.example
+Scrrenshots

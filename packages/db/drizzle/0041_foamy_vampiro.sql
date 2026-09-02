@@ -1,0 +1,1 @@
+ALTER TABLE "missing_kbs" ADD COLUMN "cve_ids" jsonb DEFAULT '[]'::jsonb NOT NULL;

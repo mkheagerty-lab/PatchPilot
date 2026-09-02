@@ -1,0 +1,2 @@
+DROP INDEX "intune_app_deployments_tenant_source_package_idx";--> statement-breakpoint
+CREATE UNIQUE INDEX "intune_app_deployments_tenant_type_source_package_idx" ON "intune_app_deployments" USING btree ("tenant_id","app_type","source","package_id");

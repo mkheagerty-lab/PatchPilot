@@ -1,0 +1,1 @@
+ALTER TABLE "vulnerabilities" ADD COLUMN "exploit_verified" boolean DEFAULT false NOT NULL;

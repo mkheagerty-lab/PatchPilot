@@ -1,0 +1,1 @@
+ALTER TABLE "tenants" ADD COLUMN "last_synced_at" timestamp with time zone;

@@ -1,0 +1,189 @@
+# PatchPilot — full self-hosted stack.
+# Non-negotiable: no Azure / SharePoint / Power Platform. Everything runs here.
+# All Microsoft tokens stay server-side (api + worker); the browser only ever
+# talks to Caddy -> web/api on the same origin.
+
+name: patchpilot
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+    networks:
+      - patchpilot
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - patchpilot
+
+  # One-shot init container: applies pending Drizzle migrations, then exits.
+  # api/worker won't start until this exits 0 (see their depends_on below) —
+  # `pnpm db:migrate` is no longer a manual step someone has to remember.
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.migrate
+    restart: "no"
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgres://patchpilot:${POSTGRES_PASSWORD}@postgres:5432/patchpilot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - patchpilot
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgres://patchpilot:${POSTGRES_PASSWORD}@postgres:5432/patchpilot
+      REDIS_URL: redis://redis:6379
+      OLLAMA_BASE_URL: http://ollama:11434
+    expose:
+      - "4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - patchpilot
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.worker
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgres://patchpilot:${POSTGRES_PASSWORD}@postgres:5432/patchpilot
+      REDIS_URL: redis://redis:6379
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      # Read-only: the worker only checks .last_success/.last_failure mtimes
+      # (see apps/worker/src/backup-watchdog.ts) to alert on a missed/failed
+      # nightly backup — it never writes here itself.
+      - ../backups:/backups:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - patchpilot
+
+  # Nightly pg_dump with local-disk rotation (default 14 days, BACKUP_RETENTION_DAYS
+  # overrides). Local disk only, no cloud/offsite copy, by design — see infra/backup.sh.
+  # Same postgres:17-alpine image as `postgres` itself so pg_dump/pg_restore never
+  # cross a major-version boundary.
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: patchpilot
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: patchpilot
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ../backups:/backups
+    entrypoint: ["sh", "/backup.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - patchpilot
+
+  # Local LLM inference for the AI feature set (summaries, reports, chatbot).
+  # No published port — reachable only from api/worker on the internal network,
+  # never from Caddy/the internet. Model weights are pulled once, after first
+  # boot, into the persisted volume (see README "AI features" section); the
+  # container itself makes no outbound calls at inference time.
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    expose:
+      - "11434"
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - patchpilot
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: patchpilot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: patchpilot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patchpilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - patchpilot
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - patchpilot
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+  ollama_data:
+
+networks:
+  patchpilot:
+    driver: bridge

@@ -1,0 +1,25 @@
+# PatchPilot DB migrator — one-shot init container. Runs `drizzle-orm`'s
+# migrator against packages/db/drizzle, then exits. api/worker depend on this
+# completing successfully before they start (see infra/docker-compose.yml),
+# so a deploy can no longer boot against a schema nobody has migrated yet.
+FROM node:22-alpine AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable
+
+WORKDIR /app
+
+# Copy manifests first for layer caching.
+COPY pnpm-workspace.yaml package.json .npmrc tsconfig.base.json ./
+COPY packages/shared/package.json packages/shared/
+COPY packages/db/package.json packages/db/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile=false --filter @patchpilot/db...
+
+# Copy sources.
+COPY packages/shared packages/shared
+COPY packages/db packages/db
+
+WORKDIR /app/packages/db
+CMD ["pnpm", "run", "migrate"]

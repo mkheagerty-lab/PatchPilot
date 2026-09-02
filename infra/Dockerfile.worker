@@ -1,0 +1,57 @@
+# PatchPilot worker (BullMQ remediation runner + report renderer).
+# Built from monorepo root.
+FROM node:22-alpine AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable
+
+# Headless Chromium for PDF report rendering, plus the fonts it draws with.
+#
+# System Chromium rather than a Playwright-downloaded one: `playwright install`
+# publishes no musl builds, so on alpine the system binary is the only option.
+# ~150 MB here against ~450 MB for the Debian route.
+#
+# The font set is not optional decoration. A container with no fonts renders
+# every glyph as a tofu box and the failure looks like a CSS bug:
+#  - ttf-liberation is metric-compatible with Arial/Helvetica, so the
+#    template's font-family stack resolves to real glyphs at the intended
+#    widths (see reports/template.ts — it names no webfont and loads no URL).
+#  - font-noto / font-noto-emoji cover non-Latin tenant and device names,
+#    which Graph really does return.
+#  - fc-cache -f rebuilds the font index; without it a squashed layer can ship
+#    fonts fontconfig never sees.
+RUN apk add --no-cache \
+      chromium nss freetype harfbuzz ca-certificates \
+      ttf-liberation ttf-dejavu font-noto font-noto-emoji fontconfig \
+ && fc-cache -f
+
+# No browser download at install time (see the playwright-core note above),
+# and point the renderer at the binary apk just installed. Both are read in
+# apps/worker/src/reports/env.ts; nothing hardcodes this path, which is what
+# keeps the Debian escape hatch a Dockerfile-only change.
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    REPORT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+WORKDIR /app
+
+COPY pnpm-workspace.yaml package.json .npmrc tsconfig.base.json ./
+COPY packages/shared/package.json packages/shared/
+COPY packages/db/package.json packages/db/
+COPY packages/graph/package.json packages/graph/
+COPY packages/ai/package.json packages/ai/
+COPY apps/worker/package.json apps/worker/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile=false --filter @patchpilot/worker...
+
+COPY packages/shared packages/shared
+COPY packages/db packages/db
+# The worker depends on and imports both of these (auditSafe from graph,
+# OllamaClient from ai). They were missing here, so the image only ever built
+# off a stale cache.
+COPY packages/graph packages/graph
+COPY packages/ai packages/ai
+COPY apps/worker apps/worker
+
+WORKDIR /app/apps/worker
+CMD ["pnpm", "exec", "tsx", "src/index.ts"]

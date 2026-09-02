@@ -1,0 +1,58 @@
+# Dev infra only: Postgres + Redis. Run the app (web/api/worker) on the host
+# with `pnpm dev` against these. Keeps the fast inner loop, no app rebuilds.
+#
+#   docker compose -f infra/docker-compose.dev.yml up -d
+#
+name: patchpilot-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: patchpilot
+      POSTGRES_PASSWORD: patchpilot
+      POSTGRES_DB: patchpilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pp_dev_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patchpilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - pp_dev_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Published (unlike prod) so a host-run `pnpm dev` api/worker can reach it at
+  # http://localhost:11434. Pull a model once: `docker compose -f
+  # infra/docker-compose.dev.yml exec ollama ollama pull llama3.1:8b`.
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - pp_dev_ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pp_dev_postgres:
+  pp_dev_redis:
+  pp_dev_ollama:

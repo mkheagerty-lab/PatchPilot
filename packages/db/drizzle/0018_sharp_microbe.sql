@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "devices_tenant_managed_device_idx" ON "devices" USING btree ("tenant_id","managed_device_id");

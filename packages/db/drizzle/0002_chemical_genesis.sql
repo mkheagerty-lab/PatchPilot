@@ -1,0 +1,2 @@
+CREATE TYPE "public"."reachability" AS ENUM('reachable', 'consent-needed', 'throttled', 'unreachable', 'unknown');--> statement-breakpoint
+ALTER TABLE "tenants" ADD COLUMN "reachability" "reachability" DEFAULT 'unknown' NOT NULL;

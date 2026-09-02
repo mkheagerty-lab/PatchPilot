@@ -1,0 +1,1 @@
+ALTER TABLE "device_vulnerabilities" ADD COLUMN "registry_paths" jsonb;

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "vulns_tenant_cve_idx" ON "vulnerabilities" USING btree ("tenant_id","cve_id");

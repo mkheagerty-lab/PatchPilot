@@ -1,0 +1,1 @@
+ALTER TABLE "tenants" ADD COLUMN "live_response_device_limit" integer DEFAULT 0 NOT NULL;

@@ -1,0 +1,29 @@
+# Caddy reverse proxy + automatic Let's Encrypt TLS.
+# Set PUBLIC_URL's hostname here (replace patchpilot.example.com).
+# The browser only ever sees this origin — /api and /auth proxy to the API,
+# everything else to the static web app. Same-origin keeps the session cookie
+# server-side; the browser never receives a Graph token.
+
+{$PP_DOMAIN:patchpilot.example.com} {
+	encode gzip
+
+	# API + auth endpoints -> Fastify
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+	handle /auth/* {
+		reverse_proxy api:4000
+	}
+
+	# Everything else -> static SPA (nginx serving the Vite build)
+	handle {
+		reverse_proxy web:80
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}

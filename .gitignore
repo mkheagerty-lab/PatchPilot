@@ -1,0 +1,47 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / os
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# vite
+apps/web/dist/
+
+# playwright
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+
+# docker volumes (if bind-mounted locally)
+infra/.data/
+
+# nightly Postgres backups (local disk, contains live tenant data — never committed)
+/backups/
+
+# deploy script output
+scripts/PatchPilot-Deploy/
+
+# ad-hoc screenshots (not versioned)
+Scrrenshots/
+screenshots/
+Claudeinstructions.txt
