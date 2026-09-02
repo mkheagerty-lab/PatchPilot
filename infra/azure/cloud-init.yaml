@@ -1,0 +1,59 @@
+#cloud-config
+# Boot-time provisioning for the PatchPilot Azure VM. Deployed via main.bicep,
+# which substitutes __PP_DOMAIN__ and __ADMIN_USER__ before base64-encoding
+# this file into the VM's customData. Everything below runs once, automatically,
+# on first boot — no SSH session required to bring the stack up.
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - git
+  - unattended-upgrades
+  - ca-certificates
+  - curl
+
+runcmd:
+  # Keep the OS patched without anyone logging in.
+  - systemctl enable --now unattended-upgrades
+
+  # Docker's official convenience script installs docker-ce + the `docker
+  # compose` v2 CLI plugin together — more reliable than Ubuntu's own apt
+  # package names, which vary by release.
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker __ADMIN_USER__
+  - systemctl enable --now docker
+
+  - git clone https://github.com/mkheagerty-lab/PatchPilot.git /opt/patchpilot
+  - cp /opt/patchpilot/.env.example /opt/patchpilot/.env
+
+  # Fill in the domain (auto cloudapp.azure.com hostname or a custom domain,
+  # resolved by main.bicep before this file is templated) and generate fresh
+  # secrets locally on the VM — nothing secret ever passes through the Azure
+  # deployment template or its logs.
+  - |
+    DOMAIN="__PP_DOMAIN__"
+    SESSION_SECRET=$(openssl rand -base64 32)
+    TOKEN_KEY=$(openssl rand -base64 32)
+    PG_PASS=$(openssl rand -base64 24 | tr -d '/+=')
+    ENV_FILE=/opt/patchpilot/.env
+    sed -i "s#^PUBLIC_URL=.*#PUBLIC_URL=https://${DOMAIN}#" "$ENV_FILE"
+    sed -i "s#^PP_DOMAIN=.*#PP_DOMAIN=${DOMAIN}#" "$ENV_FILE"
+    sed -i "s#^AUTH_REDIRECT_URI=.*#AUTH_REDIRECT_URI=https://${DOMAIN}/auth/callback#" "$ENV_FILE"
+    sed -i "s#^CORS_ORIGINS=.*#CORS_ORIGINS=https://${DOMAIN}#" "$ENV_FILE"
+    sed -i "s#^SESSION_SECRET=.*#SESSION_SECRET=${SESSION_SECRET}#" "$ENV_FILE"
+    sed -i "s#^TOKEN_ENCRYPTION_KEY=.*#TOKEN_ENCRYPTION_KEY=${TOKEN_KEY}#" "$ENV_FILE"
+    sed -i "s#^POSTGRES_PASSWORD=.*#POSTGRES_PASSWORD=${PG_PASS}#" "$ENV_FILE"
+    sed -i "s#^DATABASE_URL=.*#DATABASE_URL=postgres://patchpilot:${PG_PASS}@postgres:5432/patchpilot#" "$ENV_FILE"
+    sed -i "s#^DEMO_MODE=.*#DEMO_MODE=false#" "$ENV_FILE"
+    # ENTRA_* stays at its placeholder value on purpose — the app boots with
+    # no Entra credentials and serves the "Pair this instance" setup screen
+    # until the phone-home pairing flow (Deploy-PatchPilot.ps1) supplies them.
+
+  # Compose brings up postgres/redis/ollama, waits for the one-shot `migrate`
+  # container to apply pending Drizzle migrations, then starts api/worker/web/
+  # caddy/backup. Caddy requests its Let's Encrypt certificate for $DOMAIN on
+  # first request. AI features stay off (AI_FEATURES_ENABLED=false, the
+  # .env.example default) — ollama still runs (api/worker depend on it being
+  # healthy) but no model is pulled, so it stays idle and cheap.
+  - cd /opt/patchpilot && docker compose -f infra/docker-compose.yml up -d --build

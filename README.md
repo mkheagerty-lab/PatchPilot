@@ -101,6 +101,16 @@ Services: `caddy` (TLS via Let's Encrypt) → `web` (nginx SPA) + `api` (Fastify
 plus `worker`, `postgres`, `redis`, `ollama`. Point `PP_DOMAIN`'s DNS at the host
 and Caddy provisions the certificate automatically.
 
+### Deploying to an Azure VM
+
+[`infra/azure/`](infra/azure/) has a one-command Bicep + cloud-init deployment:
+`az deployment group create` provisions the network, firewall, a static public
+IP (with a free `<label>.<region>.cloudapp.azure.com` hostname, or your own
+domain if you have one), and an Ubuntu VM that installs Docker and brings up
+this exact stack on first boot — no SSH required for setup or day-to-day
+operation. See [`infra/azure/README.md`](infra/azure/README.md) for the full
+runbook, including switching to a custom domain later and updating the deploy.
+
 ### AI features (summaries, reports, chatbot)
 
 Off by default (`AI_FEATURES_ENABLED=false`). The model runs entirely inside
