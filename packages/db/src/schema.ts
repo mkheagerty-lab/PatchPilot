@@ -1067,8 +1067,8 @@ export const settings = pgTable("settings", {
 // ---- custom domains (Setup -> App Registration "Custom domain" section) ----
 // One row per additional hostname this instance should accept logins/OAuth
 // callbacks on, on top of the deploy-time PUBLIC_URL. "subdomain" rows are a
-// <label>.patchpilot365.com hostname living in BITG's own DNS zone — BITG
-// creates that record manually (support@patchpilot365.com); "custom" rows are
+// <label>.patchpilot365.com hostname living in PatchPilot's own DNS zone —
+// PatchPilot Support creates that record manually (support@patchpilot365.com); "custom" rows are
 // a hostname the customer owns, pointed at this instance via a CNAME they
 // create themselves. Neither path ever calls a DNS provider's API to CREATE a
 // record — activation (see routes/domains.ts's verify handler) is always

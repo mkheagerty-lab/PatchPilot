@@ -844,6 +844,10 @@ export interface OnboardingReport {
   clientId: string;
   tenantId: string;
   redirectUri: string;
+  /** Every redirect URI this instance's own allowlist currently accepts —
+   * PUBLIC_URL plus every active custom domain. Not a live read of the real
+   * Entra app registration; the two match once a sync has actually run. */
+  redirectUris: string[];
   /** One-click admin-consent URL for the MSP's own (home) tenant — the Global
    * Administrator opens this to make the first "Discover tenants" succeed. */
   homeConsentUrl: string;
@@ -855,7 +859,7 @@ export interface OnboardingReport {
   consentTargets: ConsentTarget[];
 }
 
-/** "<label>.patchpilot365.com" (BITG creates the DNS record) vs. a fully custom hostname. */
+/** "<label>.patchpilot365.com" (PatchPilot Support creates the DNS record) vs. a fully custom hostname. */
 export type DomainType = "subdomain" | "custom";
 /** "pending" until a Verify click finds a matching CNAME; "active" once it does. */
 export type DomainStatus = "pending" | "active";
@@ -884,6 +888,10 @@ export interface CustomDomain {
 export interface DomainsReport {
   primaryOrigin: string;
   platformBaseDomain: string;
+  /** The host new domains are told to CNAME at — see CUSTOM_DOMAIN_CNAME_TARGET. */
+  cnameTarget: string;
+  /** False when cnameTarget isn't a real DNS name (e.g. a local-dev "localhost:5173"). */
+  cnameTargetUsable: boolean;
   domains: CustomDomain[];
 }
 

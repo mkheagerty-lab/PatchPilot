@@ -297,6 +297,58 @@ describe("POST /api/domains", () => {
     expect(res.statusCode).toBe(403);
     await app.close();
   });
+
+  it("rejects domain creation when the instance's public hostname isn't a real DNS name (e.g. local dev)", async () => {
+    const { config } = await import("../config.js");
+    const original = config.PUBLIC_URL;
+    config.PUBLIC_URL = "http://localhost:5173";
+    const app = await buildApp();
+    try {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/domains",
+        payload: { type: "subdomain", label: "acme" },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(JSON.parse(res.body).error).toContain("isn't a real DNS name");
+      expect(tableRows.get(tables.customDomains) ?? []).toHaveLength(0);
+    } finally {
+      config.PUBLIC_URL = original;
+      await app.close();
+    }
+  });
+});
+
+describe("GET /api/domains", () => {
+  it("reports the resolved CNAME target and its usability alongside every row", async () => {
+    seedDomain();
+    const app = await buildApp();
+    const res = await app.inject({ method: "GET", url: "/api/domains" });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.cnameTarget).toBe("patchpilot.example.com");
+    expect(body.cnameTargetUsable).toBe(true);
+    expect(body.domains).toHaveLength(1);
+    await app.close();
+  });
+
+  it("flags cnameTargetUsable as false when the public hostname is localhost", async () => {
+    const { config } = await import("../config.js");
+    const original = config.PUBLIC_URL;
+    config.PUBLIC_URL = "http://localhost:5173";
+    const app = await buildApp();
+    try {
+      const res = await app.inject({ method: "GET", url: "/api/domains" });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.cnameTarget).toBe("localhost:5173");
+      expect(body.cnameTargetUsable).toBe(false);
+    } finally {
+      config.PUBLIC_URL = original;
+      await app.close();
+    }
+  });
 });
 
 describe("POST /api/domains/:id/verify", () => {

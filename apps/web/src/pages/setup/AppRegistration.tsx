@@ -375,8 +375,8 @@ function RegistrationCommand({ domainId }: { domainId: string }) {
 /**
  * Semi-automated custom-domain onboarding for the app registration's OAuth
  * redirect origin allowlist. An admin adds a "<label>.patchpilot365.com"
- * subdomain (BITG creates the DNS record out-of-band — no live Cloudflare API
- * in v1) or a fully custom hostname, verifies it with a read-only CNAME
+ * subdomain (PatchPilot Support creates the DNS record out-of-band — no live
+ * Cloudflare API in v1) or a fully custom hostname, verifies it with a read-only CNAME
  * lookup (apps/api/src/routes/domains.ts never writes a DNS record itself),
  * and then pushes the resulting redirect URI(s) into the real Entra app
  * registration — either via the same step-up browser consent SyncPermissionsCard
@@ -455,7 +455,8 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
   const hasActive = domains.some((d) => d.status === "active");
   const previewHostname =
     type === "subdomain" ? `${label.trim() || "<label>"}.${report?.platformBaseDomain ?? "patchpilot365.com"}` : hostname.trim() || "<hostname>";
-  const previewCnameTarget = report ? new URL(report.primaryOrigin).host : "";
+  const previewCnameTarget = report?.cnameTarget ?? "";
+  const cnameTargetUsable = report?.cnameTargetUsable ?? true;
   const pendingDeleteDomain = domains.find((d) => d.id === pendingDeleteId) ?? null;
 
   return (
@@ -482,6 +483,15 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
       {!canWrite && (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
           Your role doesn&apos;t include settings write access.
+        </div>
+      )}
+
+      {report && !cnameTargetUsable && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          This instance&apos;s public hostname (<code className="font-mono">{report.cnameTarget}</code>) isn&apos;t a
+          real DNS name, so a CNAME can&apos;t point at it yet. Set <code className="font-mono">PUBLIC_URL</code> (or{" "}
+          <code className="font-mono">CUSTOM_DOMAIN_CNAME_TARGET</code>) to the instance&apos;s actual public
+          hostname before adding a custom domain.
         </div>
       )}
 
@@ -534,6 +544,7 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
             type="button"
             disabled={
               !canWrite ||
+              !cnameTargetUsable ||
               addDomain.isPending ||
               (type === "subdomain" ? !label.trim() : !hostname.trim())
             }
@@ -809,7 +820,25 @@ export function AppRegistration() {
               <Field label="Client ID" value={report.clientId} />
               <Field label="Home tenant ID" value={report.tenantId} />
               <div className="sm:col-span-2">
-                <Field label="Redirect URI" value={report.redirectUri} />
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Redirect URIs
+                </div>
+                <div className="mt-1 space-y-1.5">
+                  {report.redirectUris.map((uri) => (
+                    <div key={uri} className="flex items-center gap-2">
+                      <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">
+                        {uri}
+                      </code>
+                      <CopyButton value={uri} />
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Every origin this instance currently accepts an OAuth callback from — the primary origin plus any
+                  active custom domain below. Reflects this server&apos;s own allowlist, not a live read of the real
+                  Entra app registration; use Custom domains&apos; &quot;Update via browser&quot; (or the PowerShell
+                  command) to push a newly-active domain into the real app registration.
+                </p>
               </div>
             </div>
           </Card>

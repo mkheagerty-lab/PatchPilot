@@ -7,7 +7,7 @@ import {
   PARTNER_CENTER_SCOPES,
 } from "@patchpilot/shared";
 import { cca, APP_REGISTRATION_SYNC_SCOPES, auditSafe } from "@patchpilot/graph";
-import { config } from "../config.js";
+import { config, webOrigins } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
 import { resolveWebOrigin } from "../auth/origin.js";
 
@@ -44,6 +44,17 @@ interface OnboardingReport {
   clientId: string;
   tenantId: string;
   redirectUri: string;
+  /**
+   * Every "<origin>/auth/callback" this instance currently accepts an OAuth
+   * round trip from — PUBLIC_URL plus every active custom domain (see
+   * routes/domains.ts), post-restart. This is this server's own allowlist,
+   * not a live read of the real Entra app registration — the two only agree
+   * once "Update via browser" (or the equivalent PowerShell command) has
+   * actually pushed each one in. Shown so the Application identity card
+   * stops looking frozen at deploy-time's single AUTH_REDIRECT_URI once a
+   * custom domain goes active.
+   */
+  redirectUris: string[];
   /**
    * One-click admin-consent URL for the MSP's OWN (home) tenant. A Global
    * Administrator opens this to grant PatchPilot's read-only permissions in the
@@ -96,6 +107,7 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
       clientId: config.ENTRA_CLIENT_ID,
       tenantId: config.ENTRA_TENANT_ID,
       redirectUri,
+      redirectUris: webOrigins.map((o) => `${o}/auth/callback`),
       homeConsentUrl: buildConsentUrl(config.ENTRA_TENANT_ID, config.ENTRA_CLIENT_ID, redirectUri),
       scopes: {
         graph: GRAPH_SCOPES,

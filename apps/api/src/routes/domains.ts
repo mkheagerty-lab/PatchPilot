@@ -14,8 +14,8 @@ import { connection } from "../queue.js";
  * Custom Domain Management for the App Registration page.
  *
  * Lets an admin add either a "<label>.patchpilot365.com" subdomain (DNS
- * created out-of-band by BITG after an emailed request — no live Cloudflare
- * API in v1) or a fully custom hostname, verify it's live with a read-only
+ * created out-of-band by PatchPilot Support after an emailed request — no
+ * live Cloudflare API in v1) or a fully custom hostname, verify it's live with a read-only
  * CNAME lookup (never a DNS-provider write), and then push the resulting
  * redirect URI(s) into the real Entra app registration — either via the
  * in-app "sync via browser" step-up consent flow, or by copying the exact
@@ -50,10 +50,34 @@ interface DomainReport {
 interface DomainsReport {
   primaryOrigin: string;
   platformBaseDomain: string;
+  cnameTarget: string;
+  cnameTargetUsable: boolean;
   domains: DomainReport[];
 }
 
 const SUPPORT_EMAIL = "support@patchpilot365.com";
+
+// The CNAME target the create/report endpoints hand out. See config.ts's
+// CUSTOM_DOMAIN_CNAME_TARGET doc comment for why this can't just always be
+// `new URL(config.PUBLIC_URL).host`.
+function resolveCnameTarget(): string {
+  return (config.CUSTOM_DOMAIN_CNAME_TARGET || new URL(config.PUBLIC_URL).host).toLowerCase();
+}
+
+// True only for something a real DNS provider could actually resolve a
+// customer's CNAME through — rules out loopback hosts (a bare "localhost",
+// 127.0.0.1, ::1 — always true of a local dev PUBLIC_URL) and single-label
+// hostnames (no dot — not a registrable public DNS name). An IP-literal
+// target isn't rejected here: some deployments legitimately front the
+// instance with a static public IP's PTR-less A record via a CNAME-flattening
+// provider, and this is a UX guard against the obviously-broken case, not a
+// full DNS-target validator.
+function hostIsRoutable(host: string): boolean {
+  const bare = host.split(":")[0]!.toLowerCase();
+  if (bare === "localhost" || bare === "127.0.0.1" || bare === "::1" || bare === "0.0.0.0") return false;
+  if (!bare.includes(".")) return false;
+  return true;
+}
 
 function buildSupportMailto(row: { hostname: string; cnameTarget: string; createdBy: string }): string {
   const subject = `DNS request: ${row.hostname}`;
@@ -72,7 +96,7 @@ function toDomainReport(row: DomainRow): DomainReport {
     row.type === "subdomain"
       ? {
           kind: "email-support",
-          summary: `Email ${SUPPORT_EMAIL} to request this DNS record — BITG will create a CNAME pointing ${row.hostname} at ${row.cnameTarget}.`,
+          summary: `Email ${SUPPORT_EMAIL} to request this DNS record — PatchPilot Support will create a CNAME pointing ${row.hostname} at ${row.cnameTarget}.`,
           supportMailto: buildSupportMailto(row),
         }
       : {
@@ -121,11 +145,13 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/domains", async (): Promise<DomainsReport> => {
     const primaryOrigin = config.PUBLIC_URL;
     const platformBaseDomain = config.PLATFORM_BASE_DOMAIN;
+    const cnameTarget = resolveCnameTarget();
+    const cnameTargetUsable = hostIsRoutable(cnameTarget);
     if (config.DEMO_MODE) {
-      return { primaryOrigin, platformBaseDomain, domains: [] };
+      return { primaryOrigin, platformBaseDomain, cnameTarget, cnameTargetUsable, domains: [] };
     }
     const rows = await db.select().from(tables.customDomains).orderBy(desc(tables.customDomains.createdAt));
-    return { primaryOrigin, platformBaseDomain, domains: rows.map(toDomainReport) };
+    return { primaryOrigin, platformBaseDomain, cnameTarget, cnameTargetUsable, domains: rows.map(toDomainReport) };
   });
 
   app.get<{ Params: { id: string } }>("/api/domains/:id/registration-command", async (req, reply) => {
@@ -149,6 +175,13 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
       }
       if (config.DEMO_MODE) {
         return reply.code(400).send({ error: "not_available_in_demo_mode" });
+      }
+
+      const cnameTarget = resolveCnameTarget();
+      if (!hostIsRoutable(cnameTarget)) {
+        return reply.code(400).send({
+          error: `This instance's public hostname ("${cnameTarget}") isn't a real DNS name a customer's DNS provider can point a CNAME at. Set PUBLIC_URL (or CUSTOM_DOMAIN_CNAME_TARGET) to the instance's actual public hostname before adding a custom domain.`,
+        });
       }
 
       let hostname: string;
@@ -175,7 +208,6 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
-      const cnameTarget = new URL(config.PUBLIC_URL).host;
       const actor = req.session.engineer!;
 
       let row: DomainRow;
