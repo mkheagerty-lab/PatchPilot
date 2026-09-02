@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RESOURCE_APP_IDS, GRAPH_READONLY_SCOPES, DEFENDER_READONLY_SCOPES } from "@patchpilot/shared";
-import { syncAppRegistrationScopes } from "./app-registration-sync.js";
+import { syncAppRegistrationScopes, updateAppRegistrationRedirectUris } from "./app-registration-sync.js";
 
 const CLIENT_ID = "11111111-1111-1111-1111-111111111111";
 const APP_OBJECT_ID = "app-obj-1";
@@ -237,5 +237,99 @@ describe("syncAppRegistrationScopes", () => {
     expect(patchCalls.some((c) => c.path === "/oauth2PermissionGrants/grant-graph-1")).toBe(false);
     const graphConsent = result.consentGranted.find((c) => c.resource === "graph");
     expect(graphConsent?.scopeCount).toBe(GRAPH_READONLY_SCOPES.length);
+  });
+});
+
+/**
+ * Routes just the two Graph calls updateAppRegistrationRedirectUris makes:
+ * the application lookup by clientId, and a GET/PATCH pair against
+ * /applications/{id}. Kept separate from installFetchMock above since this
+ * function touches a disjoint set of endpoints.
+ */
+function installRedirectUriFetchMock(existingRedirectUris: string[]) {
+  const patchCalls: { path: string; body: unknown }[] = [];
+
+  const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
+    const path = url.toString().replace("https://graph.microsoft.com/v1.0", "");
+    const method = (init?.method ?? "GET") as string;
+
+    if (method === "GET" && path.startsWith("/applications?")) {
+      return jsonRes(200, { value: [{ id: APP_OBJECT_ID }] });
+    }
+    if (method === "GET" && path.startsWith(`/applications/${APP_OBJECT_ID}?`)) {
+      return jsonRes(200, { web: { redirectUris: existingRedirectUris } });
+    }
+    if (method === "PATCH" && path === `/applications/${APP_OBJECT_ID}`) {
+      patchCalls.push({ path, body: JSON.parse(init!.body as string) });
+      return jsonRes(204, undefined);
+    }
+
+    throw new Error(`unmocked fetch: ${method} ${path}`);
+  });
+
+  vi.stubGlobal("fetch", fetchMock);
+  return { fetchMock, patchCalls };
+}
+
+describe("updateAppRegistrationRedirectUris", () => {
+  it("adds a new origin's redirect URI with a single PATCH", async () => {
+    const { patchCalls } = installRedirectUriFetchMock(["https://patchpilot.example.com/auth/callback"]);
+
+    const result = await updateAppRegistrationRedirectUris({
+      accessToken: "tok",
+      clientId: CLIENT_ID,
+      redirectOrigins: ["https://patchpilot.example.com", "https://acme.patchpilot365.com"],
+    });
+
+    expect(result.added).toEqual(["https://acme.patchpilot365.com/auth/callback"]);
+    expect(result.alreadyPresent).toEqual(["https://patchpilot.example.com/auth/callback"]);
+    expect(patchCalls).toHaveLength(1);
+    expect((patchCalls[0]!.body as { web: { redirectUris: string[] } }).web.redirectUris).toEqual(
+      expect.arrayContaining([
+        "https://patchpilot.example.com/auth/callback",
+        "https://acme.patchpilot365.com/auth/callback",
+      ]),
+    );
+  });
+
+  it("issues zero PATCH calls when every wanted URI is already present — the idempotency guarantee", async () => {
+    const { patchCalls } = installRedirectUriFetchMock([
+      "https://patchpilot.example.com/auth/callback",
+      "https://acme.patchpilot365.com/auth/callback",
+    ]);
+
+    const result = await updateAppRegistrationRedirectUris({
+      accessToken: "tok",
+      clientId: CLIENT_ID,
+      redirectOrigins: ["https://patchpilot.example.com", "https://acme.patchpilot365.com"],
+    });
+
+    expect(result.added).toEqual([]);
+    expect(result.alreadyPresent).toHaveLength(2);
+    expect(patchCalls).toEqual([]);
+  });
+
+  it("merges mixed new/existing origins and preserves unrelated existing URIs untouched", async () => {
+    const { patchCalls } = installRedirectUriFetchMock([
+      "https://patchpilot.example.com/auth/callback",
+      "https://some-other-unrelated-app.example.net/callback",
+    ]);
+
+    const result = await updateAppRegistrationRedirectUris({
+      accessToken: "tok",
+      clientId: CLIENT_ID,
+      redirectOrigins: ["https://patchpilot.example.com", "https://acme.patchpilot365.com"],
+    });
+
+    expect(result.added).toEqual(["https://acme.patchpilot365.com/auth/callback"]);
+    const merged = (patchCalls[0]!.body as { web: { redirectUris: string[] } }).web.redirectUris;
+    expect(merged).toEqual(
+      expect.arrayContaining([
+        "https://patchpilot.example.com/auth/callback",
+        "https://some-other-unrelated-app.example.net/callback",
+        "https://acme.patchpilot365.com/auth/callback",
+      ]),
+    );
+    expect(merged).toHaveLength(3);
   });
 });

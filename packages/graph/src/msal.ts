@@ -148,8 +148,14 @@ function accountUpn(account: { username?: string; homeAccountId?: string } | nul
  * cache contains only this login's account + RT (no cross-engineer bleed), then it
  * is encrypted into Redis under the engineer key for later silent customer-tenant
  * redemption. Returns the auth result so the caller can start the session.
+ *
+ * redirectUri must be byte-for-byte the same URI /auth/login used to obtain
+ * this code (MSAL/Entra reject the exchange otherwise) — the caller resolves
+ * it per-request rather than a fixed env default so a request arriving via an
+ * alternate allow-listed origin (see apps/api/src/auth/origin.ts) round-trips
+ * correctly instead of always exchanging against env.AUTH_REDIRECT_URI.
  */
-export async function redeemLoginCode(code: string): Promise<AuthenticationResult> {
+export async function redeemLoginCode(code: string, redirectUri: string): Promise<AuthenticationResult> {
   if (env.DEMO_MODE) {
     throw new Error("Login code redemption must never run in DEMO_MODE");
   }
@@ -157,7 +163,7 @@ export async function redeemLoginCode(code: string): Promise<AuthenticationResul
   const result = await client.acquireTokenByCode({
     code,
     scopes: LOGIN_SCOPES,
-    redirectUri: env.AUTH_REDIRECT_URI,
+    redirectUri,
   });
   if (!result?.account) {
     throw new Error("Login code redemption returned no account");

@@ -130,7 +130,12 @@ export {
   type Win32WrapperFamily,
   type Win32WrapperPackage,
 } from "./win32-app.js";
-export { syncAppRegistrationScopes, type ScopeSyncResult } from "./app-registration-sync.js";
+export {
+  syncAppRegistrationScopes,
+  type ScopeSyncResult,
+  updateAppRegistrationRedirectUris,
+  type UpdateRedirectUrisResult,
+} from "./app-registration-sync.js";
 export {
   loadStoredEntitlement,
   saveStoredEntitlement,

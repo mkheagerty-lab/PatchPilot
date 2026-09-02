@@ -27,7 +27,25 @@ export default defineConfig({
     proxy: {
       // Proxy API + auth to the Fastify backend in dev so cookies are same-origin.
       "/api": { target: `http://localhost:${apiPort}`, changeOrigin: true },
-      "/auth": { target: `http://localhost:${apiPort}`, changeOrigin: true },
+      "/auth": {
+        target: `http://localhost:${apiPort}`,
+        changeOrigin: true,
+        // changeOrigin rewrites the Host header this proxy sends upstream to
+        // localhost:<apiPort>, so apps/api can never see the browser's real
+        // Host through it otherwise. The OAuth redirect_uri apps/api builds
+        // (see apps/api/src/auth/origin.ts) needs that real host to round-trip
+        // a login started from an allow-listed alternate origin (e.g. the
+        // cloudflared tunnel hostname) back to itself instead of always
+        // landing on PUBLIC_URL. Only forwarded if the incoming request
+        // already carried it (from cloudflared) — never synthesized here.
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq, req) => {
+            if (req.headers.host) proxyReq.setHeader("x-forwarded-host", req.headers.host);
+            const proto = req.headers["x-forwarded-proto"];
+            if (proto) proxyReq.setHeader("x-forwarded-proto", proto);
+          });
+        },
+      },
     },
   },
   test: {

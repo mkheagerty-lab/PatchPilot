@@ -855,6 +855,38 @@ export interface OnboardingReport {
   consentTargets: ConsentTarget[];
 }
 
+/** "<label>.patchpilot365.com" (BITG creates the DNS record) vs. a fully custom hostname. */
+export type DomainType = "subdomain" | "custom";
+/** "pending" until a Verify click finds a matching CNAME; "active" once it does. */
+export type DomainStatus = "pending" | "active";
+
+/** Server-computed, per-domain setup instructions from GET /api/domains. */
+export type DomainInstructions =
+  | { kind: "email-support"; summary: string; supportMailto: string }
+  | { kind: "dns-cname"; summary: string; cnameRecord: { name: string; target: string } };
+
+/** One row from GET /api/domains — mirrors packages/db's custom_domains table. */
+export interface CustomDomain {
+  id: string;
+  hostname: string;
+  type: DomainType;
+  status: DomainStatus;
+  cnameTarget: string;
+  createdBy: string;
+  createdAt: string;
+  activatedAt: string | null;
+  lastCheckedAt: string | null;
+  lastCheckError: string | null;
+  instructions: DomainInstructions;
+}
+
+/** GET /api/domains — the App Registration page's Custom Domains card. */
+export interface DomainsReport {
+  primaryOrigin: string;
+  platformBaseDomain: string;
+  domains: CustomDomain[];
+}
+
 /** Whether a tenant's licensing could actually be read, independent of reachability. */
 export type LicenseStatus = "detected" | "unavailable";
 

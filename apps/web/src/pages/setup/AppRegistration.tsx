@@ -6,6 +6,9 @@ import {
   ApiError,
   type OnboardingReport,
   type SyncTenantsResult,
+  type CustomDomain,
+  type DomainsReport,
+  type DomainType,
 } from "../../lib/api";
 import { Card, PageHeader } from "../../components/ui";
 import { useCan } from "../../lib/auth";
@@ -341,6 +344,358 @@ function SyncPermissionsCard({ demoMode }: { demoMode: boolean }) {
   );
 }
 
+const DOMAIN_STATUS_STYLES: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  active: "bg-emerald-100 text-emerald-700",
+};
+
+/**
+ * Lazily fetches and displays the exact `Deploy-PatchPilot.ps1` one-liner for
+ * one domain row — a plain GET, so it needs no confirm step. The script's
+ * redirect-URI merge is already additive/idempotent (confirmed by direct
+ * read of Merge-RedirectUris), so running it again is always safe even if
+ * the redirect URI is already registered.
+ */
+function RegistrationCommand({ domainId }: { domainId: string }) {
+  const { data } = useQuery({
+    queryKey: ["domains", domainId, "registration-command"],
+    queryFn: () => api.get<{ command: string }>(`/api/domains/${domainId}/registration-command`),
+  });
+  if (!data) return null;
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+        {data.command}
+      </code>
+      <CopyButton value={data.command} />
+    </div>
+  );
+}
+
+/**
+ * Semi-automated custom-domain onboarding for the app registration's OAuth
+ * redirect origin allowlist. An admin adds a "<label>.patchpilot365.com"
+ * subdomain (BITG creates the DNS record out-of-band — no live Cloudflare API
+ * in v1) or a fully custom hostname, verifies it with a read-only CNAME
+ * lookup (apps/api/src/routes/domains.ts never writes a DNS record itself),
+ * and then pushes the resulting redirect URI(s) into the real Entra app
+ * registration — either via the same step-up browser consent SyncPermissionsCard
+ * uses, or by copying the PowerShell one-liner above. Hidden in demo mode,
+ * where nothing here could resolve or authorize anything real.
+ */
+function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
+  const qc = useQueryClient();
+  const canWrite = useCan("settings:write");
+  const [type, setType] = useState<DomainType>("subdomain");
+  const [label, setLabel] = useState("");
+  const [hostname, setHostname] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+
+  const { data: report } = useQuery({
+    queryKey: ["domains"],
+    queryFn: () => api.get<DomainsReport>("/api/domains"),
+    enabled: !demoMode,
+  });
+
+  const addDomain = useMutation({
+    mutationFn: () =>
+      api.post<CustomDomain>(
+        "/api/domains",
+        type === "subdomain" ? { type, label: label.trim() } : { type, hostname: hostname.trim() },
+      ),
+    onSuccess: (row) => {
+      setLabel("");
+      setHostname("");
+      setMessage({ tone: "ok", text: `Added ${row.hostname} — follow the instructions below to activate it.` });
+      void qc.invalidateQueries({ queryKey: ["domains"] });
+    },
+    onError: (err) =>
+      setMessage({ tone: "error", text: err instanceof ApiError ? err.message : "Failed to add domain." }),
+  });
+
+  const verifyDomain = useMutation({
+    mutationFn: (id: string) => api.post<{ verified: boolean; domain: CustomDomain }>(`/api/domains/${id}/verify`, {}),
+    onSuccess: (res) => {
+      setMessage(
+        res.verified
+          ? {
+              tone: "ok",
+              text: `${res.domain.hostname} is active — this instance is restarting to pick it up as a valid login origin.`,
+            }
+          : {
+              tone: "error",
+              text: `${res.domain.hostname} isn't resolving to the right target yet${
+                res.domain.lastCheckError ? ` (${res.domain.lastCheckError})` : ""
+              }. DNS changes can take a while to propagate — try again shortly.`,
+            },
+      );
+      void qc.invalidateQueries({ queryKey: ["domains"] });
+    },
+    onError: (err) =>
+      setMessage({ tone: "error", text: err instanceof ApiError ? err.message : "Verification failed." }),
+  });
+
+  const deleteDomain = useMutation({
+    mutationFn: (id: string) => api.del<{ deleted: boolean }>(`/api/domains/${id}`),
+    onSuccess: () => {
+      setPendingDeleteId(null);
+      setMessage({ tone: "ok", text: "Domain removed." });
+      void qc.invalidateQueries({ queryKey: ["domains"] });
+    },
+    onError: (err) => {
+      setPendingDeleteId(null);
+      setMessage({ tone: "error", text: err instanceof ApiError ? err.message : "Failed to remove domain." });
+    },
+  });
+
+  if (demoMode) return null;
+
+  const domains = report?.domains ?? [];
+  const hasActive = domains.some((d) => d.status === "active");
+  const previewHostname =
+    type === "subdomain" ? `${label.trim() || "<label>"}.${report?.platformBaseDomain ?? "patchpilot365.com"}` : hostname.trim() || "<hostname>";
+  const previewCnameTarget = report ? new URL(report.primaryOrigin).host : "";
+  const pendingDeleteDomain = domains.find((d) => d.id === pendingDeleteId) ?? null;
+
+  return (
+    <Card>
+      <h2 className="text-sm font-semibold text-slate-700">Custom domains</h2>
+      <p className="mt-1 text-sm text-slate-500">
+        Add a PatchPilot subdomain or your own hostname as an additional OAuth
+        login origin. Both the existing origin and every active domain below
+        stay valid at once — nothing is replaced.
+      </p>
+
+      {message && (
+        <div
+          className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+            message.tone === "ok"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-rose-200 bg-rose-50 text-rose-700"
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
+      {!canWrite && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          Your role doesn&apos;t include settings write access.
+        </div>
+      )}
+
+      <div className="mt-4 rounded-lg border border-slate-200 p-4">
+        <div className="flex flex-wrap gap-4 text-sm text-slate-700">
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              checked={type === "subdomain"}
+              onChange={() => setType("subdomain")}
+            />
+            PatchPilot subdomain
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input type="radio" checked={type === "custom"} onChange={() => setType("custom")} />
+            Custom domain
+          </label>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          {type === "subdomain" ? (
+            <div className="flex-1">
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Label
+              </label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder="acme"
+                  className="w-40 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+                <span className="font-mono text-xs text-slate-400">.{report?.platformBaseDomain ?? "patchpilot365.com"}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1">
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Hostname
+              </label>
+              <input
+                value={hostname}
+                onChange={(e) => setHostname(e.target.value)}
+                placeholder="patching.acme.com"
+                className="mt-1 w-full max-w-xs rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              />
+            </div>
+          )}
+          <button
+            type="button"
+            disabled={
+              !canWrite ||
+              addDomain.isPending ||
+              (type === "subdomain" ? !label.trim() : !hostname.trim())
+            }
+            onClick={() => {
+              setMessage(null);
+              addDomain.mutate();
+            }}
+            className="shrink-0 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {addDomain.isPending ? "Adding…" : "Add domain"}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-slate-400">
+          Will resolve as{" "}
+          <code className="font-mono">{previewHostname}</code>, pointed at{" "}
+          <code className="font-mono">{previewCnameTarget || "…"}</code> via CNAME.
+        </p>
+      </div>
+
+      {domains.length > 0 && (
+        <ul className="mt-4 space-y-3">
+          {domains.map((d) => (
+            <li key={d.id} className="rounded-lg border border-slate-200 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-sm text-slate-800">{d.hostname}</div>
+                  <div className="text-xs text-slate-400">
+                    {d.type === "subdomain" ? "PatchPilot subdomain" : "Custom domain"} · added by {d.createdBy}
+                  </div>
+                </div>
+                <span
+                  className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                    DOMAIN_STATUS_STYLES[d.status] ?? DOMAIN_STATUS_STYLES.pending
+                  }`}
+                >
+                  {d.status}
+                </span>
+              </div>
+
+              {d.instructions.kind === "dns-cname" ? (
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="CNAME name" value={d.instructions.cnameRecord.name} />
+                  <Field label="Points to" value={d.instructions.cnameRecord.target} />
+                </div>
+              ) : (
+                <div className="mt-3 flex items-start gap-2">
+                  <p className="flex-1 text-xs text-slate-500">{d.instructions.summary}</p>
+                  <a
+                    href={d.instructions.supportMailto}
+                    className="shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                  >
+                    Email support
+                  </a>
+                </div>
+              )}
+
+              {d.lastCheckError && d.status === "pending" && (
+                <p className="mt-2 text-xs text-amber-700">Last check: {d.lastCheckError}</p>
+              )}
+
+              <div className="mt-3 flex items-center gap-2">
+                {d.status === "pending" && (
+                  <button
+                    type="button"
+                    disabled={!canWrite || verifyDomain.isPending}
+                    onClick={() => {
+                      setMessage(null);
+                      verifyDomain.mutate(d.id);
+                    }}
+                    className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {verifyDomain.isPending ? "Checking…" : "Verify"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={!canWrite}
+                  onClick={() => setPendingDeleteId(d.id)}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </div>
+
+              {d.status === "active" && (
+                <div className="mt-3 border-t border-slate-100 pt-3">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Registration command
+                  </div>
+                  <RegistrationCommand domainId={d.id} />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {hasActive && (
+        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <h3 className="text-sm font-semibold text-slate-700">Update app registration</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Push every active domain&apos;s redirect URI into the real Entra
+            app registration in one pass. Additive only — already-registered
+            URIs are left untouched, nothing is ever duplicated.
+          </p>
+          <button
+            type="button"
+            disabled={!canWrite}
+            title={!canWrite ? "Your role doesn't include settings write access." : undefined}
+            onClick={() => {
+              window.location.href = "/api/domains/sync-registration/start";
+            }}
+            className="mt-2.5 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Update via browser
+          </button>
+          <p className="mt-1.5 text-xs text-slate-400">
+            Or copy a domain&apos;s registration command above and run it from
+            an elevated PowerShell instead.
+          </p>
+        </div>
+      )}
+
+      {pendingDeleteDomain && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setPendingDeleteId(null)}
+            aria-hidden
+          />
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900">Remove this domain?</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              <code className="font-mono text-xs">{pendingDeleteDomain.hostname}</code>{" "}
+              {pendingDeleteDomain.status === "active"
+                ? "is an active login origin — removing it restarts this instance, and logins through that hostname will stop working."
+                : "hasn't been activated yet — this just discards the pending request."}
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingDeleteId(null)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteDomain.isPending}
+                onClick={() => deleteDomain.mutate(pendingDeleteDomain.id)}
+                className="rounded-md bg-rose-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleteDomain.isPending ? "Removing…" : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 type ConsentSortKey = "name" | "reachability" | "consent";
 
 export function AppRegistration() {
@@ -477,6 +832,8 @@ export function AppRegistration() {
           </Card>
 
           <SyncPermissionsCard demoMode={report.demoMode} />
+
+          <CustomDomainsCard demoMode={report.demoMode} />
 
           {!report.demoMode && (
             <Card className="border-slate-200 bg-slate-50">

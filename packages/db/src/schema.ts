@@ -1064,6 +1064,39 @@ export const settings = pgTable("settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ---- custom domains (Setup -> App Registration "Custom domain" section) ----
+// One row per additional hostname this instance should accept logins/OAuth
+// callbacks on, on top of the deploy-time PUBLIC_URL. "subdomain" rows are a
+// <label>.patchpilot365.com hostname living in BITG's own DNS zone — BITG
+// creates that record manually (support@patchpilot365.com); "custom" rows are
+// a hostname the customer owns, pointed at this instance via a CNAME they
+// create themselves. Neither path ever calls a DNS provider's API to CREATE a
+// record — activation (see routes/domains.ts's verify handler) is always
+// gated on a live, read-only CNAME lookup, which is the one thing both paths
+// share. Not tenant-scoped: one instance = one MSP, like `settings` above.
+export const domainTypeEnum = pgEnum("domain_type", ["subdomain", "custom"]);
+export const domainStatusEnum = pgEnum("domain_status", ["pending", "active"]);
+
+export const customDomains = pgTable(
+  "custom_domains",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    hostname: text("hostname").notNull(),
+    type: domainTypeEnum("type").notNull(),
+    status: domainStatusEnum("status").notNull().default("pending"),
+    // Snapshot of the CNAME target (host of config.PUBLIC_URL) at creation
+    // time, so an old row's instructions stay self-consistent even if
+    // PUBLIC_URL is later changed.
+    cnameTarget: text("cname_target").notNull(),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    activatedAt: timestamp("activated_at", { withTimezone: true }),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    lastCheckError: text("last_check_error"),
+  },
+  (t) => [uniqueIndex("custom_domains_hostname_idx").on(t.hostname)],
+);
+
 // ---- manual remediations (Remediation Options "Manual -> record" sub-flow) ----
 // An engineer's free-text record that a finding was fixed by hand outside any
 // PatchPilot channel — no script, no Graph call, no job row. Tracked as "waiting

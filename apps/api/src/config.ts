@@ -14,6 +14,17 @@ import { z } from "zod";
 const EnvSchema = z.object({
   PUBLIC_URL: z.string().url().default("http://localhost:5173"),
   AUTH_REDIRECT_URI: z.string().url().default("http://localhost:5173/auth/callback"),
+  // Comma-separated additional origins (scheme://host[:port], no path) allowed
+  // to complete the Entra OAuth round trip — e.g. a cloudflared tunnel
+  // hostname used to reach a local dev instance externally. Each one must
+  // ALSO be registered as its own Redirect URI (origin + "/auth/callback") in
+  // the Entra app registration, or Microsoft rejects the auth request outright.
+  // See auth/origin.ts.
+  EXTRA_WEB_ORIGINS: z.string().default(""),
+  // The zone BITG hands out <label>.<this> subdomains from (routes/domains.ts
+  // "subdomain" custom-domain type). Not itself a redirect origin — only
+  // active rows in the custom_domains table (see load-env.ts) become one.
+  PLATFORM_BASE_DOMAIN: z.string().default("patchpilot365.com"),
   ENTRA_TENANT_ID: z.string().optional(),
   ENTRA_CLIENT_ID: z.string().optional(),
   ENTRA_CLIENT_SECRET: z.string().optional(),
@@ -96,6 +107,8 @@ const EnvSchema = z.object({
 export interface Config {
   PUBLIC_URL: string;
   AUTH_REDIRECT_URI: string;
+  EXTRA_WEB_ORIGINS: string;
+  PLATFORM_BASE_DOMAIN: string;
   ENTRA_TENANT_ID: string;
   ENTRA_CLIENT_ID: string;
   ENTRA_CLIENT_SECRET: string;
@@ -228,3 +241,10 @@ export const config = loadConfig();
 export const corsOrigins = config.CORS_ORIGINS.split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+
+// PUBLIC_URL plus every EXTRA_WEB_ORIGINS entry, normalized (no trailing
+// slash) so an exact match against `${proto}://${host}` works — see
+// auth/origin.ts's resolveWebOrigin, the only consumer of this list.
+export const webOrigins = [config.PUBLIC_URL, ...config.EXTRA_WEB_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)].map(
+  (o) => o.replace(/\/+$/, ""),
+);

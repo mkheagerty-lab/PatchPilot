@@ -27,6 +27,16 @@ export const REMEDIATION_QUEUE = "patchpilot-remediation";
 export const CREDENTIALS_ROTATED_CHANNEL = "patchpilot:credentials-rotated";
 
 /**
+ * Redis pub/sub channel published by apps/api/src/routes/domains.ts whenever
+ * the set of *active* custom domains changes (a verify succeeds, or an active
+ * row is deleted). apps/api-only restart signal — EXTRA_WEB_ORIGINS/CORS is an
+ * api-only concern (see load-env.ts's loadCustomDomains), so unlike
+ * CREDENTIALS_ROTATED_CHANNEL above, apps/worker does not subscribe to this
+ * one; restarting it on every domain edit would be a pointless extra restart.
+ */
+export const CUSTOM_DOMAINS_CHANGED_CHANNEL = "patchpilot:custom-domains-changed";
+
+/**
  * The recurring-schedule queue *contract*. The worker owns the cron reconciler and
  * fan-out consumer (see apps/worker/src/scheduler.ts); the api is a producer only —
  * a "Run now" action enqueues a single "fire" job so an engineer can exercise a

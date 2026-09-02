@@ -78,4 +78,36 @@ async function loadPairedEntraCredentials(): Promise<void> {
   }
 }
 
+/**
+ * Folds every activated custom-domain row (routes/domains.ts) into
+ * EXTRA_WEB_ORIGINS before config.ts parses it, so resolveWebOrigin
+ * (auth/origin.ts) accepts logins started from them. Additive onto whatever
+ * EXTRA_WEB_ORIGINS already holds from env/`.env` — same "DB augments, never
+ * silently overrides" precedence as loadPairedEntraCredentials above. A
+ * process restart is required to pick this up (see CUSTOM_DOMAINS_CHANGED_CHANNEL
+ * in routes/domains.ts), same tradeoff the pairing flow already accepts.
+ */
+async function loadCustomDomains(): Promise<void> {
+  if ((process.env.DEMO_MODE ?? "true") !== "false") return;
+
+  try {
+    const { db, tables, eq } = await import("@patchpilot/db");
+    const rows = await db
+      .select({ hostname: tables.customDomains.hostname })
+      .from(tables.customDomains)
+      .where(eq(tables.customDomains.status, "active"));
+    if (rows.length === 0) return;
+
+    const existing = (process.env.EXTRA_WEB_ORIGINS ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const active = rows.map((r) => `https://${r.hostname}`);
+    process.env.EXTRA_WEB_ORIGINS = Array.from(new Set([...existing, ...active])).join(",");
+  } catch (err) {
+    console.error("[load-env] failed to load active custom domains:", err);
+  }
+}
+
 await loadPairedEntraCredentials();
+await loadCustomDomains();

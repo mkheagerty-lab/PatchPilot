@@ -9,6 +9,7 @@ import {
 import { cca, APP_REGISTRATION_SYNC_SCOPES, auditSafe } from "@patchpilot/graph";
 import { config } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
+import { resolveWebOrigin } from "../auth/origin.js";
 
 /**
  * Onboarding / app-registration route (Phase 4).
@@ -121,10 +122,15 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(400).send({ error: "not_available_in_demo_mode" });
       }
 
+      // Resolved per-request (see auth/origin.ts) so this step-up round-trips
+      // back to whichever allow-listed origin (e.g. a cloudflared tunnel host)
+      // the admin is actually using, matching the main login flow in
+      // apps/api/src/auth/routes.ts rather than always bouncing to PUBLIC_URL.
+      const origin = resolveWebOrigin(req);
       const state = `patchpilot-syncperm:${req.session.sessionId}:${includeWriteScopes ? "1" : "0"}`;
       const url = await cca.getAuthCodeUrl({
         scopes: APP_REGISTRATION_SYNC_SCOPES,
-        redirectUri: config.AUTH_REDIRECT_URI,
+        redirectUri: `${origin}/auth/callback`,
         state,
       });
 
