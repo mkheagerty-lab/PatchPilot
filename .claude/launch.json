@@ -9,9 +9,7 @@
     },
     {
       "name": "api",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@patchpilot/api", "dev:resilient"],
-      "port": 4000
+      "url": "http://localhost:4000"
     },
     {
       "name": "worker",
