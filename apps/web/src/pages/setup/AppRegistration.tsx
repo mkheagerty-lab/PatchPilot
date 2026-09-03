@@ -131,7 +131,7 @@ function Step({
  */
 function GettingStarted({ report }: { report: OnboardingReport }) {
   const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
-  const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script"))) -MspTenantId <YOUR-TENANT-ID>`;
+  const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script")))`;
   const canWrite = useCan("settings:write");
   return (
     <Card className="border-slate-900/10 bg-gradient-to-br from-slate-50 to-white">
@@ -177,9 +177,9 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
             <CopyButton value={deployCmd} />
           </div>
           <p className="mt-2.5 text-xs text-slate-400">
-            Re-registering from an Azure Cloud Shell instead? Paste this
-            (replace <code className="font-mono">&lt;YOUR-TENANT-ID&gt;</code>{" "}
-            with your own Entra tenant ID first):
+            Re-registering from an Azure Cloud Shell instead? Paste this —
+            your tenant ID is detected automatically from the signed-in
+            Cloud Shell session:
           </p>
           <div className="mt-1.5 flex items-start gap-2">
             <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
