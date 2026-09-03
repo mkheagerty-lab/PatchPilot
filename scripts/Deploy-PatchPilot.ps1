@@ -544,13 +544,6 @@ try {
     if ($isHeadlessSession) {
         Write-Info "No local browser available (headless/Cloud Shell session detected) - using device code sign-in."
         $connectMgGraphParams["UseDeviceCode"] = $true
-        # Connect-MgGraph writes the "go to https://microsoft.com/devicelogin
-        # and enter this code" message to the Information stream, not
-        # directly to the host. $InformationPreference defaults to
-        # SilentlyContinue, which swallows it entirely - the script then
-        # just sits there, indistinguishable from actually being hung,
-        # because it's really waiting on a code the admin was never shown.
-        $connectMgGraphParams["InformationAction"] = "Continue"
     }
     else {
         Write-Info "Using normal interactive sign-in."
@@ -559,7 +552,24 @@ try {
 
     Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
 
-    Connect-MgGraph @connectMgGraphParams | Out-Null
+    if ($isHeadlessSession) {
+        # The device-code prompt ("go to https://microsoft.com/devicelogin
+        # and enter this code ...") is written by Connect-MgGraph to the
+        # normal success/output stream, not to the host and not to the
+        # Information stream - an earlier fix here wrongly assumed the
+        # latter and added -InformationAction Continue, which did nothing.
+        # Confirmed against https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/2798,
+        # a known SDK issue where the message "fails to display ... since
+        # the output is captured" whenever it's piped or redirected - which
+        # `| Out-Null` (used in the non-headless branch below) does exactly
+        # that. Piping it away here left the script sitting indistinguishable
+        # from actually being hung: it was really waiting on a code the
+        # admin was never shown. Let this branch's output print normally.
+        Connect-MgGraph @connectMgGraphParams
+    }
+    else {
+        Connect-MgGraph @connectMgGraphParams | Out-Null
+    }
 
     $context = Get-MgContext
 
