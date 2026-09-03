@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Deploy-PatchPilot.ps1 - Idempotent installer for the PatchPilot Entra ID app registration.
 
