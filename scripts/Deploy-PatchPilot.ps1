@@ -32,11 +32,15 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $MspTenantId,
 
-    # {{REDIRECT_URI}} is a template placeholder, substituted with this
-    # instance's real AUTH_REDIRECT_URI on a personalized download (see
+    # The {{...}} default below is a template placeholder, substituted with
+    # this instance's real AUTH_REDIRECT_URI on a personalized download (see
     # apps/api/src/routes/onboarding-pairing.ts), same mechanism as
-    # $InstanceUrl/$PairingToken below. An un-substituted placeholder means
-    # this is a plain, unmodified copy of the script (a self-hosted git
+    # $InstanceUrl/$PairingToken below. Deliberately written as "{{...}}"
+    # here rather than spelling out the literal token: the server's
+    # substitution is a global find-and-replace across this whole file, so
+    # writing the exact token in a comment or comparison gets it silently
+    # rewritten too, same as the param default. An un-substituted placeholder
+    # means this is a plain, unmodified copy of the script (a self-hosted git
     # clone) - the fallback right after $ErrorActionPreference below restores
     # this parameter's original localhost default in that case.
     [Parameter(Mandatory = $false)]
@@ -82,10 +86,17 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# See the $RedirectUri param comment above: an un-substituted {{REDIRECT_URI}}
-# means this is an unmodified copy of the script, not a personalized download
-# - restore the real default so a self-hoster's experience is unchanged.
-if ($RedirectUri -eq "{{REDIRECT_URI}}") {
+# See the $RedirectUri param comment above: an un-substituted "{{...}}"
+# placeholder means this is an unmodified copy of the script, not a
+# personalized download - restore the real default so a self-hoster's
+# experience is unchanged. Checked via StartsWith/EndsWith, not an exact
+# literal match against the placeholder text itself - the server's
+# substitution is a global replace across the whole file, so spelling out
+# that exact placeholder text again here (rather than describing it as
+# "{{...}}") would get it rewritten right along with the param default
+# above, and this check would then compare the substituted real value
+# against itself and always be true.
+if ($RedirectUri.StartsWith("{{") -and $RedirectUri.EndsWith("}}")) {
     $RedirectUri = "http://localhost:5173/auth/callback"
 }
 
@@ -1137,6 +1148,15 @@ LOG_LEVEL=info
     # param block above) means this is a plain, unmodified copy of the script,
     # not one downloaded from an instance's Setup page. Treat that exactly
     # like "not supplied", not like a real (and doomed-to-fail) pairing target.
+    # Checked via StartsWith/EndsWith, not an exact literal match against the
+    # placeholder text: the server's substitution (onboarding-pairing.ts) is a
+    # global replace across the whole file, so spelling out either exact
+    # placeholder again here (rather than describing them as "{{...}}") would
+    # get it rewritten right along with the param defaults above, and this
+    # check would then always compare the substituted real value against
+    # itself - always true, so pairing would silently never fire on a real
+    # personalized download. (This is exactly that latent bug, now fixed - it
+    # predates the $RedirectUri templating added alongside this comment.)
     #
     # $RedirectUri deliberately isn't part of this gate: by now it has always
     # already resolved to a real, usable value (either the substituted real
@@ -1144,7 +1164,8 @@ LOG_LEVEL=info
     # used earlier for the app registration itself - not specific to this
     # phone-home step the way $InstanceUrl/$PairingToken are.
     $pairingRequested = $InstanceUrl -and $PairingToken `
-        -and $InstanceUrl -ne "{{INSTANCE_URL}}" -and $PairingToken -ne "{{PAIRING_TOKEN}}"
+        -and -not ($InstanceUrl.StartsWith("{{") -and $InstanceUrl.EndsWith("}}")) `
+        -and -not ($PairingToken.StartsWith("{{") -and $PairingToken.EndsWith("}}"))
 
     if (-not $pairingRequested) {
         Write-Host "  Skipped - no -InstanceUrl/-PairingToken supplied (self-hosted .env config above is authoritative)." -ForegroundColor DarkGray
