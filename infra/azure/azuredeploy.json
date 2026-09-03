@@ -5,15 +5,15 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "14758927003810016345"
+      "templateHash": "11646684476644156986"
     }
   },
   "parameters": {
     "location": {
       "type": "string",
-      "defaultValue": "[resourceGroup().location]",
+      "defaultValue": "australiaeast",
       "metadata": {
-        "description": "Azure region. Defaults to the resource group's own region."
+        "description": "Azure region to deploy into. Defaults to Australia East; change it to deploy elsewhere."
       }
     },
     "dnsLabel": {
@@ -32,7 +32,7 @@
     },
     "adminUsername": {
       "type": "string",
-      "defaultValue": "azureuser",
+      "defaultValue": "ppadmin",
       "metadata": {
         "description": "Admin username for the VM (used only for break-glass SSH access)."
       }

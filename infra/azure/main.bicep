@@ -4,8 +4,8 @@
 // a DNS-labeled static public IP, and an Ubuntu VM that provisions itself via
 // cloud-init.yaml — no SSH needed for setup.
 
-@description('Azure region. Defaults to the resource group\'s own region.')
-param location string = resourceGroup().location
+@description('Azure region to deploy into. Defaults to Australia East; change it to deploy elsewhere.')
+param location string = 'australiaeast'
 
 @description('DNS label for the free <label>.<region>.cloudapp.azure.com hostname. Must be globally unique within the region. Defaults to a generated value so a one-click deploy doesn\'t require inventing a globally-unique name.')
 param dnsLabel string = 'patchpilot-${uniqueString(resourceGroup().id)}'
@@ -14,7 +14,7 @@ param dnsLabel string = 'patchpilot-${uniqueString(resourceGroup().id)}'
 param customDomain string = ''
 
 @description('Admin username for the VM (used only for break-glass SSH access).')
-param adminUsername string = 'azureuser'
+param adminUsername string = 'ppadmin'
 
 @description('Enable inbound SSH (port 22) for break-glass access. PatchPilot never needs SSH for setup or day-to-day operation (az vm run-command is used instead) — leave this off to shrink the deploy form.')
 param enableSsh bool = false

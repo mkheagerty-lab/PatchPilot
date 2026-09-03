@@ -14,8 +14,11 @@ icon, Bash) — it has `az`, `git`, and `openssl` pre-installed.
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmkheagerty-lab%2FPatchPilot%2Fmain%2Finfra%2Fazure%2Fazuredeploy.json)
 
 Click the button, sign in, and hit deploy — every field is already defaulted
-(a unique `dnsLabel` is generated for you, there's no custom domain, SSH is
-off, and the VM size is `Standard_B2as_v2`). `sshPublicKey` defaults to a
+(`location` is Australia East, a unique `dnsLabel` is generated for you,
+there's no custom domain, SSH is off, and the VM size is
+`Standard_B2as_v2`). All of these are plain editable fields in the form —
+change the region, size, or anything else before clicking Create.
+`sshPublicKey` defaults to a
 placeholder value with no known private key, which is safe *only* because
 SSH is off by default (no NSG rule opens port 22, so the placeholder can
 never actually be used to log in) — see `enableSsh` below if you want real
@@ -38,7 +41,7 @@ az deployment group create \
   -g patchpilot-rg \
   --template-file infra/azure/main.bicep \
   --parameters dnsLabel=patchpilot-mk \
-               adminUsername=azureuser \
+               adminUsername=ppadmin \
                sshPublicKey="$(cat ~/patchpilot_key.pub)" \
                enableSsh=true \
                allowedSshSourceIp="$(curl -s ifconfig.me)/32"
