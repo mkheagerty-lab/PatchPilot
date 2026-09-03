@@ -7,7 +7,12 @@ name: patchpilot
 
 services:
   caddy:
-    image: caddy:2-alpine
+    # Pinned to the 2.11 minor line, not the floating "2-alpine" tag — a
+    # routine image pull once silently upgraded Caddy across a minor version
+    # that dropped the on_demand_tls interval/burst options (see Caddyfile),
+    # which crash-loops the container with no healthcheck to catch it. Bump
+    # this deliberately, not automatically.
+    image: caddy:2.11-alpine
     restart: unless-stopped
     env_file:
       - ../.env
