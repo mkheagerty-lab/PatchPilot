@@ -177,11 +177,27 @@ export async function redeemLoginCode(code: string, redirectUri: string): Promis
   return result;
 }
 
+let cachedCca: ConfidentialClientApplication | undefined;
+
 /**
  * Singleton confidential client used only for cache-independent operations:
- * building the auth-code URL (no token cache is touched until a code is redeemed).
+ * building the auth-code URL (no token cache is touched until a code is
+ * redeemed) and the home-tenant OBO exchange. Built lazily on first real use
+ * rather than at module load: this module is imported unconditionally by
+ * every api/worker boot, including a freshly-deployed, not-yet-paired
+ * instance where ENTRA_* are intentionally blank (see .env.example) — MSAL's
+ * ConfidentialClientApplication constructor throws immediately on an empty
+ * client secret, which used to crash-loop the whole process before it could
+ * ever serve the "Pair this instance" screen. Every real caller of getCca()
+ * already runs behind a real Entra flow, so deferring construction to first
+ * call is free.
  */
-export const cca = new ConfidentialClientApplication(msalConfig);
+export function getCca(): ConfidentialClientApplication {
+  if (!cachedCca) {
+    cachedCca = new ConfidentialClientApplication(msalConfig);
+  }
+  return cachedCca;
+}
 
 /**
  * Scopes requested for the one-time "Sync permissions" step-up consent (Setup ->
@@ -303,7 +319,7 @@ export async function acquireTokenForTenant(
     );
   }
 
-  const result = await cca.acquireTokenOnBehalfOf({
+  const result = await getCca().acquireTokenOnBehalfOf({
     oboAssertion: userAssertion,
     authority: `https://login.microsoftonline.com/${tenantId}`,
     scopes,

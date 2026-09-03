@@ -6,7 +6,7 @@ import { permissionsFor } from "@patchpilot/shared";
 import { config, webOrigins } from "../config.js";
 import { resolveWebOrigin } from "./origin.js";
 import {
-  cca,
+  getCca,
   LOGIN_SCOPES,
   redeemLoginCode,
   redeemStepUpConsentCode,
@@ -78,7 +78,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (config.DEMO_MODE) {
       return reply.redirect(origin);
     }
-    const url = await cca.getAuthCodeUrl({
+    const url = await getCca().getAuthCodeUrl({
       scopes: LOGIN_SCOPES,
       // Must be byte-for-byte the same URI /auth/callback later redeems the
       // code with (see redeemLoginCode) — resolved per-request rather than

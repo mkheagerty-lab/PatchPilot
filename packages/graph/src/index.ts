@@ -17,7 +17,7 @@ export {
   type CachedToken,
 } from "./token-store.js";
 export {
-  cca,
+  getCca,
   LOGIN_SCOPES,
   APP_REGISTRATION_SYNC_SCOPES,
   ccaForEngineer,

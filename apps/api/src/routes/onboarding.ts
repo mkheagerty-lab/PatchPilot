@@ -6,7 +6,7 @@ import {
   DEFENDER_SCOPES,
   PARTNER_CENTER_SCOPES,
 } from "@patchpilot/shared";
-import { cca, APP_REGISTRATION_SYNC_SCOPES, auditSafe } from "@patchpilot/graph";
+import { getCca, APP_REGISTRATION_SYNC_SCOPES, auditSafe } from "@patchpilot/graph";
 import { config, webOrigins } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
 import { resolveWebOrigin } from "../auth/origin.js";
@@ -140,7 +140,7 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
       // apps/api/src/auth/routes.ts rather than always bouncing to PUBLIC_URL.
       const origin = resolveWebOrigin(req);
       const state = `patchpilot-syncperm:${req.session.sessionId}:${includeWriteScopes ? "1" : "0"}`;
-      const url = await cca.getAuthCodeUrl({
+      const url = await getCca().getAuthCodeUrl({
         scopes: APP_REGISTRATION_SYNC_SCOPES,
         redirectUri: `${origin}/auth/callback`,
         state,
