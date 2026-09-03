@@ -13,12 +13,15 @@ icon, Bash) — it has `az`, `git`, and `openssl` pre-installed.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmkheagerty-lab%2FPatchPilot%2Fmain%2Finfra%2Fazure%2Fazuredeploy.json)
 
-Click the button, sign in, and fill in the form — every field is defaulted
-except `sshPublicKey` (a unique `dnsLabel` is generated for you, there's no
-custom domain, SSH is off, and the VM size is `Standard_B2as_v2`). The
-deployment's `fqdn` / `url` outputs show the address the instance is reachable
-at once cloud-init finishes (a few minutes after the VM boots) — see "Verify"
-below.
+Click the button, sign in, and hit deploy — every field is already defaulted
+(a unique `dnsLabel` is generated for you, there's no custom domain, SSH is
+off, and the VM size is `Standard_B2as_v2`). `sshPublicKey` defaults to a
+placeholder value with no known private key, which is safe *only* because
+SSH is off by default (no NSG rule opens port 22, so the placeholder can
+never actually be used to log in) — see `enableSsh` below if you want real
+SSH access. The deployment's `fqdn` / `url` outputs show the address the
+instance is reachable at once cloud-init finishes (a few minutes after the
+VM boots) — see "Verify" below.
 
 ### Manual / advanced: Azure CLI
 
@@ -51,7 +54,10 @@ az deployment group create \
 - `enableSsh=true` opens the break-glass SSH rule, restricted to
   `allowedSshSourceIp`. Leave both out (or `enableSsh=false`) and the NSG
   never opens port 22 at all — SSH is never used by the deploy or verify flow
-  itself.
+  itself. Always pass your own `sshPublicKey` when you set `enableSsh=true` —
+  the template's default is a placeholder nobody holds the private key for,
+  so leaving it in place with SSH enabled just locks you out, it doesn't
+  grant anyone access.
 - `repoUrl`/`repoRef` default to this repo's `main` branch; point them at
   your own fork/branch to deploy custom code.
 

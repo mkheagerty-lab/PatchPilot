@@ -19,8 +19,8 @@ param adminUsername string = 'azureuser'
 @description('Enable inbound SSH (port 22) for break-glass access. PatchPilot never needs SSH for setup or day-to-day operation (az vm run-command is used instead) — leave this off to shrink the deploy form.')
 param enableSsh bool = false
 
-@description('SSH public key content for the admin user. Always required by the VM resource (Azure Linux VMs need a credential even with password auth disabled), but network-unreachable unless enableSsh is true.')
-param sshPublicKey string
+@description('SSH public key content for the admin user. Always required by the VM resource (Azure Linux VMs need a credential even with password auth disabled), but network-unreachable unless enableSsh is true. Defaults to a placeholder key with no known private key anywhere — safe only because enableSsh defaults to false (no NSG rule opens port 22, so the key can never actually be used). If you set enableSsh to true, you MUST override this with your own public key or the VM will be unreachable via SSH — the placeholder locks you out, it does not grant anyone access.')
+param sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF38BzZ5aspSurxUU6/kjxpCBVwyAl5XwKg6uc8C9jre patchpilot-placeholder-inert-key'
 
 @description('CIDR allowed to reach SSH (22) when enableSsh is true, e.g. "1.2.3.4/32". Use "*" to allow any source (not recommended). Ignored when enableSsh is false.')
 param allowedSshSourceIp string = '*'
