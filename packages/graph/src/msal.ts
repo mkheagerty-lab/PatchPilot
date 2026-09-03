@@ -27,19 +27,33 @@ import { redis } from "./token-store.js";
  * in Redis) so a later request can mint a customer-tenant token silently, and so
  * MSAL transparently rotates the refresh token for us.
  */
-const msalConfig: Configuration = {
-  auth: {
-    clientId: env.ENTRA_CLIENT_ID,
-    authority: `https://login.microsoftonline.com/${env.ENTRA_TENANT_ID}`,
-    clientSecret: env.ENTRA_CLIENT_SECRET,
-  },
-  system: {
-    loggerOptions: {
-      loggerCallback: () => {},
-      piiLoggingEnabled: false,
+/**
+ * Built fresh on every call rather than hoisted into a module-level constant:
+ * this module is imported once, at process boot, but `env.ENTRA_*` can still
+ * change after that — a freshly-paired instance populates them via a DB round
+ * trip that resolves after this module's own top-level evaluation (see
+ * apps/api/src/load-env.ts and apps/worker/src/load-env.ts, both of which
+ * patch `env` in place once loading completes). A module-level object literal
+ * would have copied `env.ENTRA_CLIENT_SECRET` as a plain string at that first,
+ * pre-pairing moment and never observed the correction, which is exactly what
+ * caused /auth/login to fail with "Client credential ... must not be empty"
+ * on a live instance right after a fresh pairing.
+ */
+function getMsalConfig(): Configuration {
+  return {
+    auth: {
+      clientId: env.ENTRA_CLIENT_ID,
+      authority: `https://login.microsoftonline.com/${env.ENTRA_TENANT_ID}`,
+      clientSecret: env.ENTRA_CLIENT_SECRET,
     },
-  },
-};
+    system: {
+      loggerOptions: {
+        loggerCallback: () => {},
+        piiLoggingEnabled: false,
+      },
+    },
+  };
+}
 
 /**
  * Refresh tokens roll for up to 90 days, so the engineer's serialized MSAL cache
@@ -120,7 +134,7 @@ function cachePluginFor(engineerUpn: string): ICachePlugin {
  */
 export function ccaForEngineer(engineerUpn: string): ConfidentialClientApplication {
   return new ConfidentialClientApplication({
-    ...msalConfig,
+    ...getMsalConfig(),
     cache: { cachePlugin: cachePluginFor(engineerUpn) },
   });
 }
@@ -159,10 +173,10 @@ export async function redeemLoginCode(code: string, redirectUri: string): Promis
   if (env.DEMO_MODE) {
     throw new Error("Login code redemption must never run in DEMO_MODE");
   }
-  const client = new ConfidentialClientApplication(msalConfig);
+  const client = new ConfidentialClientApplication(getMsalConfig());
   const result = await client.acquireTokenByCode({
     code,
-    scopes: LOGIN_SCOPES,
+    scopes: getLoginScopes(),
     redirectUri,
   });
   if (!result?.account) {
@@ -194,7 +208,7 @@ let cachedCca: ConfidentialClientApplication | undefined;
  */
 export function getCca(): ConfidentialClientApplication {
   if (!cachedCca) {
-    cachedCca = new ConfidentialClientApplication(msalConfig);
+    cachedCca = new ConfidentialClientApplication(getMsalConfig());
   }
   return cachedCca;
 }
@@ -230,7 +244,7 @@ export async function redeemStepUpConsentCode(
   if (env.DEMO_MODE) {
     throw new Error("Step-up consent redemption must never run in DEMO_MODE");
   }
-  const client = new ConfidentialClientApplication(msalConfig);
+  const client = new ConfidentialClientApplication(getMsalConfig());
   const result = await client.acquireTokenByCode({
     code,
     scopes: APP_REGISTRATION_SYNC_SCOPES,
@@ -250,12 +264,9 @@ export async function redeemStepUpConsentCode(
  * tokens are minted per-tenant on demand. `offline_access` yields the refresh
  * token MSAL caches and later redeems against each customer-tenant authority.
  */
-export const LOGIN_SCOPES = [
-  "openid",
-  "profile",
-  "offline_access",
-  env.ENTRA_API_SCOPE,
-];
+export function getLoginScopes(): string[] {
+  return ["openid", "profile", "offline_access", env.ENTRA_API_SCOPE];
+}
 
 /**
  * Silently mints a fresh "login" token (audience = PatchPilot API, scope
