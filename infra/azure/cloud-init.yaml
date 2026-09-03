@@ -1,8 +1,9 @@
 #cloud-config
 # Boot-time provisioning for the PatchPilot Azure VM. Deployed via main.bicep,
-# which substitutes __PP_DOMAIN__ and __ADMIN_USER__ before base64-encoding
-# this file into the VM's customData. Everything below runs once, automatically,
-# on first boot — no SSH session required to bring the stack up.
+# which substitutes __PP_DOMAIN__, __ADMIN_USER__, __REPO_URL__, and __REPO_REF__
+# before base64-encoding this file into the VM's customData. Everything below
+# runs once, automatically, on first boot — no SSH session required to bring
+# the stack up.
 
 package_update: true
 package_upgrade: true
@@ -24,7 +25,7 @@ runcmd:
   - usermod -aG docker __ADMIN_USER__
   - systemctl enable --now docker
 
-  - git clone https://github.com/mkheagerty-lab/PatchPilot.git /opt/patchpilot
+  - git clone --branch __REPO_REF__ --single-branch __REPO_URL__ /opt/patchpilot
   - cp /opt/patchpilot/.env.example /opt/patchpilot/.env
 
   # Fill in the domain (auto cloudapp.azure.com hostname or a custom domain,

@@ -11,6 +11,27 @@ icon, Bash) — it has `az`, `git`, and `openssl` pre-installed.
 
 ## Deploy
 
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmkheagerty-lab%2FPatchPilot%2Fmain%2Finfra%2Fazure%2Fazuredeploy.json)
+
+Click the button, sign in, and hit deploy — every field is already defaulted
+(`location` is Australia East, a unique `dnsLabel` is generated for you,
+there's no custom domain, SSH is off, and the VM size is
+`Standard_B2as_v2`). All of these are plain editable fields in the form —
+change the region, size, or anything else before clicking Create.
+`sshPublicKey` defaults to a
+placeholder value with no known private key, which is safe *only* because
+SSH is off by default (no NSG rule opens port 22, so the placeholder can
+never actually be used to log in) — see `enableSsh` below if you want real
+SSH access. The deployment's `fqdn` / `url` outputs show the address the
+instance is reachable at once cloud-init finishes (a few minutes after the
+VM boots) — see "Verify" below.
+
+### Manual / advanced: Azure CLI
+
+Use the CLI instead of the button if you're deploying a fork
+(`repoUrl`/`repoRef`), want SSH enabled at deploy time, or are scripting this
+as part of your own CI/CD:
+
 ```bash
 az group create -n patchpilot-rg -l australiaeast
 
@@ -20,23 +41,37 @@ az deployment group create \
   -g patchpilot-rg \
   --template-file infra/azure/main.bicep \
   --parameters dnsLabel=patchpilot-mk \
-               adminUsername=azureuser \
+               adminUsername=ppadmin \
                sshPublicKey="$(cat ~/patchpilot_key.pub)" \
+               enableSsh=true \
                allowedSshSourceIp="$(curl -s ifconfig.me)/32"
 ```
 
 - `dnsLabel` must be globally unique in the region — it becomes
   `<dnsLabel>.<region>.cloudapp.azure.com`, a free hostname Azure provides
-  automatically (no domain registration needed).
-- The command omits `customDomain` on purpose, which makes `az` prompt for it
-  interactively — press Enter to skip it (uses the free hostname above) or type
-  a domain you already own. Either way it's stored as `PP_DOMAIN` and can be
-  changed later (below) without redeploying.
-- `allowedSshSourceIp` restricts the break-glass SSH rule to your current IP.
-  SSH is never used by the deploy or verify flow itself.
+  automatically (no domain registration needed). Omit it to use the
+  template's own generated default instead.
+- `customDomain` defaults to blank (the free hostname above); pass a domain
+  you already own to use that instead. Either way it's stored as `PP_DOMAIN`
+  and can be changed later (below) without redeploying.
+- `enableSsh=true` opens the break-glass SSH rule, restricted to
+  `allowedSshSourceIp`. Leave both out (or `enableSsh=false`) and the NSG
+  never opens port 22 at all — SSH is never used by the deploy or verify flow
+  itself. Always pass your own `sshPublicKey` when you set `enableSsh=true` —
+  the template's default is a placeholder nobody holds the private key for,
+  so leaving it in place with SSH enabled just locks you out, it doesn't
+  grant anyone access.
+- `repoUrl`/`repoRef` default to this repo's `main` branch; point them at
+  your own fork/branch to deploy custom code.
 
-The deployment's `fqdn` / `url` outputs show the address the instance is
-reachable at once cloud-init finishes (a few minutes after the VM boots).
+After changing `infra/azure/main.bicep` or `cloud-init.yaml`, regenerate the
+compiled artifact the "Deploy to Azure" button reads from:
+
+```bash
+az bicep build --file infra/azure/main.bicep --outfile infra/azure/azuredeploy.json
+```
+
+CI fails the build if this file is ever out of sync with its source.
 
 ## Verify (no SSH)
 
