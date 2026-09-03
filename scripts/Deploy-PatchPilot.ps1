@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Deploy-PatchPilot.ps1 - Idempotent installer for the PatchPilot Entra ID app registration.
 
@@ -16,6 +16,12 @@
     .\Deploy-PatchPilot.ps1 -MspTenantId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" -RedirectUri "http://localhost:5173/auth/callback"
 
 .EXAMPLE
+    # -MspTenantId can be omitted entirely from a session already signed in
+    # to Azure (Connect-AzAccount or az login) - it's auto-detected from that
+    # session. This is the normal case in Azure Cloud Shell.
+    .\Deploy-PatchPilot.ps1
+
+.EXAMPLE
     .\Deploy-PatchPilot.ps1 -MspTenantId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" -RotateClientSecret
 
 .EXAMPLE
@@ -29,7 +35,17 @@
 
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-    [Parameter(Mandatory = $true)]
+    # Not actually mandatory at the parameter level: if omitted, the
+    # auto-detection block right after $ErrorActionPreference below tries to
+    # fill it in from an already-authenticated Azure session (Get-AzContext,
+    # then `az account show`) before falling back to a hard error. This is
+    # aimed at the Azure Cloud Shell one-liner (see
+    # apps/web/src/pages/setup/SetupPairing.tsx) - Cloud Shell is always
+    # already signed in to Azure as the admin running it, so there's nothing
+    # left for them to type. Still explicitly overridable, e.g. to target a
+    # tenant other than the one the current session happens to be signed
+    # into.
+    [Parameter(Mandatory = $false)]
     [string] $MspTenantId,
 
     # The {{...}} default below is a template placeholder, substituted with
@@ -98,6 +114,52 @@ $ErrorActionPreference = "Stop"
 # against itself and always be true.
 if ($RedirectUri.StartsWith("{{") -and $RedirectUri.EndsWith("}}")) {
     $RedirectUri = "http://localhost:5173/auth/callback"
+}
+
+# See the $MspTenantId param comment above. Tries Get-AzContext first since
+# Azure Cloud Shell's PowerShell flavor always has the Az module pre-loaded
+# and pre-authenticated with zero setup; `az account show` is the fallback
+# for anywhere else a plain `az login` already happened (including Cloud
+# Shell's bash flavor, if this were ever invoked through it). Neither is a
+# new hard dependency for the script as a whole - both checks are skipped
+# entirely, with no error, when $MspTenantId is already supplied.
+if (-not $MspTenantId) {
+    $detectedTenantId = $null
+    $detectionSource = $null
+
+    if (Get-Command Get-AzContext -ErrorAction SilentlyContinue) {
+        try {
+            $azContext = Get-AzContext -ErrorAction Stop
+            if ($azContext -and $azContext.Tenant -and $azContext.Tenant.Id) {
+                $detectedTenantId = $azContext.Tenant.Id
+                $detectionSource = "the active Az PowerShell session"
+            }
+        }
+        catch {
+            # No active Az session - fall through to the Azure CLI check below.
+        }
+    }
+
+    if (-not $detectedTenantId -and (Get-Command az -ErrorAction SilentlyContinue)) {
+        try {
+            $cliTenantId = (az account show --query tenantId -o tsv 2>$null)
+            if ($cliTenantId -and $cliTenantId -match '^[0-9a-fA-F-]{36}$') {
+                $detectedTenantId = $cliTenantId
+                $detectionSource = "the active Azure CLI session"
+            }
+        }
+        catch {
+            # `az` is present but not signed in - fall through to the error below.
+        }
+    }
+
+    if ($detectedTenantId) {
+        $MspTenantId = $detectedTenantId
+        Write-Host "No -MspTenantId supplied - using $MspTenantId, detected from $detectionSource." -ForegroundColor DarkGray
+    }
+    else {
+        throw "MspTenantId is required. Pass -MspTenantId <your-tenant-id>, or run this from a session already signed in to Azure (Connect-AzAccount or az login) - e.g. Azure Cloud Shell."
+    }
 }
 
 $AppDisplayName = "PatchPilot"

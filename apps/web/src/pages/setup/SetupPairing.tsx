@@ -19,7 +19,7 @@ import { CopyButton } from "../../components/ui";
  */
 export function SetupPairing() {
   const queryClient = useQueryClient();
-  const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script"))) -MspTenantId <YOUR-TENANT-ID>`;
+  const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script")))`;
 
   // Once the customer's admin runs the script, POST /api/onboarding/pair
   // restarts the api process (see onboarding-pairing.ts) with real Entra
@@ -68,9 +68,8 @@ export function SetupPairing() {
           <h2 className="text-sm font-semibold text-slate-800">Or run in Azure Cloud Shell</h2>
           <p className="mt-1.5 text-xs text-slate-500">
             Skip the download — paste this one-liner into an Azure Cloud Shell
-            (PowerShell) session. Replace{" "}
-            <code className="font-mono">&lt;YOUR-TENANT-ID&gt;</code> with
-            your own Entra tenant ID first.
+            (PowerShell) session. Your tenant ID is detected automatically
+            from the signed-in Cloud Shell session.
           </p>
           <div className="mt-2.5 flex items-start gap-2">
             <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-700">

@@ -149,7 +149,18 @@ export async function onboardingPairingRoutes(app: FastifyInstance): Promise<voi
       expiresAt,
     });
 
-    const template = readFileSync(DEPLOY_SCRIPT_PATH, "utf8");
+    // Strip a leading UTF-8 BOM defensively (node's readFileSync("utf8") does
+    // not do this itself, unlike PowerShell's own .ps1 file loader). A BOM
+    // survives harmlessly when this script is downloaded and run as a file,
+    // but the Cloud Shell one-liner (irm ... | [scriptblock]::Create(...))
+    // feeds the fetched text straight into the parser as a raw string, where
+    // the BOM becomes a literal leading character. PowerShell then no longer
+    // sees [CmdletBinding()]/param() as the block's first statement — which
+    // both attributes require — and fails with a "position sensitive" parse
+    // error. Source-of-truth fix is keeping scripts/Deploy-PatchPilot.ps1
+    // itself saved without a BOM; this is a defensive backstop in case some
+    // future editor resaves it with one.
+    const template = readFileSync(DEPLOY_SCRIPT_PATH, "utf8").replace(/^\uFEFF/, "");
     const script = template
       .replace(/\{\{INSTANCE_URL\}\}/g, config.PUBLIC_URL)
       .replace(/\{\{PAIRING_TOKEN\}\}/g, token)
