@@ -7,7 +7,7 @@ import { config, webOrigins } from "../config.js";
 import { resolveWebOrigin } from "./origin.js";
 import {
   getCca,
-  LOGIN_SCOPES,
+  getLoginScopes,
   redeemLoginCode,
   redeemStepUpConsentCode,
   syncAppRegistrationScopes,
@@ -79,7 +79,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return reply.redirect(origin);
     }
     const url = await getCca().getAuthCodeUrl({
-      scopes: LOGIN_SCOPES,
+      scopes: getLoginScopes(),
       // Must be byte-for-byte the same URI /auth/callback later redeems the
       // code with (see redeemLoginCode) — resolved per-request rather than
       // config.AUTH_REDIRECT_URI so a login started from an allow-listed
