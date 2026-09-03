@@ -12,14 +12,22 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json .npmrc tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/db/package.json packages/db/
+COPY packages/graph/package.json packages/graph/
+COPY packages/ai/package.json packages/ai/
 COPY apps/api/package.json apps/api/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile=false --filter @patchpilot/api...
 
-# Copy sources.
+# Copy sources. apps/api depends on both of these directly (see its
+# package.json) — omitting either one fails pnpm's workspace resolution
+# during install (ERR_PNPM_WORKSPACE_PKG_NOT_FOUND) rather than at runtime,
+# so this was caught by the first real `docker compose up --build` rather
+# than silently building off a stale cache the way the worker image once did.
 COPY packages/shared packages/shared
 COPY packages/db packages/db
+COPY packages/graph packages/graph
+COPY packages/ai packages/ai
 COPY apps/api apps/api
 
 EXPOSE 4000
