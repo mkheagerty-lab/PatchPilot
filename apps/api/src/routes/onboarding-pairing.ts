@@ -152,7 +152,8 @@ export async function onboardingPairingRoutes(app: FastifyInstance): Promise<voi
     const template = readFileSync(DEPLOY_SCRIPT_PATH, "utf8");
     const script = template
       .replace(/\{\{INSTANCE_URL\}\}/g, config.PUBLIC_URL)
-      .replace(/\{\{PAIRING_TOKEN\}\}/g, token);
+      .replace(/\{\{PAIRING_TOKEN\}\}/g, token)
+      .replace(/\{\{REDIRECT_URI\}\}/g, config.AUTH_REDIRECT_URI);
 
     await auditSafe({
       engineer: issuedBy,

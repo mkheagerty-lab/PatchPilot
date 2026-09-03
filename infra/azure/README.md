@@ -23,8 +23,23 @@ placeholder value with no known private key, which is safe *only* because
 SSH is off by default (no NSG rule opens port 22, so the placeholder can
 never actually be used to log in) — see `enableSsh` below if you want real
 SSH access. The deployment's `fqdn` / `url` outputs show the address the
-instance is reachable at once cloud-init finishes (a few minutes after the
-VM boots) — see "Verify" below.
+instance is reachable at.
+
+Cloud-init builds four Docker images from source, which takes about 10
+minutes — the Portal's deployment status stays "Running" for that whole
+window (a `pp-wait-for-app-ready` run-command resource in `main.bicep`
+deliberately blocks ARM from reporting "Succeeded" until the app answers at
+`/api/health`), and the URL itself is never a dead connection in the
+meantime — it briefly serves a "PatchPilot is deploying…" placeholder page
+before the real stack takes over.
+
+If that resource ever reports **Failed**, it does not necessarily mean the
+VM or app is broken — it just means nothing answered `/api/health` within
+~25 minutes. Check the actual state with the `az vm run-command invoke`
+commands under "Verify" below (`docker compose ps` / `logs caddy`) before
+assuming anything needs fixing; a slow first-boot image pull or a transient
+Let's Encrypt hiccup can trip the timeout even though the stack comes up
+fine moments later.
 
 ### Manual / advanced: Azure CLI
 

@@ -32,8 +32,15 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $MspTenantId,
 
+    # {{REDIRECT_URI}} is a template placeholder, substituted with this
+    # instance's real AUTH_REDIRECT_URI on a personalized download (see
+    # apps/api/src/routes/onboarding-pairing.ts), same mechanism as
+    # $InstanceUrl/$PairingToken below. An un-substituted placeholder means
+    # this is a plain, unmodified copy of the script (a self-hosted git
+    # clone) - the fallback right after $ErrorActionPreference below restores
+    # this parameter's original localhost default in that case.
     [Parameter(Mandatory = $false)]
-    [string] $RedirectUri = "http://localhost:5173/auth/callback",
+    [string] $RedirectUri = "{{REDIRECT_URI}}",
 
     [Parameter(Mandatory = $false)]
     [string] $OutputFolder = "$env:USERPROFILE\PatchPilot-Deploy",
@@ -74,6 +81,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# See the $RedirectUri param comment above: an un-substituted {{REDIRECT_URI}}
+# means this is an unmodified copy of the script, not a personalized download
+# - restore the real default so a self-hoster's experience is unchanged.
+if ($RedirectUri -eq "{{REDIRECT_URI}}") {
+    $RedirectUri = "http://localhost:5173/auth/callback"
+}
 
 $AppDisplayName = "PatchPilot"
 
@@ -1123,6 +1137,12 @@ LOG_LEVEL=info
     # param block above) means this is a plain, unmodified copy of the script,
     # not one downloaded from an instance's Setup page. Treat that exactly
     # like "not supplied", not like a real (and doomed-to-fail) pairing target.
+    #
+    # $RedirectUri deliberately isn't part of this gate: by now it has always
+    # already resolved to a real, usable value (either the substituted real
+    # URI or the localhost fallback near the top of the script), and it's
+    # used earlier for the app registration itself - not specific to this
+    # phone-home step the way $InstanceUrl/$PairingToken are.
     $pairingRequested = $InstanceUrl -and $PairingToken `
         -and $InstanceUrl -ne "{{INSTANCE_URL}}" -and $PairingToken -ne "{{PAIRING_TOKEN}}"
 

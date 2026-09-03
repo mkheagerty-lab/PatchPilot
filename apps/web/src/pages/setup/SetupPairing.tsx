@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import { CopyButton } from "../../components/ui";
 
 /**
  * Shown by <AuthGate> instead of the normal login redirect when the instance
@@ -18,6 +19,7 @@ import { api } from "../../lib/api";
  */
 export function SetupPairing() {
   const queryClient = useQueryClient();
+  const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script"))) -MspTenantId <YOUR-TENANT-ID>`;
 
   // Once the customer's admin runs the script, POST /api/onboarding/pair
   // restarts the api process (see onboarding-pairing.ts) with real Entra
@@ -61,6 +63,30 @@ export function SetupPairing() {
           instance. This page updates automatically once pairing completes —
           no need to reload.
         </p>
+
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          <h2 className="text-sm font-semibold text-slate-800">Or run in Azure Cloud Shell</h2>
+          <p className="mt-1.5 text-xs text-slate-500">
+            Skip the download — paste this one-liner into an Azure Cloud Shell
+            (PowerShell) session. Replace{" "}
+            <code className="font-mono">&lt;YOUR-TENANT-ID&gt;</code> with
+            your own Entra tenant ID first.
+          </p>
+          <div className="mt-2.5 flex items-start gap-2">
+            <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-700">
+              {cloudShellCommand}
+            </code>
+            <CopyButton value={cloudShellCommand} />
+          </div>
+          <a
+            href="https://shell.azure.com/powershell"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2.5 inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-800"
+          >
+            Open Azure Cloud Shell ↗
+          </a>
+        </div>
       </div>
     </div>
   );

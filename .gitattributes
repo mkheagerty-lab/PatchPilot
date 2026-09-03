@@ -1,0 +1,10 @@
+# infra/azure/main.bicep's loadTextContent() and inline script blocks embed
+# these files' literal bytes into infra/azure/azuredeploy.json's JSON string
+# values as escaped \r\n vs \n — a difference git's own line-ending
+# normalization can't fix after the fact, because it only touches a file's
+# own EOL bytes, not escaped characters already baked into a string value.
+# Force LF so `az bicep build` produces the same output on every machine,
+# regardless of a contributor's core.autocrlf setting.
+infra/azure/*.bicep text eol=lf
+infra/azure/*.yaml text eol=lf
+infra/azure/*.json text eol=lf

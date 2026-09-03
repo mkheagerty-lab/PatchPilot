@@ -14,6 +14,35 @@ packages:
   - ca-certificates
   - curl
 
+# Boot-time placeholder so https://$DOMAIN answers something immediately
+# instead of a dead connection for the ~10 minutes the real stack takes to
+# build — see the pp-placeholder container started below.
+write_files:
+  - path: /opt/patchpilot-placeholder/index.html
+    permissions: '0644'
+    content: |
+      <!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <meta http-equiv="refresh" content="15" />
+          <title>PatchPilot is deploying…</title>
+          <style>
+            body { font-family: system-ui, sans-serif; background: #f8fafc; color: #1e293b;
+                   display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            .card { max-width: 32rem; padding: 2rem; text-align: center; }
+            p { color: #64748b; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h1>PatchPilot is deploying…</h1>
+            <p>This typically takes about 10 minutes. This page refreshes
+               automatically — no action needed.</p>
+          </div>
+        </body>
+      </html>
+
 runcmd:
   # Keep the OS patched without anyone logging in.
   - systemctl enable --now unattended-upgrades
@@ -24,6 +53,20 @@ runcmd:
   - curl -fsSL https://get.docker.com | sh
   - usermod -aG docker __ADMIN_USER__
   - systemctl enable --now docker
+
+  # Boot-time placeholder so something answers HTTPS immediately — the real
+  # Caddy/Compose stack isn't up for ~10 more minutes. Shares the named
+  # volumes the real `caddy` Compose service (project name "patchpilot", see
+  # docker-compose.yml) will use, so the cert issued here is reused rather
+  # than re-requested once the real stack takes over.
+  - |
+    docker run -d --name pp-placeholder --restart unless-stopped \
+      -p 80:80 -p 443:443 \
+      -v patchpilot_caddy_data:/data \
+      -v patchpilot_caddy_config:/config \
+      -v /opt/patchpilot-placeholder:/srv/pp-placeholder:ro \
+      caddy:2.11-alpine \
+      caddy file-server --domain __PP_DOMAIN__ --root /srv/pp-placeholder
 
   - git clone --branch __REPO_REF__ --single-branch __REPO_URL__ /opt/patchpilot
   - cp /opt/patchpilot/.env.example /opt/patchpilot/.env
@@ -69,4 +112,7 @@ runcmd:
   # each service's own `env_file: ../.env`, which only injects vars into
   # the container's runtime environment and does not affect this
   # file-level interpolation.
+  # Free ports 80/443 before the real Caddy binds them.
+  - docker stop pp-placeholder && docker rm pp-placeholder
+
   - cd /opt/patchpilot && docker compose -f infra/docker-compose.yml --env-file .env up -d --build
