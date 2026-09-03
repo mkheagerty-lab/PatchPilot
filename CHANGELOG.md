@@ -77,3 +77,24 @@ rollout:
   exercising real Postgres/Redis against an isolated `patchpilot_test`
   database and Redis logical DB 15 — never the databases real tenant data
   lives in.
+
+## Phase 5 — Onboarding pairing, vendor entitlement/licensing, custom domains
+
+Merged to `main` alongside the rest of Phase 5.
+
+- Fix for license tenant-count using the wrong consent signal.
+- Vendor entitlement/licensing system — a signed entitlement token verified
+  against a published public key, gating write scopes and Live Response
+  quota by plan.
+- Onboarding-pairing flow for provisioning a customer's app registration
+  without a manual Entra walkthrough.
+- Dynamic OAuth redirect origin resolution (`webOrigins`, replacing a single
+  hardcoded `AUTH_REDIRECT_URI`) plus semi-automated custom-domain
+  management on the App Registration page — add a `<label>.patchpilot365.com`
+  subdomain or a fully custom hostname, verify it via a read-only CNAME
+  check, and push the resulting redirect URI(s) into the real Entra app
+  registration with one click.
+- Templated Azure VM deployment (Bicep + cloud-init, no SSH).
+- Removed "BITG"/"Black Iron" branding from all user-facing support,
+  instructions, and app-registration text in favor of "PatchPilot Support"
+  (`support@patchpilot365.com`).

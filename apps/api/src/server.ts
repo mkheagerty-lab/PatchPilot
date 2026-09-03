@@ -43,6 +43,7 @@ import { updateRingsRoutes } from "./routes/update-rings.js";
 import { driverUpdatesRoutes } from "./routes/driver-updates.js";
 import { windowsUpdatesRoutes } from "./routes/windows-updates.js";
 import { groupsRoutes } from "./routes/groups.js";
+import { domainsRoutes, domainsInternalRoutes } from "./routes/domains.js";
 import { sendAlertEmail } from "@patchpilot/shared/alerting";
 
 export async function buildServer() {
@@ -184,6 +185,8 @@ export async function buildServer() {
   await app.register(driverUpdatesRoutes);
   await app.register(windowsUpdatesRoutes);
   await app.register(groupsRoutes);
+  await app.register(domainsRoutes);
+  await app.register(domainsInternalRoutes);
 
   return app;
 }

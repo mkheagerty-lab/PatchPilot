@@ -67,7 +67,7 @@ interface EntitlementView {
   /** True only for a verified, currently-valid pro/unlimited token. */
   valid: boolean;
   invalidReason: string | null;
-  /** Tenants with `consentStatus === "consented"` only — a merely-discovered GDAP relationship never counts against the tenant limit. */
+  /** Tenants with `reachability === "reachable"` only — a merely-discovered GDAP relationship (`consentStatus === "consented"`) never counts against the tenant limit; only a tenant PatchPilot's own app can actually reach does. */
   consentedTenantCount: number;
   perTenantDeviceUsage: PerTenantDeviceUsage[];
   trialStartedAt: string | null;
@@ -121,9 +121,15 @@ async function loadUsageByTenant(): Promise<Map<string, number>> {
 async function loadView(): Promise<EntitlementView> {
   const [stored, tenants, trial] = await Promise.all([loadStored(), loadTenants(), loadTrial()]);
   // Discovery (tenant:discover) upserts a row for every GDAP relationship it
-  // finds, consented or not — see sync.ts. Only consented tenants count
-  // against the tier's tenant limit, matching assertWritesAllowed.
-  const consentedTenantCount = tenants.filter((t) => t.consentStatus === "consented").length;
+  // finds, consented or not — see sync.ts. `consentStatus` tracks that GDAP
+  // relationship's own state on Microsoft's side and flips to "consented" the
+  // moment the customer approves it there, well before PatchPilot's own app
+  // has been granted admin consent in that tenant — so it is NOT the count we
+  // want here. `reachability === "reachable"` is: it's only set once a real
+  // probe successfully calls Graph for that tenant (see licensing.ts's
+  // probeTenant), which requires PatchPilot's own app to actually be
+  // consented into it. Matches assertWritesAllowed in packages/graph/src/write-gate.ts.
+  const consentedTenantCount = tenants.filter((t) => t.reachability === "reachable").length;
   // The MSP's own allocation of the pool — this is tenants' own state, not
   // the entitlement's, so it's always shown regardless of tier/validity (an
   // admin should be able to see what they've allocated even while sorting

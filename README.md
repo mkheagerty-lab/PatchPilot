@@ -318,4 +318,7 @@ the Winget/WUA PowerShell generators are in
   RBAC (Users & Roles), the remediation catalog/history views, Windows Update rings/
   quality/feature-update campaigns, branded PDF/CSV reports, a pre-ship security/
   hardening pass (CSRF protection, session-fixation fix, CI pipeline), and an
-  admin-configurable SMTP relay for job/sync failure alerts. Merged to `main`. ✅
+  admin-configurable SMTP relay for job/sync failure alerts; a multi-tenant
+  onboarding-pairing + vendor entitlement/licensing system; dynamic OAuth
+  redirect origins and semi-automated custom-domain management for the app
+  registration. Merged to `main`. ✅

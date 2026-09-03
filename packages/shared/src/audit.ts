@@ -230,6 +230,17 @@ export const AUDIT_ACTIONS = [
   "app-registration:sync-start",
   "app-registration:sync-success",
   "app-registration:sync-failed",
+  // Custom domain management (Setup → App Registration, "Custom domain"
+  // section — apps/api/src/routes/domains.ts). "domain-sync-*" is the redirect-URI
+  // counterpart of the "app-registration:sync-*" scope-sync actions above: same
+  // one-time elevated step-up grant, but patches Web.RedirectUris instead.
+  "custom-domain:created",
+  "custom-domain:activated",
+  "custom-domain:verify-failed",
+  "custom-domain:deleted",
+  "app-registration:domain-sync-start",
+  "app-registration:domain-sync-success",
+  "app-registration:domain-sync-failed",
   // Onboarding pairing — the "phone home" flow that replaces writing Entra
   // credentials to a local .env (see apps/api/src/routes/onboarding-pairing.ts).
   // "issued" is written by the authenticated admin who generated the
@@ -392,6 +403,14 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "app-registration:sync-success": "Permissions synced",
   "app-registration:sync-failed": "Permission sync failed",
 
+  "custom-domain:created": "Custom domain added",
+  "custom-domain:activated": "Custom domain activated",
+  "custom-domain:verify-failed": "Custom domain verification failed",
+  "custom-domain:deleted": "Custom domain removed",
+  "app-registration:domain-sync-start": "Redirect URI sync started",
+  "app-registration:domain-sync-success": "Redirect URIs synced",
+  "app-registration:domain-sync-failed": "Redirect URI sync failed",
+
   "onboarding:pairing-token-issued": "Pairing script downloaded",
   "onboarding:paired": "Instance paired with Entra app registration",
 
@@ -532,6 +551,13 @@ export const AUDIT_ACTION_GROUPS: ReadonlyArray<{
       "app-registration:sync-start",
       "app-registration:sync-success",
       "app-registration:sync-failed",
+      "custom-domain:created",
+      "custom-domain:activated",
+      "custom-domain:verify-failed",
+      "custom-domain:deleted",
+      "app-registration:domain-sync-start",
+      "app-registration:domain-sync-success",
+      "app-registration:domain-sync-failed",
     ],
   },
   {

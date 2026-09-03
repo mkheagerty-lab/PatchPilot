@@ -222,3 +222,59 @@ export async function syncAppRegistrationScopes(input: {
 
   return { applied, consentGranted, warnings };
 }
+
+export interface UpdateRedirectUrisResult {
+  added: string[];
+  alreadyPresent: string[];
+  current: string[];
+}
+
+/**
+ * Additively merges "<origin>/auth/callback" for every origin in
+ * redirectOrigins into the app registration's Web platform redirect URIs,
+ * using the same one-time step-up access token as syncAppRegistrationScopes
+ * above. Idempotent: issues no PATCH at all if every wanted URI is already
+ * present — this is the "won't create duplicated or unexpected changes"
+ * guarantee for the in-app "update via browser" button (apps/api/src/routes/domains.ts),
+ * mirroring scripts/Deploy-PatchPilot.ps1's Merge-RedirectUris/Test-RedirectUriExists
+ * functions. Deliberately does not touch the Spa platform — that PKCE-conflict
+ * cleanup is a first-time-app-creation concern, not relevant to an incremental add.
+ */
+export async function updateAppRegistrationRedirectUris(input: {
+  accessToken: string;
+  clientId: string;
+  redirectOrigins: string[];
+}): Promise<UpdateRedirectUrisResult> {
+  const { accessToken, clientId, redirectOrigins } = input;
+  const appObjectId = await findApplicationObjectId(accessToken, clientId);
+  const current = await graphFetch<{ web?: { redirectUris?: string[] } }>(
+    accessToken,
+    "GET",
+    `/applications/${appObjectId}?$select=web`,
+  );
+  const existing = current.web?.redirectUris ?? [];
+  const wanted = redirectOrigins.map((o) => `${o.replace(/\/+$/, "")}/auth/callback`);
+
+  const added: string[] = [];
+  const alreadyPresent: string[] = [];
+  const merged = [...existing];
+  for (const uri of wanted) {
+    if (existing.includes(uri)) {
+      alreadyPresent.push(uri);
+      continue;
+    }
+    if (!merged.includes(uri)) {
+      merged.push(uri);
+      added.push(uri);
+    }
+  }
+  const deduped = Array.from(new Set(merged));
+
+  if (added.length > 0) {
+    await graphFetch(accessToken, "PATCH", `/applications/${appObjectId}`, {
+      web: { redirectUris: deduped },
+    });
+  }
+
+  return { added, alreadyPresent, current: deduped };
+}

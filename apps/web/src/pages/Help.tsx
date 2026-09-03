@@ -90,8 +90,11 @@ export function Help() {
         <Card>
           <h2 className="mb-2 text-sm font-semibold text-slate-900">Support</h2>
           <p className="text-sm text-slate-500">
-            For anything not covered here, contact your PatchPilot administrator at Black
-            Iron Technology Group.
+            For anything not covered here, contact PatchPilot Support at{" "}
+            <a href="mailto:support@patchpilot365.com" className="text-sky-700 hover:underline">
+              support@patchpilot365.com
+            </a>
+            .
           </p>
         </Card>
       </div>

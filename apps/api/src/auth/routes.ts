@@ -3,13 +3,15 @@ import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
 import { permissionsFor } from "@patchpilot/shared";
-import { config } from "../config.js";
+import { config, webOrigins } from "../config.js";
+import { resolveWebOrigin } from "./origin.js";
 import {
   cca,
   LOGIN_SCOPES,
   redeemLoginCode,
   redeemStepUpConsentCode,
   syncAppRegistrationScopes,
+  updateAppRegistrationRedirectUris,
   storeToken,
   clearTokens,
   auditSafe,
@@ -34,6 +36,7 @@ function landingPage(opts: {
   heading: string;
   body: string;
   tone: "ok" | "error";
+  origin: string;
 }): string {
   const accent = opts.tone === "ok" ? "#16a34a" : "#dc2626";
   const escape = (s: string) =>
@@ -57,7 +60,7 @@ function landingPage(opts: {
   <span class="badge">${opts.tone === "ok" ? "✓" : "!"}</span>
   <h1>${escape(opts.heading)}</h1>
   <p>${opts.body}</p>
-  <p><a href="${escape(config.PUBLIC_URL)}">Return to PatchPilot →</a></p>
+  <p><a href="${escape(opts.origin)}">Return to PatchPilot →</a></p>
 </div></body></html>`;
 }
 
@@ -69,14 +72,20 @@ function landingPage(opts: {
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   // Step 1: kick off login -> redirect to Microsoft.
   app.get("/auth/login", async (req, reply) => {
+    const origin = resolveWebOrigin(req);
     // DEMO_MODE: skip Microsoft entirely; the demo engineer session is already
     // injected by the global hook, so just bounce back to the app.
     if (config.DEMO_MODE) {
-      return reply.redirect(config.PUBLIC_URL);
+      return reply.redirect(origin);
     }
     const url = await cca.getAuthCodeUrl({
       scopes: LOGIN_SCOPES,
-      redirectUri: config.AUTH_REDIRECT_URI,
+      // Must be byte-for-byte the same URI /auth/callback later redeems the
+      // code with (see redeemLoginCode) — resolved per-request rather than
+      // config.AUTH_REDIRECT_URI so a login started from an allow-listed
+      // alternate origin (see auth/origin.ts) round-trips back to itself
+      // instead of always landing on the default origin.
+      redirectUri: `${origin}/auth/callback`,
       // state ties the callback to this session (CSRF protection).
       state: req.session.sessionId,
     });
@@ -117,6 +126,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     "/auth/callback",
     async (req, reply) => {
       const { code, state, error, error_description, admin_consent, tenant } = req.query;
+      // Resolved once and reused throughout: this callback is only ever
+      // reached via the exact origin /auth/login (or the sync-permissions
+      // step-up start) sent as redirectUri, so this always matches.
+      const origin = resolveWebOrigin(req);
 
       // An error from either the login or the admin-consent flow.
       if (error) {
@@ -137,6 +150,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
         return reply.type("text/html").code(400).send(
           landingPage({
+            origin,
             tone: "error",
             title: "PatchPilot — authorization failed",
             heading: "Authorization didn't complete",
@@ -175,6 +189,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
           return reply.type("text/html").code(400).send(
             landingPage({
+              origin,
               tone: "error",
               title: "PatchPilot — sync permissions",
               heading: "This link is no longer valid",
@@ -184,7 +199,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         }
 
         try {
-          const stepUp = await redeemStepUpConsentCode(code, config.AUTH_REDIRECT_URI);
+          const stepUp = await redeemStepUpConsentCode(code, `${origin}/auth/callback`);
           const result = await syncAppRegistrationScopes({
             accessToken: stepUp.accessToken,
             clientId: config.ENTRA_CLIENT_ID,
@@ -216,6 +231,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
           return reply.type("text/html").send(
             landingPage({
+              origin,
               tone: result.warnings.length > 0 ? "error" : "ok",
               title: "PatchPilot — sync permissions",
               heading: result.warnings.length > 0 ? "Permissions synced with warnings" : "Permissions synced",
@@ -241,10 +257,107 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
           return reply.type("text/html").code(500).send(
             landingPage({
+              origin,
               tone: "error",
               title: "PatchPilot — sync permissions",
               heading: "Permission sync failed",
               body: `Microsoft returned an error while syncing permissions: ${
+                err instanceof Error ? err.message : "unknown error"
+              }. No changes may have been applied — check Azure Portal, or try again from PatchPilot.`,
+            }),
+          );
+        }
+      }
+
+      // "Update app registration" step-up return (Setup -> App Registration,
+      // Custom domain section). Same step-up mechanics as the syncperm branch
+      // above, discriminated by state prefix (apps/api/src/routes/domains.ts),
+      // but calls updateAppRegistrationRedirectUris instead of
+      // syncAppRegistrationScopes — it patches Web.RedirectUris, not permissions.
+      const SYNC_DOMAINS_STATE_PREFIX = "patchpilot-syncdomains:";
+      if (code && state?.startsWith(SYNC_DOMAINS_STATE_PREFIX)) {
+        const sessionId = state.slice(SYNC_DOMAINS_STATE_PREFIX.length);
+        const engineer = req.session.engineer;
+
+        if (!engineer || sessionId !== req.session.sessionId) {
+          await auditSafe({
+            engineer: engineer?.upn ?? ANONYMOUS,
+            tenantId: config.ENTRA_TENANT_ID,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:domain-sync-failed",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: "Redirect URI sync callback rejected — session mismatch",
+            outcome: "failure",
+            responseStatus: 400,
+          });
+
+          return reply.type("text/html").code(400).send(
+            landingPage({
+              origin,
+              tone: "error",
+              title: "PatchPilot — sync redirect URIs",
+              heading: "This link is no longer valid",
+              body: "This redirect-URI-sync link doesn't match your current PatchPilot session. Start it again from Setup → App Registration.",
+            }),
+          );
+        }
+
+        try {
+          const stepUp = await redeemStepUpConsentCode(code, `${origin}/auth/callback`);
+          const result = await updateAppRegistrationRedirectUris({
+            accessToken: stepUp.accessToken,
+            clientId: config.ENTRA_CLIENT_ID,
+            redirectOrigins: webOrigins,
+          });
+
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:domain-sync-success",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: `${engineer.upn} synced app registration redirect URIs (${result.added.length} added, ${result.alreadyPresent.length} already present)`,
+            outcome: "success",
+            responseStatus: 200,
+          });
+
+          return reply.type("text/html").send(
+            landingPage({
+              origin,
+              tone: "ok",
+              title: "PatchPilot — sync redirect URIs",
+              heading: result.added.length ? "Redirect URIs updated" : "Already up to date",
+              body: result.added.length
+                ? `Added: ${result.added.join(", ")}. Already present: ${result.alreadyPresent.length}.`
+                : "Every active domain's redirect URI was already registered — nothing to change.",
+            }),
+          );
+        } catch (err) {
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:domain-sync-failed",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: `${engineer.upn}'s redirect URI sync failed`,
+            outcome: "failure",
+            detail: err instanceof Error ? err.message : String(err),
+            responseStatus: 500,
+          });
+
+          return reply.type("text/html").code(500).send(
+            landingPage({
+              origin,
+              tone: "error",
+              title: "PatchPilot — sync redirect URIs",
+              heading: "Redirect URI sync failed",
+              body: `Microsoft returned an error while updating redirect URIs: ${
                 err instanceof Error ? err.message : "unknown error"
               }. No changes may have been applied — check Azure Portal, or try again from PatchPilot.`,
             }),
@@ -277,6 +390,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
         return reply.type("text/html").send(
           landingPage({
+            origin,
             tone: granted ? "ok" : "error",
             title: "PatchPilot — admin consent",
             heading: granted ? "PatchPilot authorized" : "Consent was not granted",
@@ -293,6 +407,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       if (!code) {
         return reply.type("text/html").code(400).send(
           landingPage({
+            origin,
             tone: "error",
             title: "PatchPilot — nothing to do",
             heading: "Nothing to process",
@@ -322,6 +437,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
         return reply.type("text/html").code(400).send(
           landingPage({
+            origin,
             tone: "error",
             title: "PatchPilot — authorization failed",
             heading: "This sign-in link is no longer valid",
@@ -334,7 +450,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       // customer-tenant access can be minted silently later (Secure App Model).
       let result: Awaited<ReturnType<typeof redeemLoginCode>>;
       try {
-        result = await redeemLoginCode(code);
+        result = await redeemLoginCode(code, `${origin}/auth/callback`);
       } catch (err) {
         await auditSafe({
           engineer: ANONYMOUS,
@@ -380,6 +496,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
         return reply.type("text/html").code(403).send(
           landingPage({
+            origin,
             tone: "error",
             title: "PatchPilot — not provisioned",
             heading: "Your account isn't set up in PatchPilot",
@@ -430,7 +547,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         responseStatus: 302,
       });
 
-      return reply.redirect(config.PUBLIC_URL);
+      return reply.redirect(origin);
     },
   );
 

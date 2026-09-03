@@ -4,6 +4,24 @@
 # everything else to the static web app. Same-origin keeps the session cookie
 # server-side; the browser never receives a Graph token.
 
+# Global options block (must come first, no site address): lets Caddy issue
+# certs on-the-fly for hostnames it doesn't know about at config time — the
+# admin-added subdomains/custom domains from apps/api/src/routes/domains.ts.
+# Before issuing anything, Caddy asks this endpoint whether the requested
+# SNI hostname is one PatchPilot actually recognizes; see that endpoint's own
+# doc comment for why it's safe to leave unauthenticated. caddy:2-alpine
+# ships on_demand_tls natively — no custom build needed.
+{
+	on_demand_tls {
+		ask http://api:4000/internal/domains/ask
+		interval 2m
+		burst 5
+	}
+}
+
+# The primary domain gets its own host-specific block, matched (and its cert
+# issued) the ordinary way — Caddy always prefers a host-specific block over
+# the catch-all below, so this path is unaffected by on-demand TLS.
 {$PP_DOMAIN:patchpilot.example.com} {
 	encode gzip
 
@@ -16,6 +34,34 @@
 	}
 
 	# Everything else -> static SPA (nginx serving the Vite build)
+	handle {
+		reverse_proxy web:80
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
+
+# Catch-all: every admin-added subdomain/custom domain lands here once its
+# on-demand cert is issued. Same routes/headers as the primary block above —
+# kept as a literal duplicate rather than a Caddy snippet/import so this file
+# stays a flat, easy-to-diff list of what each block actually does.
+:443 {
+	tls {
+		on_demand
+	}
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+	handle /auth/* {
+		reverse_proxy api:4000
+	}
 	handle {
 		reverse_proxy web:80
 	}

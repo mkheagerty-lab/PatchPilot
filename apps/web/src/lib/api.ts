@@ -844,6 +844,10 @@ export interface OnboardingReport {
   clientId: string;
   tenantId: string;
   redirectUri: string;
+  /** Every redirect URI this instance's own allowlist currently accepts —
+   * PUBLIC_URL plus every active custom domain. Not a live read of the real
+   * Entra app registration; the two match once a sync has actually run. */
+  redirectUris: string[];
   /** One-click admin-consent URL for the MSP's own (home) tenant — the Global
    * Administrator opens this to make the first "Discover tenants" succeed. */
   homeConsentUrl: string;
@@ -853,6 +857,42 @@ export interface OnboardingReport {
     partnerCenter: string[];
   };
   consentTargets: ConsentTarget[];
+}
+
+/** "<label>.patchpilot365.com" (PatchPilot Support creates the DNS record) vs. a fully custom hostname. */
+export type DomainType = "subdomain" | "custom";
+/** "pending" until a Verify click finds a matching CNAME; "active" once it does. */
+export type DomainStatus = "pending" | "active";
+
+/** Server-computed, per-domain setup instructions from GET /api/domains. */
+export type DomainInstructions =
+  | { kind: "email-support"; summary: string; supportMailto: string }
+  | { kind: "dns-cname"; summary: string; cnameRecord: { name: string; target: string } };
+
+/** One row from GET /api/domains — mirrors packages/db's custom_domains table. */
+export interface CustomDomain {
+  id: string;
+  hostname: string;
+  type: DomainType;
+  status: DomainStatus;
+  cnameTarget: string;
+  createdBy: string;
+  createdAt: string;
+  activatedAt: string | null;
+  lastCheckedAt: string | null;
+  lastCheckError: string | null;
+  instructions: DomainInstructions;
+}
+
+/** GET /api/domains — the App Registration page's Custom Domains card. */
+export interface DomainsReport {
+  primaryOrigin: string;
+  platformBaseDomain: string;
+  /** The host new domains are told to CNAME at — see CUSTOM_DOMAIN_CNAME_TARGET. */
+  cnameTarget: string;
+  /** False when cnameTarget isn't a real DNS name (e.g. a local-dev "localhost:5173"). */
+  cnameTargetUsable: boolean;
+  domains: CustomDomain[];
 }
 
 /** Whether a tenant's licensing could actually be read, independent of reachability. */
@@ -1591,7 +1631,7 @@ export interface EntitlementView {
   /** True only for a verified, currently-valid pro/unlimited token. */
   valid: boolean;
   invalidReason: string | null;
-  /** Tenants with `consentStatus === "consented"` only — a merely-discovered GDAP relationship never counts against the tenant limit. */
+  /** Tenants with `reachability === "reachable"` only — a merely-discovered GDAP relationship never counts against the tenant limit; only a tenant PatchPilot's own app can actually reach does. */
   consentedTenantCount: number;
   perTenantDeviceUsage: EntitlementTenantUsage[];
   trialStartedAt: string | null;

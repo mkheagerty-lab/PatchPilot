@@ -1,0 +1,507 @@
+================================================================================
+PATCHPILOT — HANDOVER PACK FOR CLAUDE CODE
+================================================================================
+
+Copy everything below into a new Claude Code session as your initial prompt.
+It is written as a self-contained brief.
+
+================================================================================
+0. CONTEXT FOR CLAUDE CODE
+================================================================================
+
+You are picking up a project called PatchPilot. A clickable prototype was built
+in a Microsoft 365 low-code "App Builder" environment, but that environment
+cannot perform live Microsoft Graph / Defender / Partner Center calls. The user
+wants the real version built OUTSIDE of:
+
+  - Microsoft Azure (no Azure subscription available)
+  - SharePoint / SPFx
+  - Power Automate / Power Apps / Power Pages
+  - Dataverse
+
+The real version should be a self-hostable web application the user can run on
+their own infrastructure (their MSP's hardware, a VPS, on-prem server, or
+anywhere they choose). All Microsoft API auth, token handling, and Graph
+orchestration must be done in a backend service the user controls, not in a
+cloud PaaS service.
+
+================================================================================
+1. WHAT PATCHPILOT IS
+================================================================================
+
+PatchPilot is a multi-tenant MSP patch management console that closes the gap
+between Microsoft Defender Vulnerability Management (MDVM) — which only
+surfaces vulnerabilities — and actual remediation. It is inspired by
+Roboshadow's "Cyberheal" product, which uses Winget under the hood.
+
+CORE VALUE PROPOSITION
+----------------------
+MDVM tells you what's vulnerable. Intune tells you what's deployed. Neither
+gives you a single console where an MSP engineer can see a CVE, click a button,
+and patch it across one device, a group, or on a schedule — using Winget for
+third-party apps and Windows Update Agent for OS patches. PatchPilot is that
+console.
+
+TARGET USER
+-----------
+MSP engineers managing multiple customer tenants via GDAP (Granular Delegated
+Admin Privileges).
+
+================================================================================
+2. WHAT WAS BUILT IN THE PROTOTYPE
+================================================================================
+
+The following pages, flows, and logic were designed and validated as a UI
+prototype. ALL DATA IS CURRENTLY MOCKED. All of this needs to be re-implemented
+in the real app.
+
+2.1 INFORMATION ARCHITECTURE
+----------------------------
+Operations         : Dashboard, Vulnerabilities, Devices, Remediations,
+                     Schedules, Jobs
+Catalog            : Winget Catalog
+Setup & integration: Connection Status, App Registration Kit, Architecture,
+                     Readiness, Pre-flight Check
+Settings           : Branding (colours, logo, product name), Compliance SLA,
+                     Tenant management
+
+2.2 KEY FEATURES
+----------------
+
+DASHBOARD
+  - KPIs: total CVEs, critical count, devices at risk, SLA compliance %,
+    overdue-by-severity breakdown, recent job activity
+  - Per-tenant view via tenant switcher in header
+
+VULNERABILITIES
+  - Table of CVEs: CVE ID, title, severity, CVSS, affected devices, software,
+    detection date, SLA chip (days remaining / overdue), Winget-remediable
+    flag, status
+  - Filters: severity, tenant, "Overdue only", "Winget-remediable only"
+  - Per-row "Run Now" action
+  - CSV export
+
+DEVICES
+  - Table of managed devices: hostname, OS, last seen, compliance,
+    vulnerability count, owner, tenant
+  - Per-device "Run Now" action
+  - CSV export
+
+REMEDIATIONS (WIZARD)
+  Step 1: Select CVE(s) or software target
+  Step 2: Select scope — device, dynamic group, all-tenant
+  Step 3: Select delivery channel
+            - On-demand Intune Remediation (PowerShell Detect + Remediate)
+            - Win32 app (Required assignment + device sync)
+            - Settings Catalog policy [CUT — never implemented; see
+              packages/shared/src/channels.ts, which has never had a
+              settings-catalog entry across the whole build. Deliberate
+              scope reduction to the 4 channels actually shipped (plus a
+              5th, Microsoft Store app deploy, added later and not in this
+              original list), not a dropped requirement.]
+            - Defender Live Response (real-time)
+            - Expedited Quality Update (OS patches only)
+  Step 4: Auto-generated script preview — Winget for third-party apps,
+          WUA / PSWindowsUpdate for OS patches
+  Step 5: Schedule — now / scheduled / recurring
+
+RUN NOW DIALOG
+  - Tier selector: Patch now (Live Response) / Expedite (Expedited Quality
+    Update) / Schedule (Remediation)
+  - Auto-routes to the appropriate Graph endpoint based on CVE type
+    (app vs OS) and urgency
+  - Shows the exact Graph endpoint and payload that will be called
+
+SCHEDULES
+  - Recurring patching policies (daily / weekly / cron-style)
+  - Bound to dynamic device groups
+  - Per-schedule history
+
+JOBS FEED
+  - Live status of all triggered actions: queued > running > succeeded / failed
+  - Per-job device, channel, CVE, timestamps, exit code, output
+  - CSV export
+
+WINGET CATALOG
+  - Local catalog of Winget packages: package ID, name, publisher, latest
+    version, install/upgrade command preview
+  - Mapping table from MDVM software title > Winget package ID
+
+CONNECTION STATUS
+  - Per-integration status: Graph, Defender, Intune, Partner Center
+  - Required scopes per integration
+  - Last successful call timestamp + latency
+  - Customer consent status table: every GDAP-linked tenant shown as
+    consented / pending / expired, with "Copy consent URL" per row, consent
+    coverage KPI, filterable
+
+APP REGISTRATION KIT
+  - Downloadable Entra ID app manifest JSON
+  - Full list of Graph + Defender + Partner Center scopes required
+  - GDAP role recommendations
+  - Customer admin consent URL template
+  - Automated installer script — downloadable Deploy-PatchPilot.ps1 with
+    prerequisites check, app creation, manifest application, scope
+    configuration, secret generation, MSP admin consent, Partner Center GDAP
+    tenant enumeration, per-customer consent URL CSV output, -WhatIf and
+    -Uninstall modes
+  - Interactive per-tenant consent URL helper (paste tenant IDs > get
+    personalised consent URLs)
+  - Customer email templates (plain text + HTML) for sending consent requests
+
+ARCHITECTURE PAGE
+  - SVG data flow diagram of the target architecture
+  - Layer-by-layer stack description
+  - Three-phase rollout plan
+  - Originally Azure-free; NOW NEEDS REWRITING for fully self-hosted,
+    no-cloud-PaaS architecture
+
+READINESS CHECKLIST
+  - Every integration shown as live / mocked / pending
+  - Per-category filters
+  - Live readiness score
+  - "Live Mode" toggle (currently flips a flag only)
+
+PRE-FLIGHT CHECK WIZARD
+  Step 1: Run Deploy script with -WhatIf
+  Step 2: Run Deploy script for real
+  Step 3: Send customer consent emails
+  Step 4: Verify customer consent
+  Step 5: Flip to Live Mode
+
+SETTINGS — BRANDING
+  - Colour pickers for primary / secondary / accent / background
+  - Theme presets
+  - Logo upload with automatic palette extraction from the image (applies
+    extracted colours across the UI)
+  - Product name field (flows through sidebar + mobile header)
+  - Persisted to local state
+
+SETTINGS — COMPLIANCE SLA
+  - Editable per-severity day thresholds
+    Defaults: Critical = 7, High = 14, Medium = 30, Low = 90
+  - Drives SLA chips on Vulnerabilities and KPIs on Dashboard
+
+SETTINGS — TENANT MANAGEMENT
+  - Manual tenant CRUD (will be replaced by live Partner Center enumeration)
+
+2.3 SCRIPT GENERATION (REAL, REUSABLE OUTPUT)
+---------------------------------------------
+The prototype generates real, deployable scripts for:
+
+WINGET REMEDIATION (THIRD-PARTY APPS)
+--------------------------------------
+# Runs as SYSTEM via Intune Remediation or Live Response
+$ErrorActionPreference = 'Stop'
+$wingetPath = (Get-ChildItem -Path "C:\Program Files\WindowsApps" `
+  -Filter "Microsoft.DesktopAppInstaller_*" -Directory |
+  Sort-Object Name -Descending | Select-Object -First 1).FullName
+$winget = Join-Path $wingetPath 'winget.exe'
+& $winget upgrade --id <PACKAGE_ID> --silent `
+  --accept-source-agreements --accept-package-agreements --force
+exit $LASTEXITCODE
+
+DETECT SCRIPT FOR INTUNE REMEDIATION
+-------------------------------------
+$installed = & $winget list --id <PACKAGE_ID> --exact
+if ($installed -match '<MIN_VERSION>') { exit 0 } else { exit 1 }
+
+WINDOWS UPDATE AGENT REMEDIATION (OS PATCHES)
+----------------------------------------------
+# Option A — PSWindowsUpdate
+Install-Module PSWindowsUpdate -Force -Scope AllUsers
+Import-Module PSWindowsUpdate
+Get-WindowsUpdate -KBArticleID <KB_ID> -Install -AcceptAll -IgnoreReboot
+
+# Option B — Native WUA COM (preferred for Live Response — no module dep)
+$session = New-Object -ComObject Microsoft.Update.Session
+$searcher = $session.CreateUpdateSearcher()
+$results = $searcher.Search("IsInstalled=0 and Type='Software'")
+# ... download + install + report exit code
+
+ENTRA APP REGISTRATION DEPLOY SCRIPT
+-------------------------------------
+A full Deploy-PatchPilot.ps1 was generated that creates the multi-tenant app
+registration, configures scopes, grants MSP admin consent, generates customer
+consent URLs from Partner Center, with -WhatIf and -Uninstall modes.
+
+================================================================================
+3. THE REMEDIATION EXECUTION MODEL
+================================================================================
+
+This is the core IP of PatchPilot. The real build must implement all four
+execution channels:
+
+CHANNEL                     LATENCY    USE CASE                  GRAPH ENDPOINT
+--------------------------- ---------- ------------------------- --------------
+Defender Live Response      seconds    Critical zero-day,        POST /api/machines/{id}/runliveresponse
+                                       single device, ad-hoc     (Defender API host)
+On-demand Intune            1–5 min    Most third-party          POST /deviceManagement/managedDevices/{id}/initiateOnDemandProactiveRemediation
+Remediation                            patches, per-device/group
+Win32 app + device sync     5–15 min   Group-level deployments   POST /deviceManagement/managedDevices/{id}/syncDevice
+Expedited Quality Update    hours      OS patches, push specific POST /deviceManagement/windowsQualityUpdateProfiles
+                                       KB to group fast
+
+TIERED OS PATCH MODEL
+---------------------
+URGENCY                       CHANNEL
+Critical zero-day, patch now  Live Response > WUA script (immediate) +
+                              Update Ring as backstop
+Important, this week          Expedited Quality Updates
+Standard cadence              Update Ring with normal deferrals
+
+IMPORTANT CAVEATS BAKED INTO THE DESIGN
+----------------------------------------
+  - Live Response requires Defender for Business Premium or MDE P2 — gracefully
+    degrade if not licensed
+  - OS patches via Live Response kick off the install but reboot handling must
+    go through Intune Update Ring policy
+  - WSUS / deferral policies may block scripted WUA calls
+  - Per-tenant licensing must be detected and UI gracefully disabled when
+    features aren't available
+
+================================================================================
+4. REQUIRED MICROSOFT GRAPH & DEFENDER SCOPES
+================================================================================
+
+MICROSOFT GRAPH (DELEGATED, VIA GDAP)
+  - SecurityEvents.Read.All                — Defender / MDVM data
+  - Vulnerability.Read.All                 — vulnerability findings
+  - DeviceManagementManagedDevices.ReadWrite.All — Intune devices
+  - DeviceManagementManagedDevices.PrivilegedOperations.All — managedDevices/
+                                                   {id}/syncDevice (win32-app
+                                                   channel's device-sync nudge;
+                                                   ReadWrite.All does NOT cover it)
+  - DeviceManagementConfiguration.ReadWrite.All  — Remediations, Update Rings,
+                                                   Win32 apps
+  - WindowsUpdates.ReadWrite.All           — Expedited Quality Updates
+
+MICROSOFT DEFENDER API
+  - Machine.Read.All
+  - Machine.LiveResponse                   — Live Response execution
+  - Vulnerability.Read.All
+
+MICROSOFT PARTNER CENTER API
+  - user_impersonation (Partner Center)
+  - For GDAP customer tenant enumeration:
+      https://api.partnercenter.microsoft.com/user_impersonation
+
+KEY ENDPOINTS TO INTEGRATE
+--------------------------
+GET  /deviceManagement/managedDevices
+GET  /deviceManagement/managedDevices/{id}/detectedApps
+GET  /security/vulnerabilities/findings
+GET  /security/vulnerabilities/software
+GET  /security/machines
+GET  /deviceManagement/deviceConfigurations            (Update Rings)
+GET  /deviceManagement/deviceHealthScripts             (Remediations)
+POST /deviceManagement/deviceHealthScripts             (create Remediation)
+POST /deviceManagement/managedDevices/{id}/initiateOnDemandProactiveRemediation
+POST /deviceManagement/managedDevices/{id}/syncDevice
+POST /deviceManagement/windowsQualityUpdateProfiles
+POST /api/machines/{id}/runliveresponse                (Defender API host)
+GET  https://api.partnercenter.microsoft.com/v1/customers  (GDAP tenants)
+
+================================================================================
+5. AUTHENTICATION & GDAP MODEL
+================================================================================
+
+This is the part the prototype could not implement and is the biggest piece of
+work.
+
+AUTH FLOW
+---------
+  1. MSP engineer signs into PatchPilot using Entra ID
+     (OIDC / Authorization Code + PKCE) against the MSP tenant
+  2. App acquires a token for the MSP tenant (standard delegated flow)
+  3. For actions in a customer tenant, app does OBO (On-Behalf-Of) token
+     exchange against /{customerTenantId}/oauth2/v2.0/token to get a delegated
+     token scoped to that customer tenant
+  4. Azure AD validates:
+       - GDAP relationship grants the engineer the right roles in the customer
+         tenant
+       - The PatchPilot app has been admin-consented in the customer tenant
+  5. Token is cached server-side (encrypted), refreshed as needed
+
+PER-TENANT CONSENT
+------------------
+GDAP ALONE IS NOT SUFFICIENT. Every customer tenant must separately consent to
+the PatchPilot app. The prototype includes a consent URL generator + email
+templates for this onboarding flow — they should be carried forward.
+
+Consent URL pattern:
+  https://login.microsoftonline.com/{customerTenantId}/adminconsent
+    ?client_id={patchpilotAppId}
+    &redirect_uri={yourRedirectUri}
+
+LICENSING DETECTION PER TENANT
+------------------------------
+Before exposing actions, probe each tenant's SKUs to detect:
+  - Intune (Remediations, Expedited Updates)
+  - Defender for Business / Defender for Business Premium (Live Response)
+  - MDE P2
+
+UI should gracefully disable unsupported channels per tenant with a tooltip
+explaining why.
+
+================================================================================
+6. ARCHITECTURE FOR THE REAL BUILD (SELF-HOSTED, NO CLOUD PAAS)
+================================================================================
+
+STACK RECOMMENDATION
+--------------------
+LAYER             TECHNOLOGY
+Frontend          React + TypeScript + Vite + Tailwind + shadcn/ui
+                  (carry over the prototype UI 1:1)
+Backend           Node.js + Fastify (or NestJS) — single binary, easy to
+                  self-host
+Auth library      @azure/msal-node (Microsoft official, no Azure subscription
+                  needed)
+Database          PostgreSQL (self-hosted) or SQLite (single-instance)
+Job queue         BullMQ + Redis (self-hosted) for scheduled / queued
+                  remediation jobs
+Reverse proxy     Caddy or nginx
+Container         Docker + docker-compose for single-host deployment
+Secrets           .env file with file-permission lock-down, or HashiCorp Vault
+                  if scaling
+Audit log         Postgres table + optional Loki / Grafana for visualisation
+
+WHY THIS STACK
+--------------
+  - 100% self-hostable on any Linux box, VPS, or on-prem server
+  - Zero cloud PaaS dependencies (no Azure, AWS, GCP, SharePoint,
+    Power Platform)
+  - All token handling server-side (browser never sees a Graph token)
+  - MSAL Node handles OBO, refresh tokens, GDAP token exchange correctly
+  - BullMQ handles the scheduling / job state for recurring remediations
+  - Standard Postgres = easy backup, easy migration, no vendor lock-in
+
+DEPLOYMENT MODEL
+----------------
+Single docker-compose.yml running:
+  - patchpilot-web    (frontend, static files served via Caddy)
+  - patchpilot-api    (Fastify backend)
+  - patchpilot-worker (BullMQ worker for scheduled jobs)
+  - postgres
+  - redis
+  - caddy             (TLS termination + reverse proxy)
+
+MSP runs this on:
+  - An on-prem server, or
+  - A small VPS (Hetzner / Linode / DigitalOcean / their existing infra), or
+  - A NUC in their office
+
+REVERSE PROXY + HTTPS
+---------------------
+Caddy auto-provisions Let's Encrypt certs. The redirect URI for the Entra app
+registration becomes:
+  https://patchpilot.<msp-domain>.com/auth/callback
+
+================================================================================
+7. WHAT CLAUDE CODE NEEDS TO BUILD
+================================================================================
+
+PHASE 1 — FOUNDATION (WEEK 1–2)
+  [ ] Scaffold monorepo: apps/web, apps/api, apps/worker, packages/shared
+  [ ] Implement Entra ID OIDC login (MSAL Node) for the MSP tenant
+  [ ] Postgres schema: tenants, devices, vulnerabilities, jobs, schedules,
+      audit_log, settings
+  [ ] Settings: branding (colour pickers + logo palette extraction),
+      compliance SLA thresholds — port directly from prototype
+  [ ] Tenant switcher (manual entry initially)
+  [ ] Docker compose dev environment
+
+PHASE 2 — READ-ONLY LIVE DATA, SINGLE TENANT (WEEK 2–3)
+  [ ] Graph client wrapper with retry/throttling
+  [ ] Devices page > /deviceManagement/managedDevices for MSP's own tenant
+  [ ] Vulnerabilities page > /security/vulnerabilities/findings
+  [ ] Connection Status page with live "Test connection" buttons + scope
+      diagnostics
+  [ ] Licensing detection
+  [ ] Audit log every Graph call
+
+PHASE 3 — WRITE ACTIONS, SINGLE TENANT (WEEK 3–4)
+  [ ] Winget script generator (port from prototype — already working)
+  [ ] WUA script generator (port from prototype — already working)
+  [ ] Run Now: On-demand Intune Remediation
+      (initiateOnDemandProactiveRemediation)
+  [ ] Run Now: Defender Live Response (runliveresponse)
+  [ ] Run Now: Expedited Quality Update
+  [ ] Run Now: Win32 app deploy + device sync
+  [ ] Jobs page: real status polling, BullMQ-backed
+  [ ] Schedules page: BullMQ recurring jobs
+
+PHASE 4 — GDAP MULTI-TENANT (WEEK 4–6)
+  [ ] Partner Center API client
+  [ ] GDAP customer tenant enumeration
+  [ ] OBO token exchange per customer tenant
+  [ ] Per-tenant licensing detection
+  [ ] Customer consent status table (port from prototype — UI is done)
+  [ ] Consent URL helper + email templates (port from prototype — done)
+  [ ] Tenant switcher driven by real Partner Center data
+
+PHASE 5 — POLISH (WEEK 6+)
+  [ ] CSV exports (port from prototype)
+  [ ] Pre-flight check wizard (port from prototype)
+  [ ] Readiness checklist (port from prototype)
+  [ ] Architecture / docs pages (rewrite for self-hosted model)
+  [ ] Backup + restore scripts for Postgres
+  [ ] Multi-engineer support + per-engineer audit attribution
+  [ ] Role-based access (engineer / lead / admin)
+
+================================================================================
+8. THINGS TO CARRY OVER FROM THE PROTOTYPE 1:1
+================================================================================
+
+These are designed, validated, and just need to be re-implemented in React in
+the new app:
+
+  - The whole sidebar / navigation IA
+  - Vulnerabilities table layout + SLA chip logic
+  - Run Now dialog with tier selector
+  - Remediations 5-step wizard
+  - Script generators (Winget + WUA)
+  - Branding settings with logo palette extraction
+  - Compliance SLA settings
+  - Customer consent status table
+  - App Registration Kit page including the Deploy script
+  - Pre-flight check wizard
+  - Readiness checklist
+  - CSV export pattern
+
+================================================================================
+9. THINGS TO REDESIGN
+================================================================================
+
+  - Architecture page — rewrite for self-hosted Node + Postgres + Redis stack
+    (current version assumes browser-only)
+  - Connection Status — currently mocked, needs real "Test connection" backed
+    by actual Graph probes
+  - Live Mode toggle — remove, or repurpose as "demo data toggle" for sales
+    demos
+  - Demo Mode banner — remove once live
+
+================================================================================
+10. NON-NEGOTIABLES / DESIGN PRINCIPLES
+================================================================================
+
+  1. No Azure, no SharePoint, no Power Platform, no Dataverse.
+     Fully self-hosted.
+  2. All tokens server-side. Browser never sees a Graph access token.
+  3. Audit everything. Every Graph call logged with: engineer, tenant,
+     endpoint, payload hash, response status, timestamp.
+  4. Graceful licensing degradation. Never expose a button for a feature the
+     tenant isn't licensed for.
+  5. Per-tenant safety. A single misconfiguration must never cascade across
+     tenants. Token cache, job queue, audit log all keyed by tenant.
+  6. Read-only first. Every new tenant integration starts read-only; write
+     actions opt-in per tenant.
+  7. Deploy script is sacred. The Deploy-PatchPilot.ps1 is real and works —
+     keep it as the canonical onboarding artefact.
+
+================================================================================
+END OF HANDOVER
+================================================================================
+
+Claude Code: please confirm understanding, then propose a Phase 1 monorepo
+scaffold and Docker Compose setup before writing any code.

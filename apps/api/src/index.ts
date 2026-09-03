@@ -1,6 +1,6 @@
 import "./load-env.js"; // MUST be first: populates process.env from the root .env before config is read.
 import { sendAlertEmail } from "@patchpilot/shared/alerting";
-import { CREDENTIALS_ROTATED_CHANNEL } from "@patchpilot/shared";
+import { CREDENTIALS_ROTATED_CHANNEL, CUSTOM_DOMAINS_CHANGED_CHANNEL } from "@patchpilot/shared";
 import { buildServer } from "./server.js";
 import { config } from "./config.js";
 import { connection } from "./queue.js";
@@ -77,9 +77,14 @@ if (!config.DEMO_MODE) {
     console.error("[api] credentials subscriber error:", err.message),
   );
   await credentialsSubscriber.subscribe(CREDENTIALS_ROTATED_CHANNEL);
+  // Same subscriber, second channel: routes/domains.ts publishes here after an
+  // active-domain-set change so EXTRA_WEB_ORIGINS (load-env.ts) is picked up
+  // fresh. apps/worker deliberately does not subscribe to this one — see
+  // CUSTOM_DOMAINS_CHANGED_CHANNEL's doc comment in packages/shared/src/queue.ts.
+  await credentialsSubscriber.subscribe(CUSTOM_DOMAINS_CHANGED_CHANNEL);
   credentialsSubscriber.on("message", (channel) => {
-    if (channel !== CREDENTIALS_ROTATED_CHANNEL) return;
-    app.log.info("credentials rotated — exiting so the process manager restarts us with them");
+    if (channel !== CREDENTIALS_ROTATED_CHANNEL && channel !== CUSTOM_DOMAINS_CHANGED_CHANNEL) return;
+    app.log.info(`${channel} — exiting so the process manager restarts us with fresh config`);
     process.exit(0);
   });
 }
