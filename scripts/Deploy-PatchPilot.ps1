@@ -1303,6 +1303,14 @@ LOG_LEVEL=info
             clientId     = $app.AppId
             tenantId     = $MspTenantId
             clientSecret = $secret.SecretText
+            # The UPN this script is signed in to Microsoft Graph as (see
+            # Get-MgContext above) - lets the instance self-provision its
+            # first admin (apps/api/src/auth/bootstrap.ts) with no separate
+            # manual .env edit + restart. Only used as a fallback default if
+            # the instance has no BOOTSTRAP_ADMIN_UPN of its own already (see
+            # apps/api/src/load-env.ts), so it never overrides an operator's
+            # explicit choice.
+            adminUpn     = $context.Account
         } | ConvertTo-Json
 
         if ($PSCmdlet.ShouldProcess("$InstanceUrl/api/onboarding/pair", "Send Entra app registration credentials")) {
