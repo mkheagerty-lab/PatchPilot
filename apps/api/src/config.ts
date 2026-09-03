@@ -222,8 +222,25 @@ export function loadConfig(): Config {
   // Entra fields are optional, but if any is set they must ALL be set (a
   // half-configured registration is a config bug, not an unpaired instance),
   // and none may be the demo placeholder.
+  //
+  // TEMPLATE_PLACEHOLDERS below are .env.example's old non-blank defaults
+  // (00000000-... GUIDs, "replace-me") from before it shipped these fields
+  // blank. Treated as unset rather than a hard config error — unlike the
+  // DEMO_DEFAULTS check above, an unpaired instance booting successfully
+  // into the pairing screen IS the correct behavior, not a problem to reject.
+  // This also self-heals any instance whose .env still has these values from
+  // its first boot (cloud-init copies .env.example once and never touches
+  // these fields again — see cloud-init.yaml) without requiring anyone to
+  // hand-edit .env.
   const entraFields = ["ENTRA_TENANT_ID", "ENTRA_CLIENT_ID", "ENTRA_CLIENT_SECRET"] as const;
-  const entraSetCount = entraFields.filter((k) => env[k]).length;
+  const TEMPLATE_PLACEHOLDERS: Record<(typeof entraFields)[number], string> = {
+    ENTRA_TENANT_ID: "00000000-0000-0000-0000-000000000000",
+    ENTRA_CLIENT_ID: "00000000-0000-0000-0000-000000000000",
+    ENTRA_CLIENT_SECRET: "replace-me",
+  };
+  const entraSetCount = entraFields.filter(
+    (k) => env[k] && env[k] !== TEMPLATE_PLACEHOLDERS[k],
+  ).length;
   if (entraSetCount > 0 && entraSetCount < entraFields.length) {
     problems.push("ENTRA_TENANT_ID, ENTRA_CLIENT_ID and ENTRA_CLIENT_SECRET must be set together, or not at all");
   }
