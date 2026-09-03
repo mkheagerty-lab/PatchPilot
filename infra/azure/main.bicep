@@ -7,28 +7,37 @@
 @description('Azure region. Defaults to the resource group\'s own region.')
 param location string = resourceGroup().location
 
-@description('DNS label for the free <label>.<region>.cloudapp.azure.com hostname. Must be globally unique within the region.')
-param dnsLabel string
+@description('DNS label for the free <label>.<region>.cloudapp.azure.com hostname. Must be globally unique within the region. Defaults to a generated value so a one-click deploy doesn\'t require inventing a globally-unique name.')
+param dnsLabel string = 'patchpilot-${uniqueString(resourceGroup().id)}'
 
-@description('Custom domain (e.g. patchpilot.yourdomain.com). No default on purpose: omitting it from --parameters makes az deployment group create prompt for it interactively — press Enter to leave it blank and use the free cloudapp.azure.com hostname instead. You can switch later without redeploying.')
-param customDomain string
+@description('Custom domain (e.g. patchpilot.yourdomain.com). Leave blank to use the free cloudapp.azure.com hostname instead. You can switch later without redeploying.')
+param customDomain string = ''
 
 @description('Admin username for the VM (used only for break-glass SSH access).')
 param adminUsername string = 'azureuser'
 
-@description('SSH public key content for the admin user.')
+@description('Enable inbound SSH (port 22) for break-glass access. PatchPilot never needs SSH for setup or day-to-day operation (az vm run-command is used instead) — leave this off to shrink the deploy form.')
+param enableSsh bool = false
+
+@description('SSH public key content for the admin user. Always required by the VM resource (Azure Linux VMs need a credential even with password auth disabled), but network-unreachable unless enableSsh is true.')
 param sshPublicKey string
 
-@description('CIDR allowed to reach SSH (22), e.g. "1.2.3.4/32". Use "*" to allow any source (not recommended).')
-param allowedSshSourceIp string
+@description('CIDR allowed to reach SSH (22) when enableSsh is true, e.g. "1.2.3.4/32". Use "*" to allow any source (not recommended). Ignored when enableSsh is false.')
+param allowedSshSourceIp string = '*'
 
-@description('VM size. B2ms (2 vCPU/8GB) is comfortable for the full stack with AI features off.')
-param vmSize string = 'Standard_B2ms'
+@description('VM size. Standard_B2as_v2 (2 vCPU/8GB) is comfortable for the full stack with AI features off. Use Standard_B4as_v2 (4 vCPU/16GB) if you plan to enable local AI (Ollama + llama3.1:8b).')
+param vmSize string = 'Standard_B2as_v2'
+
+@description('Git repository URL to clone onto the VM. Point this at your own fork to deploy custom code instead of upstream mkheagerty-lab/PatchPilot.')
+param repoUrl string = 'https://github.com/mkheagerty-lab/PatchPilot.git'
+
+@description('Git branch or tag to check out after cloning repoUrl.')
+param repoRef string = 'main'
 
 var vmName = 'patchpilot-vm'
 var resolvedDomain = empty(customDomain) ? publicIp.properties.dnsSettings.fqdn : customDomain
 var cloudInitRaw = loadTextContent('cloud-init.yaml')
-var cloudInitFilled = replace(replace(cloudInitRaw, '__PP_DOMAIN__', resolvedDomain), '__ADMIN_USER__', adminUsername)
+var cloudInitFilled = replace(replace(replace(replace(cloudInitRaw, '__PP_DOMAIN__', resolvedDomain), '__ADMIN_USER__', adminUsername), '__REPO_URL__', repoUrl), '__REPO_REF__', repoRef)
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
   name: 'patchpilot-vnet'
@@ -51,53 +60,60 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
   }
 }
 
+var baseSecurityRules = [
+  {
+    name: 'AllowHTTP'
+    properties: {
+      priority: 100
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourcePortRange: '*'
+      destinationPortRange: '80'
+      sourceAddressPrefix: '*'
+      destinationAddressPrefix: '*'
+    }
+  }
+  {
+    name: 'AllowHTTPS'
+    properties: {
+      priority: 110
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourcePortRange: '*'
+      destinationPortRange: '443'
+      sourceAddressPrefix: '*'
+      destinationAddressPrefix: '*'
+    }
+  }
+]
+
+// Break-glass only — the deploy plan never relies on SSH for setup or
+// day-to-day operation (that all goes through `az vm run-command`). Only
+// added to the NSG when enableSsh is true; otherwise the implicit
+// DenyAllInBound rule blocks port 22 regardless of the VM's SSH key.
+var sshSecurityRule = [
+  {
+    name: 'AllowSSHFromAdmin'
+    properties: {
+      priority: 120
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourcePortRange: '*'
+      destinationPortRange: '22'
+      sourceAddressPrefix: allowedSshSourceIp
+      destinationAddressPrefix: '*'
+    }
+  }
+]
+
 resource nsg 'Microsoft.Network/networkSecurityGroups@2023-09-01' = {
   name: 'patchpilot-nsg'
   location: location
   properties: {
-    securityRules: [
-      {
-        name: 'AllowHTTP'
-        properties: {
-          priority: 100
-          direction: 'Inbound'
-          access: 'Allow'
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          destinationPortRange: '80'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: '*'
-        }
-      }
-      {
-        name: 'AllowHTTPS'
-        properties: {
-          priority: 110
-          direction: 'Inbound'
-          access: 'Allow'
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          destinationPortRange: '443'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: '*'
-        }
-      }
-      {
-        // Break-glass only — the deploy plan never relies on SSH for setup
-        // or day-to-day operation (that all goes through `az vm run-command`).
-        name: 'AllowSSHFromAdmin'
-        properties: {
-          priority: 120
-          direction: 'Inbound'
-          access: 'Allow'
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          destinationPortRange: '22'
-          sourceAddressPrefix: allowedSshSourceIp
-          destinationAddressPrefix: '*'
-        }
-      }
-    ]
+    securityRules: enableSsh ? concat(baseSecurityRules, sshSecurityRule) : baseSecurityRules
   }
 }
 

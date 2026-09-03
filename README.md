@@ -103,6 +103,8 @@ and Caddy provisions the certificate automatically.
 
 ### Deploying to an Azure VM
 
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmkheagerty-lab%2FPatchPilot%2Fmain%2Finfra%2Fazure%2Fazuredeploy.json)
+
 [`infra/azure/`](infra/azure/) has a one-command Bicep + cloud-init deployment:
 `az deployment group create` provisions the network, firewall, a static public
 IP (with a free `<label>.<region>.cloudapp.azure.com` hostname, or your own

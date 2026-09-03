@@ -37,3 +37,19 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  bicep-artifact:
+    name: Verify compiled Bicep artifact is current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pure local compile — no Azure login needed. Catches both a Bicep
+      # syntax/schema error and a committed infra/azure/azuredeploy.json that
+      # has drifted from its main.bicep/cloud-init.yaml source, which is what
+      # lets the "Deploy to Azure" badge safely point straight at main's raw
+      # GitHub URL (see infra/azure/README.md).
+      - name: Build Bicep and diff against committed artifact
+        run: |
+          az bicep build --file infra/azure/main.bicep --outfile /tmp/azuredeploy.generated.json
+          diff -u infra/azure/azuredeploy.json /tmp/azuredeploy.generated.json
