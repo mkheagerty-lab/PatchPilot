@@ -94,7 +94,7 @@ pnpm dev
 
 ```bash
 cp .env.example .env        # set PP_DOMAIN, secrets, POSTGRES_PASSWORD, DEMO_MODE=false
-docker compose -f infra/docker-compose.yml up -d --build
+docker compose -f infra/docker-compose.yml --env-file .env up -d --build
 ```
 
 Services: `caddy` (TLS via Let's Encrypt) → `web` (nginx SPA) + `api` (Fastify),
@@ -126,10 +126,10 @@ To turn it on:
 ```bash
 # 1. Set in .env: AI_FEATURES_ENABLED=true
 # 2. Bring the stack up (or restart it) so the ollama container exists
-docker compose -f infra/docker-compose.yml up -d
+docker compose -f infra/docker-compose.yml --env-file .env up -d
 # 3. One-time model pull — needs host internet access for this step only,
 #    never again after. Weights persist in the ollama_data volume.
-docker compose -f infra/docker-compose.yml exec ollama ollama pull llama3.1:8b
+docker compose -f infra/docker-compose.yml --env-file .env exec ollama ollama pull llama3.1:8b
 ```
 
 `OLLAMA_MODEL` defaults to `llama3.1:8b` (Meta, USA — Llama Community License,
@@ -252,7 +252,7 @@ the app registration and the generated `.env`.
 | --- | --- | --- | --- |
 | **Localhost** | No (your browser only) | Free | Solo testing against **your own MSP tenant**. Register `http://localhost:<port>/auth/callback`. Can't send consent links to a separate customer tenant — localhost isn't reachable by them. |
 | **Tunnel** (Cloudflare Tunnel / ngrok) | Yes | Free | Run the stack locally, expose a public HTTPS URL. Lets you test the **real multi-tenant GDAP consent flow** with a separate test customer tenant. Use a **stable hostname** (Cloudflare Tunnel on a domain you own) — ngrok's free random subdomain changes on restart, forcing you to re-edit the app registration + `.env` each time. |
-| **VPS + domain** | Yes | ~few $/mo | Closest to production. Point DNS at the host and `docker compose -f infra/docker-compose.yml up -d --build`; Caddy auto-provisions the TLS cert. |
+| **VPS + domain** | Yes | ~few $/mo | Closest to production. Point DNS at the host and `docker compose -f infra/docker-compose.yml --env-file .env up -d --build`; Caddy auto-provisions the TLS cert. |
 
 **Recommendation:** validate the UI on `DEMO_MODE=true` first; use **localhost** for
 single-tenant login/OBO testing; reach for **Cloudflare Tunnel** when you need to
