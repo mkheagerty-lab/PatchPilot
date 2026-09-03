@@ -41,6 +41,13 @@ const pairBodySchema = z.object({
   clientId: z.string().min(1),
   tenantId: z.string().min(1),
   clientSecret: z.string().min(1),
+  // Optional: the UPN Deploy-PatchPilot.ps1 was signed in to Microsoft Graph
+  // as when it created the app registration ($context.Account — see the
+  // script's Connect-MgGraph section). Lets a fresh pairing self-provision
+  // its first admin with no separate manual .env edit + restart, the same
+  // "zero manual typing" goal the rest of this flow already has. Optional
+  // because older scripts and any non-script pairing caller won't send it.
+  adminUpn: z.string().min(1).optional(),
 });
 
 export async function onboardingPairingRoutes(app: FastifyInstance): Promise<void> {
@@ -93,6 +100,23 @@ export async function onboardingPairingRoutes(app: FastifyInstance): Promise<voi
           target: tables.settings.key,
           set: { value, updatedAt: new Date() },
         });
+
+      // Best-effort, additive only: never overwrite an admin UPN a previous
+      // pairing (or a manual BOOTSTRAP_ADMIN_UPN in .env) already established.
+      // load-env.ts's loadBootstrapAdminUpn() treats an explicit local
+      // env/.env value as the operator's own override and leaves it alone —
+      // this row is only ever a *fallback* default, so re-pairing (e.g. a
+      // client secret rotation) can't silently reassign who bootstraps as
+      // admin just because a different person happened to run the script.
+      if (body.adminUpn) {
+        await db
+          .insert(tables.settings)
+          .values({
+            key: "bootstrap-admin",
+            value: { upn: body.adminUpn, source: "onboarding-pairing", pairedAt: new Date().toISOString() },
+          })
+          .onConflictDoNothing({ target: tables.settings.key });
+      }
 
       await auditSafe({
         engineer: SYSTEM_ACTORS.onboardingPairing,
