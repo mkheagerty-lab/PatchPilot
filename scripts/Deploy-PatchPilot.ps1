@@ -544,6 +544,13 @@ try {
     if ($isHeadlessSession) {
         Write-Info "No local browser available (headless/Cloud Shell session detected) - using device code sign-in."
         $connectMgGraphParams["UseDeviceCode"] = $true
+        # Connect-MgGraph writes the "go to https://microsoft.com/devicelogin
+        # and enter this code" message to the Information stream, not
+        # directly to the host. $InformationPreference defaults to
+        # SilentlyContinue, which swallows it entirely - the script then
+        # just sits there, indistinguishable from actually being hung,
+        # because it's really waiting on a code the admin was never shown.
+        $connectMgGraphParams["InformationAction"] = "Continue"
     }
     else {
         Write-Info "Using normal interactive sign-in."
