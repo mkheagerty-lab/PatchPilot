@@ -78,11 +78,11 @@ CI fails the build if this file is ever out of sync with its source.
 ```bash
 az vm run-command invoke -g patchpilot-rg -n patchpilot-vm \
   --command-id RunShellScript \
-  --scripts "cd /opt/patchpilot && docker compose -f infra/docker-compose.yml ps"
+  --scripts "cd /opt/patchpilot && docker compose -f infra/docker-compose.yml --env-file .env ps"
 
 az vm run-command invoke -g patchpilot-rg -n patchpilot-vm \
   --command-id RunShellScript \
-  --scripts "cd /opt/patchpilot && docker compose -f infra/docker-compose.yml logs caddy --tail 50"
+  --scripts "cd /opt/patchpilot && docker compose -f infra/docker-compose.yml --env-file .env logs caddy --tail 50"
 ```
 
 Then open the printed URL — expect the "Pair this instance" screen over valid
@@ -94,7 +94,7 @@ HTTPS. Complete setup via the onboarding pairing flow described in the main
 ```bash
 az vm run-command invoke -g patchpilot-rg -n patchpilot-vm \
   --command-id RunShellScript \
-  --scripts "cd /opt/patchpilot && sed -i 's#PP_DOMAIN=.*#PP_DOMAIN=patchpilot.yourdomain.com#; s#PUBLIC_URL=.*#PUBLIC_URL=https://patchpilot.yourdomain.com#; s#AUTH_REDIRECT_URI=.*#AUTH_REDIRECT_URI=https://patchpilot.yourdomain.com/auth/callback#; s#CORS_ORIGINS=.*#CORS_ORIGINS=https://patchpilot.yourdomain.com#' .env && docker compose -f infra/docker-compose.yml up -d"
+  --scripts "cd /opt/patchpilot && sed -i 's#PP_DOMAIN=.*#PP_DOMAIN=patchpilot.yourdomain.com#; s#PUBLIC_URL=.*#PUBLIC_URL=https://patchpilot.yourdomain.com#; s#AUTH_REDIRECT_URI=.*#AUTH_REDIRECT_URI=https://patchpilot.yourdomain.com/auth/callback#; s#CORS_ORIGINS=.*#CORS_ORIGINS=https://patchpilot.yourdomain.com#' .env && docker compose -f infra/docker-compose.yml --env-file .env up -d"
 ```
 
 Point the domain's A record at the deployment's static IP first
@@ -107,7 +107,7 @@ fresh Let's Encrypt certificate for the new domain automatically.
 ```bash
 az vm run-command invoke -g patchpilot-rg -n patchpilot-vm \
   --command-id RunShellScript \
-  --scripts "cd /opt/patchpilot && git pull && docker compose -f infra/docker-compose.yml up -d --build"
+  --scripts "cd /opt/patchpilot && git pull && docker compose -f infra/docker-compose.yml --env-file .env up -d --build"
 ```
 
 ## Backups

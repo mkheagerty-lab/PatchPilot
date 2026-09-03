@@ -57,4 +57,16 @@ runcmd:
   # first request. AI features stay off (AI_FEATURES_ENABLED=false, the
   # .env.example default) — ollama still runs (api/worker depend on it being
   # healthy) but no model is pulled, so it stays idle and cheap.
-  - cd /opt/patchpilot && docker compose -f infra/docker-compose.yml up -d --build
+  #
+  # --env-file .env is required here: Compose resolves its own ${VAR}
+  # interpolation (used directly in this file's `environment:` blocks, e.g.
+  # postgres's POSTGRES_PASSWORD) against a .env file next to the compose
+  # file (infra/.env) by default, not the caller's cwd — but the real
+  # generated secrets above were written to /opt/patchpilot/.env (repo
+  # root). Without this flag every such variable silently resolves to a
+  # blank string instead of erroring, so postgres starts with no password
+  # and fails its healthcheck. This is separate from (and in addition to)
+  # each service's own `env_file: ../.env`, which only injects vars into
+  # the container's runtime environment and does not affect this
+  # file-level interpolation.
+  - cd /opt/patchpilot && docker compose -f infra/docker-compose.yml --env-file .env up -d --build
