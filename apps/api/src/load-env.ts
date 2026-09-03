@@ -109,8 +109,38 @@ async function loadCustomDomains(): Promise<void> {
   }
 }
 
+/**
+ * Falls back to the admin UPN captured during onboarding pairing (see
+ * routes/onboarding-pairing.ts's optional `adminUpn` field, sent by
+ * Deploy-PatchPilot.ps1 from its own signed-in Microsoft Graph context) when
+ * no BOOTSTRAP_ADMIN_UPN is already set locally. Unlike loadPairedEntraCredentials
+ * above, this does NOT let the DB row override an explicit env/.env value —
+ * BOOTSTRAP_ADMIN_UPN is also the documented manual lockout-recovery hatch
+ * (see auth/bootstrap.ts), and a re-pairing (e.g. client secret rotation) run
+ * by a different person than the original admin must never silently reassign
+ * who that is. Precedence: env/.env value (operator override) > paired DB
+ * row (first-pairing default) > unset (nobody can sign in, logged at
+ * startup by bootstrapAdmin()).
+ */
+async function loadBootstrapAdminUpn(): Promise<void> {
+  if ((process.env.DEMO_MODE ?? "true") !== "false") return;
+  if (process.env.BOOTSTRAP_ADMIN_UPN) return;
+
+  try {
+    const { db, tables, eq } = await import("@patchpilot/db");
+    const [row] = await db.select().from(tables.settings).where(eq(tables.settings.key, "bootstrap-admin"));
+    if (!row) return;
+
+    const value = row.value as { upn: string };
+    if (value.upn) process.env.BOOTSTRAP_ADMIN_UPN = value.upn;
+  } catch (err) {
+    console.error("[load-env] failed to load fallback bootstrap admin UPN:", err);
+  }
+}
+
 await loadPairedEntraCredentials();
 await loadCustomDomains();
+await loadBootstrapAdminUpn();
 
 // Belt-and-braces reconciliation. In theory, config.js (statically imported
 // by every route file) can't observe process.env until the two awaits above
