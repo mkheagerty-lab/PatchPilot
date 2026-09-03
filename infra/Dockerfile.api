@@ -29,6 +29,7 @@ COPY packages/db packages/db
 COPY packages/graph packages/graph
 COPY packages/ai packages/ai
 COPY apps/api apps/api
+COPY scripts scripts
 
 EXPOSE 4000
 WORKDIR /app/apps/api

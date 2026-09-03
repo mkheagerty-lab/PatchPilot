@@ -200,6 +200,45 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
   }
 }
 
+// Gates ARM's own "Succeeded" status on the real app actually answering —
+// without this, the Portal reports success the instant the VM resource is
+// provisioned, long before cloud-init's ~10-minute `docker compose up
+// --build` finishes (see cloud-init.yaml). Polls the api container's own
+// GET /api/health (apps/api/src/routes/status.ts) — already unauthenticated
+// and already checks DB + Redis, not just process liveness, so "ready"
+// here means the whole stack is really up, not just that something is
+// listening. No storage account or VM identity needed — this runs via the
+// pre-installed Azure VM Agent under the same Contributor-level access
+// already required for the other resources here.
+resource waitForAppReady 'Microsoft.Compute/virtualMachines/runCommands@2024-03-01' = {
+  parent: vm
+  name: 'pp-wait-for-app-ready'
+  location: location
+  properties: {
+    asyncExecution: false
+    treatFailureAsDeploymentFailure: true
+    timeoutInSeconds: 1800
+    source: {
+      script: '''
+        #!/bin/bash
+        set -uo pipefail
+        cloud-init status --wait
+        timeout_s=1500
+        elapsed=0
+        until curl -fsS -o /dev/null http://localhost/api/health; do
+          if [ "$elapsed" -ge "$timeout_s" ]; then
+            echo "PatchPilot did not become ready within ${timeout_s}s" >&2
+            exit 1
+          fi
+          sleep 10
+          elapsed=$((elapsed + 10))
+        done
+        echo "PatchPilot is ready."
+      '''
+    }
+  }
+}
+
 output fqdn string = resolvedDomain
 output publicIpAddress string = publicIp.properties.ipAddress
 output url string = 'https://${resolvedDomain}'

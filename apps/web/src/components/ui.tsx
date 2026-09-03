@@ -418,3 +418,26 @@ export function Placeholder({ note }: { note: string }) {
     </Card>
   );
 }
+
+/** Copies `value` to the clipboard, showing "Copied" briefly. Shared by every
+ * page that surfaces a one-liner command or identifier to paste elsewhere
+ * (setup/pairing screens, domain registration commands, app-identity fields). */
+export function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // clipboard unavailable (e.g. insecure context); silently ignore
+        }
+      }}
+      className="shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+    >
+      {copied ? "Copied" : label}
+    </button>
+  );
+}
