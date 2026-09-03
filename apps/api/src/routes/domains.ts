@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { eq, and, desc } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
-import { cca, APP_REGISTRATION_SYNC_SCOPES, auditSafe } from "@patchpilot/graph";
+import { getCca, APP_REGISTRATION_SYNC_SCOPES, auditSafe } from "@patchpilot/graph";
 import { CUSTOM_DOMAINS_CHANGED_CHANNEL } from "@patchpilot/shared";
 import { config } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
@@ -373,7 +373,7 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
 
       const origin = resolveWebOrigin(req);
       const state = `patchpilot-syncdomains:${req.session.sessionId}`;
-      const url = await cca.getAuthCodeUrl({
+      const url = await getCca().getAuthCodeUrl({
         scopes: APP_REGISTRATION_SYNC_SCOPES,
         redirectUri: `${origin}/auth/callback`,
         state,
