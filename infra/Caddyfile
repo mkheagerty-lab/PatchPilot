@@ -11,11 +11,14 @@
 # SNI hostname is one PatchPilot actually recognizes; see that endpoint's own
 # doc comment for why it's safe to leave unauthenticated. caddy:2-alpine
 # ships on_demand_tls natively — no custom build needed.
+#
+# No interval/burst here: newer Caddy releases removed manual on_demand_tls
+# rate limiting (the ask endpoint itself is the gate now) and refuse to start
+# at all if those keys are present ("the on_demand_tls 'interval' option is
+# no longer supported, remove it from your config").
 {
 	on_demand_tls {
 		ask http://api:4000/internal/domains/ask
-		interval 2m
-		burst 5
 	}
 }
 
