@@ -82,7 +82,7 @@ export function SetupPairing() {
             href="https://shell.azure.com/powershell"
             target="_blank"
             rel="noreferrer"
-            className="mt-2.5 inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-800"
+            className="mt-2.5 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-700"
           >
             Open Azure Cloud Shell ↗
           </a>
