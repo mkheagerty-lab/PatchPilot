@@ -10,7 +10,9 @@
 
 .NOTES
     Recommended: PowerShell 7+
-    Auth mode: normal interactive Microsoft Graph sign-in.
+    Auth mode: interactive Microsoft Graph sign-in (browser-based normally;
+    falls back to device code automatically in Azure Cloud Shell or any
+    other headless/SSH session with no local browser to open).
 
 .EXAMPLE
     .\Deploy-PatchPilot.ps1 -MspTenantId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" -RedirectUri "http://localhost:5173/auth/callback"
@@ -500,29 +502,57 @@ try {
 
     Write-Step "[2/14] Connecting to Microsoft Graph..."
 
-    Write-Info "Using normal interactive sign-in."
+    # Connect-MgGraph's default interactive sign-in tries to open a local
+    # system browser and listen for its redirect - there is no such browser
+    # in Azure Cloud Shell (or any other headless/SSH session), so it just
+    # sits waiting for a callback that can never arrive until it times out
+    # ("Authentication timed out after 120 seconds due to inactivity"). None
+    # of the three signals below are Cloud-Shell-specific on their own -
+    # ACC_CLOUD and AZUREPS_HOST_ENVIRONMENT are Cloud Shell's own documented
+    # markers, and a Linux session with no X11/Wayland display generalizes
+    # the same fix to a plain SSH box - but together they reliably catch
+    # "no local browser to open" without touching the working browser-based
+    # flow anywhere else (a Global Admin's own Windows/Mac machine).
+    $isHeadlessSession = [bool](
+        $env:ACC_CLOUD -or
+        $env:AZUREPS_HOST_ENVIRONMENT -or
+        ($IsLinux -and -not $env:DISPLAY -and -not $env:WAYLAND_DISPLAY)
+    )
+
+    $connectMgGraphParams = @{
+        TenantId = $MspTenantId
+        Scopes   = @(
+            # Application.ReadWrite.All creates/updates the app registration and its
+            # service principal; DelegatedAdminRelationship.Read.All enumerates GDAP
+            # customers for the consent-URL list; DelegatedPermissionGrant.ReadWrite.All
+            # lets step [9/13] grant the home-tenant admin consent programmatically
+            # (create/refresh the AllPrincipals oauth2PermissionGrants) so a re-run
+            # after adding a scope re-consents automatically instead of relying on a
+            # human clicking a URL. All three are consented interactively by the admin
+            # running this script - they are NOT standing app permissions, so the
+            # running PatchPilot app stays read-only-first (invariant #6). The old
+            # app-only/security-group path (AppRoleAssignment.ReadWrite.All +
+            # GroupMember.ReadWrite.All) is gone: GDAP only supports delegated
+            # ("app + user") access.
+            "Application.ReadWrite.All",
+            "DelegatedAdminRelationship.Read.All",
+            "DelegatedPermissionGrant.ReadWrite.All"
+        )
+        NoWelcome = $true
+    }
+
+    if ($isHeadlessSession) {
+        Write-Info "No local browser available (headless/Cloud Shell session detected) - using device code sign-in."
+        $connectMgGraphParams["UseDeviceCode"] = $true
+    }
+    else {
+        Write-Info "Using normal interactive sign-in."
+    }
     Write-Info "Tenant: $MspTenantId"
 
     Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
 
-    # Application.ReadWrite.All creates/updates the app registration and its service
-    # principal; DelegatedAdminRelationship.Read.All enumerates GDAP customers for the
-    # consent-URL list; DelegatedPermissionGrant.ReadWrite.All lets step [9/13] grant
-    # the home-tenant admin consent programmatically (create/refresh the AllPrincipals
-    # oauth2PermissionGrants) so a re-run after adding a scope re-consents automatically
-    # instead of relying on a human clicking a URL. All three are consented interactively
-    # by the admin running this script - they are NOT standing app permissions, so the
-    # running PatchPilot app stays read-only-first (invariant #6). The old app-only/
-    # security-group path (AppRoleAssignment.ReadWrite.All + GroupMember.ReadWrite.All)
-    # is gone: GDAP only supports delegated ("app + user") access.
-    Connect-MgGraph `
-        -TenantId $MspTenantId `
-        -Scopes @(
-            "Application.ReadWrite.All",
-            "DelegatedAdminRelationship.Read.All",
-            "DelegatedPermissionGrant.ReadWrite.All"
-        ) `
-        -NoWelcome | Out-Null
+    Connect-MgGraph @connectMgGraphParams | Out-Null
 
     $context = Get-MgContext
 
