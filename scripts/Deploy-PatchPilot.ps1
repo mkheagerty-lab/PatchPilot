@@ -62,8 +62,15 @@ param(
     [Parameter(Mandatory = $false)]
     [string] $RedirectUri = "{{REDIRECT_URI}}",
 
+    # $env:USERPROFILE is Windows-only and empty on Cloud Shell's Linux pwsh,
+    # which silently collapsed this to the OS root ("/PatchPilot-Deploy") -
+    # not writable, so every run there failed at the very first step. $HOME
+    # is set on both: Windows PowerShell 5.1 sets it to $env:USERPROFILE
+    # directly, and PowerShell 7+ (incl. Cloud Shell) sets it to the real
+    # cross-platform home directory. Join-Path also picks the right
+    # separator for whichever OS this runs on, instead of a hardcoded "\".
     [Parameter(Mandatory = $false)]
-    [string] $OutputFolder = "$env:USERPROFILE\PatchPilot-Deploy",
+    [string] $OutputFolder = (Join-Path $HOME "PatchPilot-Deploy"),
 
     [Parameter(Mandatory = $false)]
     [switch] $RotateClientSecret,
