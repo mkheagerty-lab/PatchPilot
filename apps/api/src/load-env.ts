@@ -111,3 +111,35 @@ async function loadCustomDomains(): Promise<void> {
 
 await loadPairedEntraCredentials();
 await loadCustomDomains();
+
+// Belt-and-braces reconciliation. In theory, config.js (statically imported
+// by every route file) can't observe process.env until the two awaits above
+// resolve, because this module is imported first in index.ts and ESM
+// evaluates a parent's static sibling imports only after its own top-level
+// await settles. In practice, under this project's tsx-based runtime, that
+// ordering guarantee does NOT reliably hold when the awaited work chains
+// through a dynamic `await import(...)` plus a real async DB round-trip (as
+// both functions above do): config.js was empirically observed to already
+// be evaluated — with pre-pairing, ENTRA_CONFIGURED:false env values baked
+// into its exports — by the time this line runs, live on a paired instance.
+// Rather than depend on fixing that loader behavior, re-derive config fresh
+// from process.env (now fully populated either way) and patch the
+// already-created singleton and its two derived exports in place, so every
+// module holding a reference to them sees the corrected values regardless
+// of which import won the race. Safe to run unconditionally: on a build
+// where the ordering guarantee *did* hold, this recomputes identical values.
+try {
+  const configModule = await import("./config.js");
+  const fresh = configModule.loadConfig();
+  Object.assign(configModule.config, fresh);
+  configModule.corsOrigins.length = 0;
+  configModule.corsOrigins.push(...fresh.CORS_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean));
+  configModule.webOrigins.length = 0;
+  configModule.webOrigins.push(
+    ...[fresh.PUBLIC_URL, ...fresh.EXTRA_WEB_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)].map((o) =>
+      o.replace(/\/+$/, ""),
+    ),
+  );
+} catch (err) {
+  console.error("[load-env] failed to reconcile config with loaded env:", err);
+}
