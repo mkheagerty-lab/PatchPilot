@@ -6,7 +6,7 @@
  * itself at execution time rather than depending on a request-bound token that
  * may have expired by the time a scheduled job runs.
  */
-export { env, type GraphEnv } from "./env.js";
+export { env, loadEnv, type GraphEnv } from "./env.js";
 export { encrypt, decrypt, payloadHash, sha256Hex } from "./crypto.js";
 export {
   storeToken,
@@ -18,7 +18,7 @@ export {
 } from "./token-store.js";
 export {
   getCca,
-  LOGIN_SCOPES,
+  getLoginScopes,
   APP_REGISTRATION_SYNC_SCOPES,
   ccaForEngineer,
   clearMsalCache,

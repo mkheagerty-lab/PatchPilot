@@ -78,3 +78,19 @@ async function loadPairedEntraCredentials(): Promise<void> {
 }
 
 await loadPairedEntraCredentials();
+
+// Belt-and-braces reconciliation, mirroring apps/api/src/load-env.ts's own
+// (more heavily commented) fix for the same issue. @patchpilot/graph's env.js
+// is a standalone eagerly-evaluated singleton (packages/graph/src/env.ts) —
+// this worker process has no config module of its own to race against, but
+// graph/env.js is subject to the identical tsx import-ordering hazard: it may
+// already be evaluated, with pre-pairing blank ENTRA_* values baked in, by the
+// time the async DB read above resolves. Patch it in place so every graph
+// function that reads `env` live (see packages/graph/src/msal.ts) sees the
+// corrected credentials regardless of which import won the race.
+try {
+  const graphEnvModule = await import("@patchpilot/graph");
+  Object.assign(graphEnvModule.env, graphEnvModule.loadEnv());
+} catch (err) {
+  console.error("[load-env] failed to reconcile @patchpilot/graph env with loaded env:", err);
+}

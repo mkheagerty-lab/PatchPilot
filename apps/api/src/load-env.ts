@@ -143,3 +143,21 @@ try {
 } catch (err) {
   console.error("[load-env] failed to reconcile config with loaded env:", err);
 }
+
+// Same reconciliation, for @patchpilot/graph's own independent env singleton
+// (packages/graph/src/env.ts). That package is imported by both apps/api and
+// apps/worker and can't depend on either app's config module, so it keeps its
+// own eagerly-evaluated `env` — subject to the exact same tsx import-ordering
+// race as config.js above. Patching `env` in place here is necessary but not
+// sufficient on its own: packages/graph/src/msal.ts's msalConfig/getLoginScopes
+// used to copy env.ENTRA_* into plain values at msal.ts's own import time,
+// which this patch could never retroactively fix — that copy was removed
+// separately (msal.ts now reads `env` live, at call time, well after this
+// runs), so patching the object here is what actually makes that live read see
+// the corrected credentials.
+try {
+  const graphEnvModule = await import("@patchpilot/graph");
+  Object.assign(graphEnvModule.env, graphEnvModule.loadEnv());
+} catch (err) {
+  console.error("[load-env] failed to reconcile @patchpilot/graph env with loaded env:", err);
+}

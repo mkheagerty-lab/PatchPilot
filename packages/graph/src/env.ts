@@ -48,7 +48,7 @@ const DEMO_DEFAULTS = {
   REDIS_URL: "redis://demo-redis:6379",
 } as const;
 
-function loadEnv(): GraphEnv {
+export function loadEnv(): GraphEnv {
   const parsed = EnvSchema.safeParse(process.env);
   if (!parsed.success) {
     console.error(
