@@ -43,7 +43,7 @@ const SCOPE_STATUS_STYLES: Record<ScopeStatus, string> = {
 };
 const SCOPE_STATUS_LABELS: Record<ScopeStatus, string> = {
   ok: "OK — granted and live",
-  skipped: "Skipped — published but not yet granted; run Sync API Permissions",
+  skipped: "Skipped — published but not yet granted; run Add API Permissions",
   failed: "Failed — not published on this resource's service principal",
 };
 
@@ -94,7 +94,7 @@ function ScopeList({
               {s}
               {isWriteGated && (
                 <span
-                  title="Only published and consented when 'Include remediation write scopes' is checked on a Sync run — it's listed here either way since this panel always shows every scope PatchPilot could ever request."
+                  title="Only published and consented when 'Include remediation write scopes' is checked while running Add API Permissions — it's listed here either way since this panel always shows every scope PatchPilot could ever request."
                   className="rounded-full bg-blue-100 px-1.5 font-sans text-[9px] font-medium text-blue-700"
                 >
                   write
@@ -148,12 +148,18 @@ function Step({
 }
 
 /**
- * Guided three-step onboarding for a freshly-deployed MSP. The pivotal action is
- * Step 2: a Global Administrator grants admin consent for PatchPilot in the MSP's
- * OWN (home) tenant — without it the first "Discover tenants" fails with 403. The
- * button is the same /adminconsent flow used per-customer, just pointed at the
- * home tenant, and carries only the public client id (no secret ever leaves the
- * server). Hidden in demo mode, where the link can't authorize anything.
+ * Guided four-step onboarding for a freshly-deployed MSP. Steps 1 and 2 —
+ * creating the app registration and granting Partner tenant admin consent for
+ * its read-only permissions — are both normally completed automatically in
+ * the same run of the Step 1 pairing script (Deploy-PatchPilot.ps1 grants
+ * consent programmatically right after creating the service principal); the
+ * button in Step 2 is the fallback for the rare case where that run warned it
+ * couldn't auto-consent. Step 3 is optional and NOT part of pairing — it's
+ * the only place remediation WRITE scopes ever get requested. Step 4 (tenant
+ * discovery) is also never run automatically, by pairing or the script — it
+ * only ever prints "run Discover" as a manual instruction, so an engineer
+ * always has to click through it here themselves. Hidden entirely in demo
+ * mode, where nothing here could authorize or discover anything real.
  */
 function GettingStarted({ report }: { report: OnboardingReport }) {
   const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
@@ -169,7 +175,8 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
     <Card className="border-slate-900/10 bg-gradient-to-br from-slate-50 to-white">
       <h2 className="mb-1 text-sm font-semibold text-slate-800">Get started</h2>
       <p className="mb-4 text-sm text-slate-500">
-        Three one-time steps connect PatchPilot to your MSP tenant.
+        Four steps connect PatchPilot to your MSP tenant — the first two are
+        normally already done for you by the time pairing finishes.
       </p>
       <ol className="space-y-5">
         <Step
@@ -181,10 +188,11 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
           done
         >
           Run the installer once as a Global Administrator. It creates the Entra
-          app, configures the read-only permissions below, and either writes your{" "}
+          app, configures the read-only permissions below, grants Partner tenant
+          admin consent for them (Step 2), and either writes your{" "}
           <code className="font-mono text-xs">.env</code> (self-hosted) or pairs
-          directly with this instance (hosted). Choose whichever matches how
-          you're set up:
+          directly with this instance (hosted) — all in this one run. Choose
+          whichever matches how you're set up:
 
           <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50/50 p-3">
             <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
@@ -279,12 +287,16 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
 
         <Step
           n={2}
-          title="Grant MSP tenant admin consent (Global Administrator)"
+          title="Grant Partner tenant admin consent (Read-only)"
           done={report.homeTenantConsented}
         >
-          Approve PatchPilot&apos;s read-only access in your own tenant. This is
-          what lets the first discovery succeed — without it, tenant reads come
-          back <span className="font-medium text-amber-700">403</span>.
+          Normally already granted for you — Step 1&apos;s pairing script
+          approves PatchPilot&apos;s read-only access in your own tenant
+          programmatically in that same run. Only use the button below if that
+          run warned it couldn&apos;t auto-consent, or you need to (re-)approve
+          by hand. This is what lets the first discovery succeed — without it,
+          tenant reads come back <span className="font-medium text-amber-700">403</span>.
+          Must be approved by a Global Administrator account.
           <div className="mt-2.5">
             <a
               href={report.homeConsentUrl}
@@ -299,13 +311,36 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
           <p className="mt-1.5 text-xs text-slate-400">
             Opens the Microsoft admin-consent prompt for tenant{" "}
             <code className="font-mono">{report.tenantId}</code> in a new tab.
-            Must be approved by a Global Administrator.
           </p>
         </Step>
 
-        <Step n={3} title="Discover your tenants">
+        <Step n={3} title="Add write API permissions (optional)">
+          <p>
+            Read-only permissions should already be applied — from pairing
+            (Step 1) or a manual Step 2 grant. Come back here only if you need
+            write-capable remediation (Live Response, Intune device
+            management, Windows Update).
+          </p>
+          <p className="mt-1.5">
+            Check{" "}
+            <span className="font-medium text-slate-600">
+              Include remediation write scopes
+            </span>
+            , click{" "}
+            <span className="font-medium text-slate-600">Add API Permissions</span>
+            , and approve as a Global Administrator. Then run{" "}
+            <span className="font-medium text-slate-600">Test Connection</span>{" "}
+            to confirm each permission below is actually live.
+          </p>
+          <div className="mt-3">
+            <RequestedPermissionsStep report={report} />
+          </div>
+        </Step>
+
+        <Step n={4} title="Discover your tenants">
           Pull in your home tenant and any GDAP customers, then probe access and
-          licensing.
+          licensing. Unlike the steps above, this one is never run
+          automatically — it always needs a manual click here.
           <div className="mt-2.5">
             <Link
               to="/settings/tenants"
@@ -321,18 +356,21 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
 }
 
 /**
- * Merges the "Requested API permissions" display with the one narrow
- * exception to "the in-app console never writes to Entra" — see README
- * invariant #7. "Sync API Permissions" reuses the app's existing
+ * The body of Get Started's Step 3 ("Add write API permissions"). This is
+ * the one narrow exception to "the in-app console never writes to Entra" —
+ * see README invariant #7. "Add API Permissions" reuses the app's existing
  * /auth/callback redirect to run a one-time step-up consent
  * (apps/api/src/routes/onboarding.ts + apps/api/src/auth/routes.ts), applying
  * whatever scopes.ts currently requests to an *already-existing* app
  * registration. "Test Connection" is the read-only counterpart (same step-up
  * mechanics, calls testAppRegistrationScopes instead) — it never mutates
- * anything, just reports each scope's live status as a colour-coded pill.
- * First-time creation still needs Deploy-PatchPilot.ps1. In demo mode neither
- * action could authorize or check anything real, so the card falls back to a
- * plain read-only list.
+ * anything, just reports each scope's live status as a colour-coded pill,
+ * which also drives the failed-scope banners below (a "failed" status means
+ * the scope isn't published on the resource's own service principal at all —
+ * for Defender that's almost always a licensing gap, for Partner Center a
+ * GDAP misconfiguration). First-time creation still needs
+ * Deploy-PatchPilot.ps1. In demo mode neither action could authorize or check
+ * anything real, so this falls back to a plain read-only list.
  */
 /**
  * Runs "Test Connection" without leaving the page: loads
@@ -380,7 +418,7 @@ function runSilentTestConnection(onSettled: (ok: boolean) => void): void {
   document.body.appendChild(iframe);
 }
 
-function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
+function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
   const canWrite = useCan("settings:write");
   const qc = useQueryClient();
   const [confirming, setConfirming] = useState(false);
@@ -389,16 +427,11 @@ function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
 
   if (report.demoMode) {
     return (
-      <Card>
-        <h2 className="mb-4 text-sm font-semibold text-slate-700">
-          Requested API permissions
-        </h2>
-        <div className="space-y-4">
-          <ScopeList title="Microsoft Graph" scopes={report.scopes.graph} />
-          <ScopeList title="Defender for Endpoint" scopes={report.scopes.defender} />
-          <ScopeList title="Partner Center" scopes={report.scopes.partnerCenter} />
-        </div>
-      </Card>
+      <div className="space-y-4">
+        <ScopeList title="Microsoft Graph" scopes={report.scopes.graph} />
+        <ScopeList title="Defender for Endpoint" scopes={report.scopes.defender} />
+        <ScopeList title="Partner Center" scopes={report.scopes.partnerCenter} />
+      </div>
     );
   }
 
@@ -408,30 +441,48 @@ function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
   const statusFor = (resource: string, scope: string) => statusMap.get(`${resource}:${scope}`);
   const scopesSyncNeeded = report.scopesSyncNeeded;
 
+  const failedByResource: Record<"graph" | "defender" | "partnerCenter", string[]> = {
+    graph: [],
+    defender: [],
+    partnerCenter: [],
+  };
+  for (const r of report.scopeStatus?.results ?? []) {
+    if (r.status === "failed" && r.resource in failedByResource) {
+      failedByResource[r.resource as keyof typeof failedByResource].push(r.scope);
+    }
+  }
+  const failedBanners: { key: string; label: string; scopes: string[]; hint?: string }[] = [
+    { key: "graph", label: "Microsoft Graph", scopes: failedByResource.graph },
+    {
+      key: "defender",
+      label: "Defender for Endpoint",
+      scopes: failedByResource.defender,
+      hint: "Check licensing.",
+    },
+    {
+      key: "partnerCenter",
+      label: "Partner Center",
+      scopes: failedByResource.partnerCenter,
+      hint: "Check GDAP configuration.",
+    },
+  ].filter((b) => b.scopes.length > 0);
+
   return (
-    <Card className={scopesSyncNeeded ? "border-amber-300" : undefined}>
+    <div className={scopesSyncNeeded ? "rounded-lg border border-amber-300 p-3" : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-slate-700">
-              Requested API permissions
-            </h2>
             {scopesSyncNeeded && (
               <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
                 Sync needed
               </span>
             )}
           </div>
-          <p className="mt-1 text-sm text-slate-500">
-            What PatchPilot asks this app registration for. Run{" "}
-            <span className="font-medium text-slate-600">Test Connection</span>{" "}
-            to colour-code each one by its live status below.
-          </p>
           {scopesSyncNeeded && (
             <p className="mt-1.5 text-xs text-amber-700">
               PatchPilot now requests different permissions than this app
-              registration was last synced to — likely a recent upgrade. Run a
-              sync to bring it up to date.
+              registration was last synced to — likely a recent upgrade. Run
+              Add API Permissions to bring it up to date.
             </p>
           )}
           {report.scopeStatus && (
@@ -469,7 +520,7 @@ function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
             onClick={() => setConfirming(true)}
             className="rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Sync API Permissions
+            Add API Permissions
           </button>
         </div>
       </div>
@@ -479,6 +530,17 @@ function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
           Your role doesn&apos;t include settings write access.
         </div>
       )}
+
+      {failedBanners.map((b) => (
+        <div
+          key={b.key}
+          className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+        >
+          <span className="font-medium">{b.label}:</span> {b.scopes.length} permission
+          {b.scopes.length === 1 ? "" : "s"} not found on the resource — {b.scopes.join(", ")}.
+          {b.hint && <span className="font-medium"> {b.hint}</span>}
+        </div>
+      ))}
 
       <div className="mt-4 space-y-4">
         <ScopeList
@@ -512,7 +574,7 @@ function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
           />
           <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
             <h2 className="text-base font-semibold text-slate-900">
-              Sync app registration permissions?
+              Add app registration permissions?
             </h2>
             <p className="mt-2 text-sm text-slate-600">
               You&apos;ll be sent to a Microsoft sign-in to approve two one-time,
@@ -563,7 +625,7 @@ function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -603,7 +665,7 @@ function RegistrationCommand({ domainId }: { domainId: string }) {
  * lookup (apps/api/src/routes/domains.ts never writes a DNS record itself),
  * and then pushes the resulting redirect URI(s) into the real Entra app
  * registration — either via the same step-up browser consent
- * RequestedPermissionsCard uses, or by copying the PowerShell one-liner
+ * RequestedPermissionsStep uses, or by copying the PowerShell one-liner
  * below. Hidden in demo mode, where nothing here could resolve or authorize
  * anything real.
  */
@@ -1084,7 +1146,14 @@ export function AppRegistration() {
             </div>
           </Card>
 
-          <RequestedPermissionsCard report={report} />
+          {report.demoMode && (
+            <Card>
+              <h2 className="mb-4 text-sm font-semibold text-slate-700">
+                Requested API permissions
+              </h2>
+              <RequestedPermissionsStep report={report} />
+            </Card>
+          )}
 
           <CustomDomainsCard demoMode={report.demoMode} />
         </div>
