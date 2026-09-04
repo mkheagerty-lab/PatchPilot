@@ -49,6 +49,23 @@ import { sendAlertEmail } from "@patchpilot/shared/alerting";
 export async function buildServer() {
   const app = Fastify({
     logger: { level: config.LOG_LEVEL },
+    // Caddy (infra/Caddyfile) terminates TLS and reverse-proxies here over
+    // plain HTTP inside the compose network, sending X-Forwarded-Proto per
+    // its own default reverse_proxy behavior. Without trustProxy, Fastify's
+    // request.protocol reflects only the raw (unencrypted) socket, which is
+    // always "http" for every request regardless of the real, external
+    // connection — @fastify/session's isInsecureConnection check then reads
+    // that as "an actually-insecure connection carrying a secure:true
+    // cookie" and silently refuses to save the session or set the cookie at
+    // all. Live-observed: /auth/login never issued a Set-Cookie and Redis
+    // held zero session keys, so state ties nothing across the /auth/login
+    // -> /auth/callback round trip and every real login 400s as "This
+    // sign-in link is no longer valid" (apps/api/src/auth/routes.ts). Safe
+    // to trust unconditionally: infra/docker-compose.yml publishes only
+    // Caddy's 80/443 to the host — api:4000 is unreachable from outside the
+    // compose network, so Caddy is the only thing that can ever set these
+    // headers.
+    trustProxy: true,
   });
 
   // Fastify's default handler already logs and replies; this only adds an
