@@ -319,6 +319,67 @@ describe("POST /api/domains", () => {
   });
 });
 
+describe("GET /api/domains/check", () => {
+  it("reports available for a subdomain label with no existing row", async () => {
+    const app = await buildApp();
+    const res = await app.inject({ method: "GET", url: "/api/domains/check?type=subdomain&label=acme" });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body).toEqual({ hostname: "acme.patchpilot365.com", available: true });
+    await app.close();
+  });
+
+  it("reports unavailable, with a reason, for a hostname that already exists", async () => {
+    seedDomain({ hostname: "acme.patchpilot365.com" });
+    const app = await buildApp();
+    const res = await app.inject({ method: "GET", url: "/api/domains/check?type=subdomain&label=acme" });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.hostname).toBe("acme.patchpilot365.com");
+    expect(body.available).toBe(false);
+    expect(body.reason).toBe("a domain with this hostname already exists");
+    await app.close();
+  });
+
+  it("reports unavailable (200, not 400) for a reserved hostname, explaining why", async () => {
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/domains/check?type=custom&hostname=foo.patchpilot365.com",
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.hostname).toBeNull();
+    expect(body.available).toBe(false);
+    expect(body.reason).toContain("use the subdomain option");
+    await app.close();
+  });
+
+  it("never inserts a row — it's read-only", async () => {
+    const app = await buildApp();
+    await app.inject({ method: "GET", url: "/api/domains/check?type=subdomain&label=acme" });
+    expect(tableRows.get(tables.customDomains) ?? []).toHaveLength(0);
+    await app.close();
+  });
+
+  it("returns 400 for a malformed query (missing label)", async () => {
+    const app = await buildApp();
+    const res = await app.inject({ method: "GET", url: "/api/domains/check?type=subdomain" });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("returns 403 when the current user lacks settings:write", async () => {
+    const app = await buildApp("reader");
+    const res = await app.inject({ method: "GET", url: "/api/domains/check?type=subdomain&label=acme" });
+    expect(res.statusCode).toBe(403);
+    await app.close();
+  });
+});
+
 describe("GET /api/domains", () => {
   it("reports the resolved CNAME target and its usability alongside every row", async () => {
     seedDomain();
