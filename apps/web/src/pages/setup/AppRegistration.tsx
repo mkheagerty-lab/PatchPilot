@@ -9,6 +9,7 @@ import {
   type DomainsReport,
   type DomainType,
 } from "../../lib/api";
+import { GRAPH_WRITE_GATED_SCOPES, DEFENDER_WRITE_GATED_SCOPES } from "@patchpilot/shared";
 import { Card, PageHeader, CopyButton } from "../../components/ui";
 import { useCan } from "../../lib/auth";
 
@@ -50,12 +51,19 @@ function ScopeList({
   scopes,
   resource,
   statusFor,
+  writeGatedScopes,
 }: {
   title: string;
   scopes: string[];
   /** Omit for demo mode / no live status available — pills render neutral. */
   resource?: "graph" | "defender" | "partnerCenter";
   statusFor?: (resource: string, scope: string) => ScopeStatus | undefined;
+  /** Scopes in this list that are only ever published/consented when
+   * "Include remediation write scopes" is checked on a Sync run — this list
+   * always shows every scope PatchPilot could ever ask for (see
+   * /api/onboarding), so a scope appearing here doesn't mean it's active.
+   * Tagged so it's clear which pills the checkbox actually controls. */
+  writeGatedScopes?: readonly string[];
 }) {
   return (
     <div>
@@ -73,15 +81,24 @@ function ScopeList({
       <div className="mt-2 flex flex-wrap gap-1.5">
         {scopes.map((s) => {
           const status = resource && statusFor ? statusFor(resource, s) : undefined;
+          const isWriteGated = writeGatedScopes?.includes(s) ?? false;
           return (
             <span
               key={s}
               title={status ? SCOPE_STATUS_LABELS[status] : "Not yet tested"}
-              className={`rounded px-2 py-0.5 font-mono text-[11px] ${
+              className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[11px] ${
                 status ? SCOPE_STATUS_STYLES[status] : "bg-slate-100 text-slate-600"
               }`}
             >
               {s}
+              {isWriteGated && (
+                <span
+                  title="Only published and consented when 'Include remediation write scopes' is checked on a Sync run — it's listed here either way since this panel always shows every scope PatchPilot could ever request."
+                  className="rounded-full bg-blue-100 px-1.5 font-sans text-[9px] font-medium text-blue-700"
+                >
+                  write
+                </span>
+              )}
             </span>
           );
         })}
@@ -468,12 +485,14 @@ function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
           scopes={report.scopes.graph}
           resource="graph"
           statusFor={statusFor}
+          writeGatedScopes={GRAPH_WRITE_GATED_SCOPES}
         />
         <ScopeList
           title="Defender for Endpoint"
           scopes={report.scopes.defender}
           resource="defender"
           statusFor={statusFor}
+          writeGatedScopes={DEFENDER_WRITE_GATED_SCOPES}
         />
         <ScopeList
           title="Partner Center"
