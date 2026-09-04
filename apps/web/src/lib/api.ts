@@ -851,6 +851,9 @@ export interface OnboardingReport {
   /** One-click admin-consent URL for the MSP's own (home) tenant — the Global
    * Administrator opens this to make the first "Discover tenants" succeed. */
   homeConsentUrl: string;
+  /** True once the MSP's own home tenant has completed admin consent (a
+   * `tenants` row for it exists server-side) — see routes/onboarding.ts. */
+  homeTenantConsented: boolean;
   scopes: {
     graph: string[];
     defender: string[];

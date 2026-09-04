@@ -63,6 +63,14 @@ interface OnboardingReport {
    * home tenant, and carries only the public client id (never a secret).
    */
   homeConsentUrl: string;
+  /**
+   * True once a `tenants` row for the MSP's own home tenant exists. Set only by
+   * syncTenants()'s `/organization` read (graph/sync.ts), which 403s unless the
+   * home-tenant admin consent (Step 2) already succeeded — so this row's mere
+   * existence *is* the proof, not a separate live check. Drives the "Get
+   * started" panel's Step 2 "Completed" tag.
+   */
+  homeTenantConsented: boolean;
   scopes: {
     graph: readonly string[];
     defender: readonly string[];
@@ -109,6 +117,7 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
       redirectUri,
       redirectUris: webOrigins.map((o) => `${o}/auth/callback`),
       homeConsentUrl: buildConsentUrl(config.ENTRA_TENANT_ID, config.ENTRA_CLIENT_ID, redirectUri),
+      homeTenantConsented: tenants.some((t) => t.isMspTenant),
       scopes: {
         graph: GRAPH_SCOPES,
         defender: DEFENDER_SCOPES,

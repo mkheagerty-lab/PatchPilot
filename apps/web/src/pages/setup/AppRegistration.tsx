@@ -102,10 +102,16 @@ function ScopeList({ title, scopes }: { title: string; scopes: string[] }) {
 function Step({
   n,
   title,
+  done,
   children,
 }: {
   n: number;
   title: string;
+  /** Shows a green "Completed" tag next to the title — for a step whose
+   * completion is inferred from server state rather than tracked directly
+   * (see GettingStarted's callers), so re-running the step's own action
+   * (re-registering, rotating a secret) stays available either way. */
+  done?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -114,7 +120,14 @@ function Step({
         {n}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-slate-800">{title}</div>
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-medium text-slate-800">{title}</div>
+          {done && (
+            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+              Completed
+            </span>
+          )}
+        </div>
         <div className="mt-1.5 text-sm text-slate-500">{children}</div>
       </div>
     </li>
@@ -132,6 +145,12 @@ function Step({
 function GettingStarted({ report }: { report: OnboardingReport }) {
   const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
   const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script")))`;
+  // Deploy-PatchPilot.ps1 is idempotent by default (re-running deployCmd/
+  // cloudShellCommand as-is just reuses the existing app registration), so
+  // "re-register" needs no separate command — only rotating the secret does,
+  // via the script's own -RotateClientSecret switch (see its param() block).
+  const rotateSecretCmd = `${deployCmd} -RotateClientSecret`;
+  const rotateSecretCloudShellCommand = `${cloudShellCommand} -RotateClientSecret`;
   const canWrite = useCan("settings:write");
   return (
     <Card className="border-slate-900/10 bg-gradient-to-br from-slate-50 to-white">
@@ -140,7 +159,14 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
         Three one-time steps connect PatchPilot to your MSP tenant.
       </p>
       <ol className="space-y-5">
-        <Step n={1} title="Deploy the app registration">
+        <Step
+          n={1}
+          title="Deploy the app registration"
+          // Reaching this authenticated page in non-demo mode already proves
+          // config.ENTRA_CONFIGURED is true — an app registration exists and
+          // this instance is paired to it. No separate live check needed.
+          done
+        >
           Run the installer once as a Global Administrator. It creates the Entra
           app, configures the read-only permissions below, and either writes your{" "}
           <code className="font-mono text-xs">.env</code> (self-hosted) or pairs
@@ -191,13 +217,37 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
             href="https://shell.azure.com/powershell"
             target="_blank"
             rel="noreferrer"
-            className="mt-2.5 inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-800"
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
           >
             Open Azure Cloud Shell ↗
           </a>
+
+          <p className="mt-3 border-t border-slate-200 pt-2.5 text-xs text-slate-400">
+            Client secret expired or leaked? Add{" "}
+            <code className="font-mono text-xs">-RotateClientSecret</code> to
+            reuse this same app registration and only replace the secret — no
+            new consent needed, and re-pairing restarts this instance the same
+            way as a first-time install:
+          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+              {rotateSecretCmd}
+            </code>
+            <CopyButton value={rotateSecretCmd} />
+          </div>
+          <div className="mt-1.5 flex items-start gap-2">
+            <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
+              {rotateSecretCloudShellCommand}
+            </code>
+            <CopyButton value={rotateSecretCloudShellCommand} />
+          </div>
         </Step>
 
-        <Step n={2} title="Grant MSP tenant admin consent (Global Administrator)">
+        <Step
+          n={2}
+          title="Grant MSP tenant admin consent (Global Administrator)"
+          done={report.homeTenantConsented}
+        >
           Approve PatchPilot&apos;s read-only access in your own tenant. This is
           what lets the first discovery succeed — without it, tenant reads come
           back <span className="font-medium text-amber-700">403</span>.
