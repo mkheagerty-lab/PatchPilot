@@ -1298,20 +1298,45 @@ LOG_LEVEL=info
         # baked into this script's defaults when downloaded from there. It is
         # the ONLY authentication this request carries - there is no session,
         # and none is needed.
+        # The UPN this script is signed in to Microsoft Graph as (see
+        # Get-MgContext above) - lets the instance self-provision its first
+        # admin (apps/api/src/auth/bootstrap.ts) with no separate manual
+        # .env edit + restart. Only used as a fallback default if the
+        # instance has no BOOTSTRAP_ADMIN_UPN of its own already (see
+        # apps/api/src/load-env.ts), so it never overrides an operator's
+        # explicit choice.
+        #
+        # $context.Account is empty for device-code sign-ins (used for
+        # headless/Cloud Shell sessions - see $isHeadlessSession above),
+        # confirmed live: "Connected to Microsoft Graph as ." with nothing
+        # after "as". Cloud Shell's PowerShell already carries its own,
+        # separately-authenticated Az session for the same signed-in portal
+        # user with zero extra sign-in or consent - fall back to that.
+        $adminUpn = $context.Account
+        if ([string]::IsNullOrWhiteSpace($adminUpn) -and (Get-Command Get-AzContext -ErrorAction SilentlyContinue)) {
+            $azContext = Get-AzContext -ErrorAction SilentlyContinue
+            if ($azContext -and $azContext.Account -and $azContext.Account.Id) {
+                $adminUpn = $azContext.Account.Id
+            }
+        }
+
         $pairingBody = @{
             token        = $PairingToken
             clientId     = $app.AppId
             tenantId     = $MspTenantId
             clientSecret = $secret.SecretText
-            # The UPN this script is signed in to Microsoft Graph as (see
-            # Get-MgContext above) - lets the instance self-provision its
-            # first admin (apps/api/src/auth/bootstrap.ts) with no separate
-            # manual .env edit + restart. Only used as a fallback default if
-            # the instance has no BOOTSTRAP_ADMIN_UPN of its own already (see
-            # apps/api/src/load-env.ts), so it never overrides an operator's
-            # explicit choice.
-            adminUpn     = $context.Account
-        } | ConvertTo-Json
+        }
+        # Sent only when actually known: a JSON `null` here fails the
+        # server's zod validation for the whole request (adminUpn is
+        # optional, but the schema didn't used to accept null - a body with
+        # `"adminUpn": null` doesn't match z.string().min(1).optional() and
+        # 400s the entire pairing call, not just this field). Omitting the
+        # key entirely when unknown sidesteps that regardless of the
+        # server-side fix below.
+        if (-not [string]::IsNullOrWhiteSpace($adminUpn)) {
+            $pairingBody.adminUpn = $adminUpn
+        }
+        $pairingBody = $pairingBody | ConvertTo-Json
 
         if ($PSCmdlet.ShouldProcess("$InstanceUrl/api/onboarding/pair", "Send Entra app registration credentials")) {
             try {

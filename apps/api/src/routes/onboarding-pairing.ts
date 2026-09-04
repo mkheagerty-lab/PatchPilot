@@ -47,7 +47,16 @@ const pairBodySchema = z.object({
   // its first admin with no separate manual .env edit + restart, the same
   // "zero manual typing" goal the rest of this flow already has. Optional
   // because older scripts and any non-script pairing caller won't send it.
-  adminUpn: z.string().min(1).optional(),
+  // .nullish() (not just .optional()): the script omits this key entirely
+  // when it can't determine the UPN (see its own comment on $adminUpn), but
+  // this field must never be the reason the WHOLE pairing request 400s —
+  // an older/different caller sending an explicit `"adminUpn": null` should
+  // degrade to "not provided", not fail credentials that are otherwise
+  // valid. Live-observed regression: a device-code Graph sign-in leaves
+  // $context.Account empty, which an earlier version of the script sent
+  // through verbatim as JSON null, and z.string().min(1).optional() rejects
+  // null (it only accepts undefined) — 400ing pairing entirely.
+  adminUpn: z.string().min(1).nullish(),
 });
 
 export async function onboardingPairingRoutes(app: FastifyInstance): Promise<void> {
