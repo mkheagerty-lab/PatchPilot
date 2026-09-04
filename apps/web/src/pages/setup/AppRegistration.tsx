@@ -664,10 +664,10 @@ function RegistrationCommand({ domainId }: { domainId: string }) {
  * Cloudflare API in v1) or a fully custom hostname, verifies it with a read-only CNAME
  * lookup (apps/api/src/routes/domains.ts never writes a DNS record itself),
  * and then pushes the resulting redirect URI(s) into the real Entra app
- * registration — either via the same step-up browser consent
- * RequestedPermissionsStep uses, or by copying the PowerShell one-liner
- * below. Hidden in demo mode, where nothing here could resolve or authorize
- * anything real.
+ * registration — either via Application identity's "Sync redirect URIs"
+ * button above (same step-up browser consent RequestedPermissionsStep
+ * uses), or by copying the PowerShell one-liner below. Hidden in demo mode,
+ * where nothing here could resolve or authorize anything real.
  */
 function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
   const qc = useQueryClient();
@@ -989,56 +989,30 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
 
       {hasActive && (
         <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-700">
-                Update app registration domains
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Push every active domain&apos;s redirect URI into the real
-                Entra app registration in one pass. Additive only —
-                already-registered URIs are left untouched, nothing is ever
-                duplicated.
-              </p>
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Registration command
             </div>
-            <button
-              type="button"
-              disabled={!canWrite}
-              title={!canWrite ? "Your role doesn't include settings write access." : undefined}
-              onClick={() => {
-                window.location.href = "/api/domains/sync-registration/start";
-              }}
-              className="shrink-0 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Update via browser
-            </button>
+            <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              Manual
+            </span>
           </div>
-
-          <div className="mt-4 border-t border-slate-200 pt-3">
-            <div className="flex items-center gap-2">
-              <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Registration command
-              </div>
-              <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                Manual
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-slate-400">
-              Same effect as &quot;Update via browser&quot; above, run by hand
-              instead — for an elevated PowerShell on a machine that isn&apos;t
-              hosted in Azure. Additive/idempotent, so re-running an
-              already-registered domain&apos;s command is always safe.
-            </p>
-            <div className="mt-2 space-y-2">
-              {domains
-                .filter((d) => d.status === "active")
-                .map((d) => (
-                  <div key={d.id}>
-                    <div className="font-mono text-xs text-slate-500">{d.hostname}</div>
-                    <RegistrationCommand domainId={d.id} />
-                  </div>
-                ))}
-            </div>
+          <p className="mt-1 text-xs text-slate-400">
+            Same effect as Application identity&apos;s &quot;Sync redirect
+            URIs&quot; above, run by hand instead — for an elevated PowerShell
+            on a machine that isn&apos;t hosted in Azure. Additive/idempotent,
+            so re-running an already-registered domain&apos;s command is
+            always safe.
+          </p>
+          <div className="mt-2 space-y-2">
+            {domains
+              .filter((d) => d.status === "active")
+              .map((d) => (
+                <div key={d.id}>
+                  <div className="font-mono text-xs text-slate-500">{d.hostname}</div>
+                  <RegistrationCommand domainId={d.id} />
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -1083,6 +1057,7 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
 }
 
 export function AppRegistration() {
+  const canWrite = useCan("settings:write");
   const { data: report, isLoading } = useQuery({
     queryKey: ["onboarding"],
     queryFn: () => api.get<OnboardingReport>("/api/onboarding"),
@@ -1139,10 +1114,29 @@ export function AppRegistration() {
                 <p className="mt-1.5 text-xs text-slate-400">
                   Every origin this instance currently accepts an OAuth callback from — the primary origin plus any
                   active custom domain below. Reflects this server&apos;s own allowlist, not a live read of the real
-                  Entra app registration; use Custom domains&apos; &quot;Update via browser&quot; (or the PowerShell
-                  command) to push a newly-active domain into the real app registration.
+                  Entra app registration.
                 </p>
               </div>
+              {!report.demoMode && (
+                <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">
+                    Push the list above into the real Entra app registration.
+                    Additive only — already-registered URIs are left
+                    untouched, nothing is ever duplicated or removed.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={!canWrite}
+                    title={!canWrite ? "Your role doesn't include settings write access." : undefined}
+                    onClick={() => {
+                      window.location.href = "/api/domains/sync-registration/start";
+                    }}
+                    className="shrink-0 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Sync redirect URIs
+                  </button>
+                </div>
+              )}
             </div>
           </Card>
 
