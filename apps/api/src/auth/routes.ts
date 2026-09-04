@@ -82,6 +82,23 @@ function landingPage(opts: {
 const APP_REGISTRATION_PATH = "/setup/app-registration";
 
 /**
+ * Tiny same-origin postMessage bridge for a step-up flow run inside a hidden
+ * `<iframe>` (see SILENT_TEST_CONN_STATE_PREFIX below) instead of a top-level
+ * navigation. landingPage() assumes the whole tab just navigated here and
+ * offers a "Return to PatchPilot" link — inside a hidden iframe that would be
+ * both invisible and pointless. This just hands the outcome back to
+ * `window.parent` and lets the parent page redraw in place (or fall back to
+ * the normal visible redirect if `ok` is false).
+ */
+function postMessagePage(payload: { ok: boolean }, targetOrigin: string): string {
+  const json = JSON.stringify({ source: "patchpilot-test-connection", ...payload }).replace(/</g, "\\u003c");
+  const safeOrigin = JSON.stringify(targetOrigin);
+  return `<!doctype html><html><head><meta charset="utf-8" /></head><body><script>
+  try { window.parent.postMessage(${json}, ${safeOrigin}); } catch (e) {}
+</script></body></html>`;
+}
+
+/**
  * OIDC Authorization Code + PKCE login against the MSP tenant.
  * The session cookie holds only the engineer identity; the access/refresh
  * tokens are encrypted and cached server-side (Redis), never sent to the browser.
@@ -147,6 +164,87 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       // reached via the exact origin /auth/login (or the sync-permissions
       // step-up start) sent as redirectUri, so this always matches.
       const origin = resolveWebOrigin(req);
+
+      // Silent SSO "Test Connection" (hidden iframe, prompt=none) — see
+      // onboarding.ts's ?silent=1 branch and AppRegistration.tsx's
+      // runTestConnection. Same read-only testAppRegistrationScopes as the
+      // visible TEST_CONN_STATE_PREFIX flow further down, but this callback
+      // loads inside a hidden iframe, not the top-level page, so it must
+      // never render landingPage()'s HTML — it postMessages a tiny {ok}
+      // result back to the parent window instead. Checked before the generic
+      // `if (error)` block below: a failed prompt=none silent attempt (no
+      // active SSO session, a Conditional Access step-up) comes back as
+      // `error=interaction_required` with no code, and that generic block
+      // doesn't look at `state` at all — left unchecked it would render the
+      // full error landingPage inside the hidden iframe instead of letting
+      // the parent's fallback kick in immediately.
+      const SILENT_TEST_CONN_STATE_PREFIX = "patchpilot-testconn-silent:";
+      if (state?.startsWith(SILENT_TEST_CONN_STATE_PREFIX)) {
+        const sessionId = state.slice(SILENT_TEST_CONN_STATE_PREFIX.length);
+        const engineer = req.session.engineer;
+
+        if (error || !code || !engineer || sessionId !== req.session.sessionId) {
+          // Every failure path here is an expected, silent outcome (no SSO
+          // session, MFA step-up, a rotated session) — the parent's
+          // timeout/fallback to the visible flow handles it, and a human
+          // driving that visible retry already produces its own audit trail,
+          // so this doesn't need one of its own beyond the start event above.
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin));
+        }
+
+        try {
+          const stepUp = await redeemStepUpConsentCode(
+            code,
+            `${origin}/auth/callback`,
+            APP_REGISTRATION_TEST_SCOPES,
+          );
+          const result = await testAppRegistrationScopes({
+            accessToken: stepUp.accessToken,
+            clientId: config.ENTRA_CLIENT_ID,
+          });
+
+          const value = { checkedAt: new Date().toISOString(), results: result.results };
+          await db
+            .insert(tables.settings)
+            .values({ key: "entra-scope-status", value })
+            .onConflictDoUpdate({ target: tables.settings.key, set: { value, updatedAt: new Date() } });
+
+          const ok = result.results.filter((r) => r.status === "ok").length;
+          const skipped = result.results.filter((r) => r.status === "skipped").length;
+          const failed = result.results.filter((r) => r.status === "failed").length;
+
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:test-connection-success",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: `${engineer.upn} tested app registration permissions silently (${ok} ok, ${skipped} skipped, ${failed} failed)`,
+            outcome: failed > 0 ? "partial" : "success",
+            responseStatus: 200,
+          });
+
+          return reply.type("text/html").send(postMessagePage({ ok: true }, origin));
+        } catch (err) {
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:test-connection-failed",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: `${engineer.upn}'s silent connection test failed`,
+            outcome: "failure",
+            detail: err instanceof Error ? err.message : String(err),
+            responseStatus: 500,
+          });
+
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin));
+        }
+      }
 
       // An error from either the login or the admin-consent flow.
       if (error) {

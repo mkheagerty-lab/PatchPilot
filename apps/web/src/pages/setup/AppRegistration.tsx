@@ -316,10 +316,58 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
  * action could authorize or check anything real, so the card falls back to a
  * plain read-only list.
  */
+/**
+ * Runs "Test Connection" without leaving the page: loads
+ * /api/onboarding/test-connection/start?silent=1 in a hidden iframe, which
+ * requests prompt=none instead of the normal interactive redirect (see
+ * apps/api/src/routes/onboarding.ts + auth/routes.ts's
+ * SILENT_TEST_CONN_STATE_PREFIX). If the engineer still has an active
+ * Microsoft SSO session — true for almost every case now that Sync grants
+ * these scopes tenant-wide — the hidden callback postMessages `{ok: true}`
+ * back here and this just re-fetches the report in place. If it can't
+ * complete silently (no SSO session, a Conditional Access step-up) the
+ * callback posts `{ok: false}`, or nothing arrives at all before the
+ * timeout — either way this falls back to today's visible full-page redirect
+ * rather than leaving the button looking like it did nothing.
+ */
+function runSilentTestConnection(onSettled: (ok: boolean) => void): void {
+  const iframe = document.createElement("iframe");
+  iframe.style.display = "none";
+  iframe.setAttribute("aria-hidden", "true");
+
+  let settled = false;
+  const finish = (ok: boolean) => {
+    if (settled) return;
+    settled = true;
+    window.clearTimeout(timer);
+    window.removeEventListener("message", onMessage);
+    iframe.remove();
+    onSettled(ok);
+  };
+
+  const onMessage = (event: MessageEvent) => {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data as { source?: string; ok?: boolean } | null;
+    if (!data || data.source !== "patchpilot-test-connection") return;
+    finish(data.ok === true);
+  };
+
+  // Generous but bounded: a real prompt=none round trip is normally under a
+  // second, but this accounts for a slow tenant/network before giving up and
+  // falling back to the visible redirect.
+  const timer = window.setTimeout(() => finish(false), 8000);
+
+  window.addEventListener("message", onMessage);
+  iframe.src = "/api/onboarding/test-connection/start?silent=1";
+  document.body.appendChild(iframe);
+}
+
 function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
   const canWrite = useCan("settings:write");
+  const qc = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const [includeWriteScopes, setIncludeWriteScopes] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
 
   if (report.demoMode) {
     return (
@@ -377,13 +425,24 @@ function RequestedPermissionsCard({ report }: { report: OnboardingReport }) {
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             type="button"
+            disabled={testingConnection}
             onClick={() => {
-              window.location.href = "/api/onboarding/test-connection/start";
+              setTestingConnection(true);
+              runSilentTestConnection((ok) => {
+                if (ok) {
+                  setTestingConnection(false);
+                  void qc.invalidateQueries({ queryKey: ["onboarding"] });
+                } else {
+                  // Couldn't complete silently — fall back to the visible
+                  // redirect, which always works (it's today's flow).
+                  window.location.href = "/api/onboarding/test-connection/start";
+                }
+              });
             }}
             title="Read-only — checks each permission's live status without changing anything."
-            className="rounded-md border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+            className="rounded-md border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70"
           >
-            Test Connection
+            {testingConnection ? "Testing…" : "Test Connection"}
           </button>
           <button
             type="button"

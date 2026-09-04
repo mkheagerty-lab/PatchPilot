@@ -242,41 +242,58 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // Starts the one-time "Test Connection" step-up consent redirect — the
-  // read-only counterpart to sync-permissions/start above (see
-  // testAppRegistrationScopes in packages/graph/src/app-registration-sync.ts).
-  // Requests APP_REGISTRATION_TEST_SCOPES (Application.Read.All +
-  // Directory.Read.All), NOT the sync flow's write-capable pair — this only
-  // ever reads, so it has no business asking an admin to approve write access.
-  // Kept on the router's default settings:read gate rather than elevated to
-  // settings:write: nothing here mutates the app registration or its consent
-  // grants, only reports each requested scope's live status.
-  app.get("/api/onboarding/test-connection/start", async (req, reply) => {
-    if (config.DEMO_MODE) {
-      return reply.code(400).send({ error: "not_available_in_demo_mode" });
-    }
+  // Starts the "Test Connection" step-up consent redirect — the read-only
+  // counterpart to sync-permissions/start above (see testAppRegistrationScopes
+  // in packages/graph/src/app-registration-sync.ts). Requests
+  // APP_REGISTRATION_TEST_SCOPES (Application.Read.All + Directory.Read.All),
+  // NOT the sync flow's write-capable pair — this only ever reads, so it has
+  // no business asking an admin to approve write access. Kept on the router's
+  // default settings:read gate rather than elevated to settings:write:
+  // nothing here mutates the app registration or its consent grants, only
+  // reports each requested scope's live status.
+  //
+  // `?silent=1` (AppRegistration.tsx's runTestConnection, loaded in a hidden
+  // iframe) requests prompt=none instead of the normal interactive redirect:
+  // now that Sync grants these scopes tenant-wide (AllPrincipals), any
+  // engineer with an active Microsoft SSO session can complete this with no
+  // visible navigation at all. It's discriminated from the visible flow by a
+  // distinct state prefix (apps/api/src/auth/routes.ts), since a hidden-iframe
+  // callback must postMessage its result rather than render landingPage()'s
+  // full-page HTML. If prompt=none can't complete silently — no SSO session,
+  // a Conditional Access step-up — Microsoft returns `error=interaction_required`
+  // (or similar) with no code, and the frontend falls back to the visible
+  // redirect after a short timeout.
+  app.get<{ Querystring: { silent?: string } }>(
+    "/api/onboarding/test-connection/start",
+    async (req, reply) => {
+      if (config.DEMO_MODE) {
+        return reply.code(400).send({ error: "not_available_in_demo_mode" });
+      }
 
-    const origin = resolveWebOrigin(req);
-    const state = `patchpilot-testconn:${req.session.sessionId}`;
-    const url = await getCca().getAuthCodeUrl({
-      scopes: APP_REGISTRATION_TEST_SCOPES,
-      redirectUri: `${origin}/auth/callback`,
-      state,
-    });
+      const origin = resolveWebOrigin(req);
+      const silent = req.query.silent === "1";
+      const state = `${silent ? "patchpilot-testconn-silent:" : "patchpilot-testconn:"}${req.session.sessionId}`;
+      const url = await getCca().getAuthCodeUrl({
+        scopes: APP_REGISTRATION_TEST_SCOPES,
+        redirectUri: `${origin}/auth/callback`,
+        state,
+        ...(silent ? { prompt: "none" as const, loginHint: req.session.engineer!.upn } : {}),
+      });
 
-    await auditSafe({
-      engineer: req.session.engineer!.upn,
-      tenantId: config.ENTRA_TENANT_ID,
-      endpoint: "/api/onboarding/test-connection/start",
-      method: "GET",
-      action: "app-registration:test-connection-start",
-      resourceType: "application",
-      resourceId: config.ENTRA_CLIENT_ID,
-      summary: `${req.session.engineer!.upn} started a permissions connection test`,
-      outcome: "success",
-      responseStatus: 302,
-    });
+      await auditSafe({
+        engineer: req.session.engineer!.upn,
+        tenantId: config.ENTRA_TENANT_ID,
+        endpoint: "/api/onboarding/test-connection/start",
+        method: "GET",
+        action: "app-registration:test-connection-start",
+        resourceType: "application",
+        resourceId: config.ENTRA_CLIENT_ID,
+        summary: `${req.session.engineer!.upn} started a${silent ? " silent" : ""} permissions connection test`,
+        outcome: "success",
+        responseStatus: 302,
+      });
 
-    return reply.redirect(url);
-  });
+      return reply.redirect(url);
+    },
+  );
 }
