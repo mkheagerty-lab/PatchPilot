@@ -10,6 +10,7 @@ import { encrypt, sha256Hex, auditSafe } from "@patchpilot/graph";
 import { SYSTEM_ACTORS, can, CREDENTIALS_ROTATED_CHANNEL } from "@patchpilot/shared";
 import { config } from "../config.js";
 import { connection } from "../queue.js";
+import { exitAfterReply } from "../restart-after-reply.js";
 
 /**
  * The pairing flow's two routes, deliberately isolated in their own hook-free
@@ -157,8 +158,7 @@ export async function onboardingPairingRoutes(app: FastifyInstance): Promise<voi
       await connection.publish(CREDENTIALS_ROTATED_CHANNEL, "paired").catch(() => undefined);
 
       reply.send({ paired: true });
-      // Give the response a moment to actually flush before the process exits.
-      setTimeout(() => process.exit(0), 250);
+      exitAfterReply(reply);
     },
   );
 

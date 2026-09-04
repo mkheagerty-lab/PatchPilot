@@ -9,6 +9,7 @@ import { config } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
 import { resolveWebOrigin } from "../auth/origin.js";
 import { connection } from "../queue.js";
+import { exitAfterReply } from "../restart-after-reply.js";
 
 /**
  * Custom Domain Management for the App Registration page.
@@ -313,7 +314,7 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
         // Newly active — EXTRA_WEB_ORIGINS only picks this up on next boot.
         await connection.publish(CUSTOM_DOMAINS_CHANGED_CHANNEL, "activated").catch(() => undefined);
         reply.send({ verified, domain: toDomainReport(updated!) });
-        setTimeout(() => process.exit(0), 250);
+        exitAfterReply(reply);
         return;
       }
       return reply.send({ verified, domain: toDomainReport(updated!) });
@@ -352,7 +353,7 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
         // An origin is being removed from the allowlist — same restart need as activation.
         await connection.publish(CUSTOM_DOMAINS_CHANGED_CHANNEL, "deleted").catch(() => undefined);
         reply.send({ deleted: true });
-        setTimeout(() => process.exit(0), 250);
+        exitAfterReply(reply);
         return;
       }
       return reply.send({ deleted: true });
