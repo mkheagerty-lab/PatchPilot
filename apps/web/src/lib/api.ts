@@ -848,6 +848,11 @@ export interface OnboardingReport {
    * PUBLIC_URL plus every active custom domain. Not a live read of the real
    * Entra app registration; the two match once a sync has actually run. */
   redirectUris: string[];
+  /** The real, verified redirect URI list as last read directly from the
+   * Entra app registration by "Sync redirect URIs" — null until that flow
+   * has ever completed once. This is the trustworthy answer; redirectUris
+   * above is only ever this server's own computed guess. */
+  liveRedirectUris: { checkedAt: string; redirectUris: string[] } | null;
   /** One-click admin-consent URL for the MSP's own (home) tenant — the Global
    * Administrator opens this to make the first "Discover tenants" succeed. */
   homeConsentUrl: string;

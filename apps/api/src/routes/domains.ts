@@ -3,9 +3,14 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { eq, and, desc } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
-import { getCca, APP_REGISTRATION_SYNC_SCOPES, auditSafe } from "@patchpilot/graph";
+import {
+  getCca,
+  APP_REGISTRATION_SYNC_SCOPES,
+  auditSafe,
+  encodeRedirectUriRemoval,
+} from "@patchpilot/graph";
 import { CUSTOM_DOMAINS_CHANGED_CHANNEL } from "@patchpilot/shared";
-import { config } from "../config.js";
+import { config, webOrigins } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
 import { resolveWebOrigin } from "../auth/origin.js";
 import { connection } from "../queue.js";
@@ -423,7 +428,20 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
   // packages/graph/src/app-registration-sync.ts's updateAppRegistrationRedirectUris
   // for what it does once the callback in apps/api/src/auth/routes.ts redeems
   // the code). Structurally identical to onboarding.ts's sync-permissions/start.
-  app.get(
+  //
+  // An optional `remove` querystring param (comma-separated, URI-encoded
+  // redirect URIs) requests deletion of specific URIs from the live app
+  // registration in the same round trip. Only "orphaned" URIs — live in Entra
+  // but not one this instance itself expects — should ever reach here (the
+  // Application Identity UI only offers those as checkboxes), but this route
+  // re-derives and enforces that same protectedUris filter server-side rather
+  // than trusting the querystring: removing this instance's own active
+  // redirect URI would lock every admin out of the app registration. Anything
+  // that survives the filter is carried across the redirect inside `state`
+  // (never in a way Microsoft's endpoint interprets — it just echoes state
+  // back verbatim) and re-filtered again in auth/routes.ts right before the
+  // actual Graph PATCH.
+  app.get<{ Querystring: { remove?: string } }>(
     "/api/domains/sync-registration/start",
     { preHandler: requirePermission("settings:write") },
     async (req, reply) => {
@@ -431,8 +449,18 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(400).send({ error: "not_available_in_demo_mode" });
       }
 
+      const protectedUris = new Set(webOrigins.map((o) => `${o}/auth/callback`));
+      const requestedRemovals = (req.query.remove ?? "")
+        .split(",")
+        .map((s) => decodeURIComponent(s.trim()))
+        .filter(Boolean);
+      const safeRemovals = requestedRemovals.filter((uri) => !protectedUris.has(uri));
+
       const origin = resolveWebOrigin(req);
-      const state = `patchpilot-syncdomains:${req.session.sessionId}`;
+      let state = `patchpilot-syncdomains:${req.session.sessionId}`;
+      if (safeRemovals.length > 0) {
+        state += `:${encodeRedirectUriRemoval(safeRemovals)}`;
+      }
       const url = await getCca().getAuthCodeUrl({
         scopes: APP_REGISTRATION_SYNC_SCOPES,
         redirectUri: `${origin}/auth/callback`,
@@ -447,7 +475,10 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
         action: "app-registration:domain-sync-start",
         resourceType: "application",
         resourceId: config.ENTRA_CLIENT_ID,
-        summary: `${req.session.engineer!.upn} started a redirect URI sync`,
+        summary:
+          safeRemovals.length > 0
+            ? `${req.session.engineer!.upn} started a redirect URI sync (requesting removal of ${safeRemovals.length})`
+            : `${req.session.engineer!.upn} started a redirect URI sync`,
         outcome: "success",
         responseStatus: 302,
       });

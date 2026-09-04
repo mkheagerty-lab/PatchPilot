@@ -14,6 +14,7 @@ import {
   syncAppRegistrationScopes,
   testAppRegistrationScopes,
   updateAppRegistrationRedirectUris,
+  decodeRedirectUriRemoval,
   storeToken,
   clearTokens,
   auditSafe,
@@ -537,8 +538,14 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       // syncAppRegistrationScopes — it patches Web.RedirectUris, not permissions.
       const SYNC_DOMAINS_STATE_PREFIX = "patchpilot-syncdomains:";
       if (code && state?.startsWith(SYNC_DOMAINS_STATE_PREFIX)) {
-        const sessionId = state.slice(SYNC_DOMAINS_STATE_PREFIX.length);
+        const [sessionId, removalPayload] = state.slice(SYNC_DOMAINS_STATE_PREFIX.length).split(":");
         const engineer = req.session.engineer;
+        // Re-derive + re-apply the same protectedUris filter domains.ts's
+        // start route already used — this payload rode through the user's
+        // browser and Microsoft's redirect, so it's untrusted here regardless
+        // of what the start route already excluded. Never trust it alone.
+        const protectedUris = new Set(webOrigins.map((o) => `${o}/auth/callback`));
+        const removeUris = decodeRedirectUriRemoval(removalPayload).filter((uri) => !protectedUris.has(uri));
 
         if (!engineer || sessionId !== req.session.sessionId) {
           await auditSafe({
@@ -572,7 +579,20 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
             accessToken: stepUp.accessToken,
             clientId: config.ENTRA_CLIENT_ID,
             redirectOrigins: webOrigins,
+            removeUris,
           });
+
+          // result.current is the authoritative post-operation Entra state —
+          // every pre-existing redirect URI (including any added outside
+          // PatchPilot entirely) plus whatever this run just added. Persisting
+          // it lets the Application identity card show the real, verified
+          // list instead of just this server's own computed guess (see
+          // OnboardingReport.liveRedirectUris in routes/onboarding.ts).
+          const liveValue = { checkedAt: new Date().toISOString(), redirectUris: result.current };
+          await db
+            .insert(tables.settings)
+            .values({ key: "entra-redirect-uris-live", value: liveValue })
+            .onConflictDoUpdate({ target: tables.settings.key, set: { value: liveValue, updatedAt: new Date() } });
 
           await auditSafe({
             engineer: engineer.upn,
@@ -582,10 +602,16 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
             action: "app-registration:domain-sync-success",
             resourceType: "application",
             resourceId: config.ENTRA_CLIENT_ID,
-            summary: `${engineer.upn} synced app registration redirect URIs (${result.added.length} added, ${result.alreadyPresent.length} already present)`,
+            summary: `${engineer.upn} synced app registration redirect URIs (${result.added.length} added, ${result.removed.length} removed, ${result.alreadyPresent.length} already present)`,
             outcome: "success",
             responseStatus: 200,
           });
+
+          const changed = result.added.length > 0 || result.removed.length > 0;
+          const bodyParts: string[] = [];
+          if (result.added.length > 0) bodyParts.push(`Added: ${result.added.join(", ")}.`);
+          if (result.removed.length > 0) bodyParts.push(`Removed: ${result.removed.join(", ")}.`);
+          if (!changed) bodyParts.push("Every active domain's redirect URI was already registered — nothing to change.");
 
           return reply.type("text/html").send(
             landingPage({
@@ -593,10 +619,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
               returnPath: APP_REGISTRATION_PATH,
               tone: "ok",
               title: "PatchPilot — sync redirect URIs",
-              heading: result.added.length ? "Redirect URIs updated" : "Already up to date",
-              body: result.added.length
-                ? `Added: ${result.added.join(", ")}. Already present: ${result.alreadyPresent.length}.`
-                : "Every active domain's redirect URI was already registered — nothing to change.",
+              heading: changed ? "Redirect URIs updated" : "Already up to date",
+              body: bodyParts.join(" "),
             }),
           );
         } catch (err) {
