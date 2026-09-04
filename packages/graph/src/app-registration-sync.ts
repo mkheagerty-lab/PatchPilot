@@ -7,6 +7,7 @@ import {
   RESOURCE_APP_IDS,
 } from "@patchpilot/shared";
 import { GraphError } from "./client.js";
+import { APP_REGISTRATION_TEST_SCOPES } from "./msal.js";
 
 /**
  * Ports Deploy-PatchPilot.ps1's `Resolve-ResourceAccess` + `Set-DelegatedAdminConsent`
@@ -116,6 +117,26 @@ function scopesFor(resource: ResourceKey, includeWriteScopes: boolean): readonly
 }
 
 /**
+ * APP_REGISTRATION_TEST_SCOPES (Application.Read.All, Directory.Read.All)
+ * folded into the Graph resource ONLY inside syncAppRegistrationScopes below —
+ * never into scopesFor/testAppRegistrationScopes's display list, since these
+ * aren't "requested" onboarding permissions and shouldn't render as pills in
+ * Requested API permissions.
+ *
+ * Both are admin-restricted Graph delegated permissions: Microsoft blocks a
+ * non-Global-Admin's consent to them with "Need admin approval" unless
+ * they're already tenant-wide (AllPrincipals) granted. Sync is already the
+ * one action gated to a Global Admin's write-capable step-up, so bundling
+ * these into its publish + grant step here means every other engineer's
+ * Test Connection afterward is just a sign-in redirect against an
+ * already-consented scope — never a fresh admin-restricted consent prompt
+ * that only a Global Admin could get past.
+ */
+function testScopesFor(resource: ResourceKey): readonly string[] {
+  return resource === "graph" ? APP_REGISTRATION_TEST_SCOPES : [];
+}
+
+/**
  * Applies PatchPilot's current requested scopes (packages/shared/src/scopes.ts)
  * to an *existing* app registration, then grants/refreshes tenant-wide admin
  * consent for them — the two steps a Global Admin otherwise performs by
@@ -149,7 +170,7 @@ export async function syncAppRegistrationScopes(input: {
       warnings.push(`${resource.label} service principal not found — skipped`);
       continue;
     }
-    const wanted = scopesFor(resource.key, includeWriteScopes);
+    const wanted = [...scopesFor(resource.key, includeWriteScopes), ...testScopesFor(resource.key)];
     const published = sp.oauth2PermissionScopes ?? [];
     const access: { id: string; type: "Scope" }[] = [];
     for (const value of wanted) {
@@ -185,7 +206,7 @@ export async function syncAppRegistrationScopes(input: {
     const sp = servicePrincipals[i];
     if (!sp) continue; // already warned above
 
-    const wanted = scopesFor(resource.key, includeWriteScopes);
+    const wanted = [...scopesFor(resource.key, includeWriteScopes), ...testScopesFor(resource.key)];
     const publishable = new Set((sp.oauth2PermissionScopes ?? []).map((s) => s.value));
     const valid = wanted.filter((v) => publishable.has(v));
     if (valid.length === 0) continue;
