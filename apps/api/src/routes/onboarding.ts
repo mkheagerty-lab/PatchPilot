@@ -16,6 +16,7 @@ import {
   APP_REGISTRATION_TEST_SCOPES,
   auditSafe,
   type ScopeStatusEntry,
+  type LicenseCheckResult,
 } from "@patchpilot/graph";
 import { config, webOrigins } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
@@ -118,8 +119,15 @@ interface OnboardingReport {
    * see testAppRegistrationScopes), persisted in the `entra-scope-status`
    * settings row. Null until a test has ever been run, so the UI can tell
    * "never tested" apart from "tested and every scope failed".
+   *
+   * `licensing` rides along from that same run (see
+   * checkTenantLicensing/testAppRegistrationScopes) — the tenant's real
+   * Defender/Intune entitlement from `/organization` assignedPlans, which is
+   * the thing that actually determines whether those scopes will *work*,
+   * independent of whether they're published/granted. Optional so an older
+   * `entra-scope-status` row written before this field shipped still parses.
    */
-  scopeStatus: { checkedAt: string; results: ScopeStatusEntry[] } | null;
+  scopeStatus: { checkedAt: string; results: ScopeStatusEntry[]; licensing?: LicenseCheckResult } | null;
   consentTargets: ConsentTarget[];
 }
 
@@ -160,9 +168,9 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
       .from(tables.settings)
       .where(eq(tables.settings.key, "entra-scope-status"));
     if (!row) return null;
-    const value = row.value as { checkedAt?: string; results?: ScopeStatusEntry[] };
+    const value = row.value as { checkedAt?: string; results?: ScopeStatusEntry[]; licensing?: LicenseCheckResult };
     if (!Array.isArray(value.results) || typeof value.checkedAt !== "string") return null;
-    return { checkedAt: value.checkedAt, results: value.results };
+    return { checkedAt: value.checkedAt, results: value.results, licensing: value.licensing };
   }
 
   async function loadLiveRedirectUris(): Promise<OnboardingReport["liveRedirectUris"]> {

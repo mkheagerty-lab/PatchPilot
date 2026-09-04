@@ -137,6 +137,8 @@ export {
   testAppRegistrationScopes,
   type ScopeTestResult,
   type ScopeStatusEntry,
+  checkTenantLicensing,
+  type LicenseCheckResult,
   updateAppRegistrationRedirectUris,
   type UpdateRedirectUrisResult,
   encodeRedirectUriRemoval,

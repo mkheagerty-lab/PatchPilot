@@ -5,6 +5,8 @@ import {
   DEFENDER_READONLY_SCOPES,
   PARTNER_CENTER_SCOPES,
   RESOURCE_APP_IDS,
+  mapAssignedPlansToLicenses,
+  type RequiredLicense,
 } from "@patchpilot/shared";
 import { GraphError } from "./client.js";
 import { APP_REGISTRATION_TEST_SCOPES } from "./msal.js";
@@ -255,6 +257,62 @@ export interface ScopeStatusEntry {
 
 export interface ScopeTestResult {
   results: ScopeStatusEntry[];
+  /** See {@link checkTenantLicensing}. */
+  licensing: LicenseCheckResult;
+}
+
+export interface LicenseCheckResult {
+  /**
+   * "detected" only when the tenant's `/organization` object actually
+   * returned a non-empty `assignedPlans` array we could map — i.e. a real
+   * answer, not just an absent one. See mapAssignedPlansToLicenses's "empty
+   * array isn't zero licenses" precedent in apps/api/src/graph/licensing.ts.
+   */
+  status: "detected" | "unavailable";
+  /** Capabilities the tenant actually holds. Only meaningful when status is "detected". */
+  licenses: RequiredLicense[];
+  /** Short reason detection didn't run/succeed, set only when status is "unavailable". */
+  detail?: string;
+}
+
+/**
+ * Answers "does this tenant actually hold a Defender/Intune-class license?" —
+ * the one question syncAppRegistrationScopes/testAppRegistrationScopes's
+ * scope-publish-and-grant checks structurally cannot answer (see this
+ * function's doc comment history: a resource's delegated-permission catalog
+ * is static per first-party app and ships identically to every tenant
+ * regardless of subscription tier, so a scope can be published, granted, and
+ * still fail at runtime for a tenant with no matching license).
+ *
+ * Reuses the SAME accessToken already in hand — the "Test Connection" step-up
+ * consent already includes Directory.Read.All (APP_REGISTRATION_TEST_SCOPES),
+ * which is exactly what `/organization` needs, so this adds no new consent
+ * prompt. Mirrors apps/api/src/graph/licensing.ts's probeTenant: licensing
+ * comes from the same object's `assignedPlans` (service plan IDs), the
+ * seamless GDAP-readable signal, with no /subscribedSkus fallback here since
+ * this token was never granted the broader Organization.Read.All that read
+ * needs — an unavailable result here just means "couldn't check", never
+ * "not licensed".
+ */
+export async function checkTenantLicensing(accessToken: string): Promise<LicenseCheckResult> {
+  try {
+    const org = await graphFetch<{ value: { assignedPlans?: { servicePlanId?: string; service?: string; capabilityStatus?: string }[] }[] }>(
+      accessToken,
+      "GET",
+      "/organization?$select=assignedPlans",
+    );
+    const plans = org.value[0]?.assignedPlans;
+    if (!Array.isArray(plans) || plans.length === 0) {
+      return { status: "unavailable", licenses: [], detail: "tenant's /organization returned no assignedPlans" };
+    }
+    return { status: "detected", licenses: mapAssignedPlansToLicenses(plans) };
+  } catch (err) {
+    return {
+      status: "unavailable",
+      licenses: [],
+      detail: err instanceof Error ? err.message : "licensing read failed",
+    };
+  }
 }
 
 /**
@@ -274,9 +332,10 @@ export async function testAppRegistrationScopes(input: {
   const { accessToken, clientId } = input;
   const results: ScopeStatusEntry[] = [];
 
-  const [servicePrincipals, clientSp] = await Promise.all([
+  const [servicePrincipals, clientSp, licensing] = await Promise.all([
     Promise.all(RESOURCES.map((r) => findServicePrincipal(accessToken, r.resourceAppId))),
     findServicePrincipal(accessToken, clientId),
+    checkTenantLicensing(accessToken),
   ]);
 
   let grants: Oauth2PermissionGrant[] = [];
@@ -310,7 +369,7 @@ export async function testAppRegistrationScopes(input: {
     }
   }
 
-  return { results };
+  return { results, licensing };
 }
 
 export interface UpdateRedirectUrisResult {

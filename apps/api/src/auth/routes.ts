@@ -204,7 +204,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
             clientId: config.ENTRA_CLIENT_ID,
           });
 
-          const value = { checkedAt: new Date().toISOString(), results: result.results };
+          const value = {
+            checkedAt: new Date().toISOString(),
+            results: result.results,
+            licensing: result.licensing,
+          };
           await db
             .insert(tables.settings)
             .values({ key: "entra-scope-status", value })
@@ -468,7 +472,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
             clientId: config.ENTRA_CLIENT_ID,
           });
 
-          const value = { checkedAt: new Date().toISOString(), results: result.results };
+          const value = {
+            checkedAt: new Date().toISOString(),
+            results: result.results,
+            licensing: result.licensing,
+          };
           await db
             .insert(tables.settings)
             .values({ key: "entra-scope-status", value })
@@ -477,6 +485,18 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           const ok = result.results.filter((r) => r.status === "ok").length;
           const skipped = result.results.filter((r) => r.status === "skipped").length;
           const failed = result.results.filter((r) => r.status === "failed").length;
+          const missingCapabilities =
+            result.licensing.status === "detected"
+              ? [
+                  !result.licensing.licenses.some((l) => l === "mde-p2" || l === "defender-business-premium") &&
+                    "Defender for Endpoint",
+                  !result.licensing.licenses.includes("intune") && "Intune",
+                ].filter((v): v is string => typeof v === "string")
+              : [];
+          const licenseNote =
+            missingCapabilities.length > 0
+              ? ` This tenant isn't licensed for: ${missingCapabilities.join(", ")} — the matching permissions may still show as granted, but the underlying feature won't work.`
+              : "";
 
           await auditSafe({
             engineer: engineer.upn,
@@ -498,7 +518,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
               tone: failed > 0 ? "error" : "ok",
               title: "PatchPilot — test connection",
               heading: "Connection test complete",
-              body: `${ok} permission${ok === 1 ? "" : "s"} OK, ${skipped} skipped, ${failed} failed. Nothing was changed — this was a read-only check. Return to PatchPilot and see Setup → App Registration for the breakdown.`,
+              body: `${ok} permission${ok === 1 ? "" : "s"} OK, ${skipped} skipped, ${failed} failed. Nothing was changed — this was a read-only check. Return to PatchPilot and see Setup → App Registration for the breakdown.${licenseNote}`,
             }),
           );
         } catch (err) {
