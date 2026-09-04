@@ -5,7 +5,6 @@ DeviceManagementManagedDevices.PrivilegedOperations.All
 DeviceManagementConfiguration.ReadWrite.All
 DeviceManagementApps.ReadWrite.All
 SecurityEvents.Read.All
-Vulnerability.Read.All
 WindowsUpdates.ReadWrite.All
 Organization.Read.All
 Group.Read.All

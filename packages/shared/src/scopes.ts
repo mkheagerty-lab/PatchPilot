@@ -17,7 +17,15 @@ export const GRAPH_SCOPES = [
   "DeviceManagementConfiguration.ReadWrite.All",
   "DeviceManagementApps.ReadWrite.All",
   "SecurityEvents.Read.All",
-  "Vulnerability.Read.All",
+  // NOTE: no Graph-side "Vulnerability.Read.All" here. An earlier revision
+  // requested it, but nothing in PatchPilot calls a Microsoft Graph vulnerability
+  // endpoint — every CVE/vulnerability read goes through Defender's own API
+  // (see DEFENDER_SCOPES's "Vulnerability.Read" below), and live syncing
+  // confirmed Microsoft Graph's own service principal doesn't even publish a
+  // delegated oauth2PermissionScope by that name (Sync API Permissions reported
+  // "Microsoft Graph missing delegated scope: Vulnerability.Read.All" and it
+  // never resolved past "skipped"/"failed"). It was almost certainly copy-pasted
+  // from the Defender scope list by mistake — dropped as unused dead weight.
   "WindowsUpdates.ReadWrite.All",
   // Reads /subscribedSkus for licensing detection. Without it the home-tenant
   // OBO licensing probe 403s, surfacing as a false "needs consent" reachability

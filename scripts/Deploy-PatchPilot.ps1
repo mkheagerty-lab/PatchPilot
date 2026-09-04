@@ -676,10 +676,15 @@ try {
     # READ-ONLY BY DEFAULT (invariant #11): the arrays below request only read scopes,
     # which are all sync needs. The Phase 5 remediation WRITE scopes are appended only
     # when -EnableRemediationWriteScopes is passed (see $remediation*WriteScopes).
+    # NOTE: no Graph-side "Vulnerability.Read.All" here. Nothing in PatchPilot
+    # calls a Microsoft Graph vulnerability endpoint - every CVE/vulnerability
+    # read goes through Defender's own API ($defenderScopes's "Vulnerability.Read"
+    # below). Live syncing confirmed Microsoft Graph's own service principal
+    # doesn't even publish a delegated oauth2PermissionScope by that name; it
+    # was almost certainly copy-pasted from the Defender list by mistake.
     $graphScopes = @(
         "DelegatedAdminRelationship.Read.All",
         "SecurityEvents.Read.All",
-        "Vulnerability.Read.All",
         # Reads /subscribedSkus for licensing detection over the home-tenant OBO
         # path. Without it the licensing probe 403s and the MSP tenant shows a
         # false "needs consent" with an empty Licenses column.

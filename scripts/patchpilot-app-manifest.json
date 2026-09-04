@@ -48,10 +48,6 @@
           "type": "Scope"
         },
         {
-          "id": "Vulnerability.Read.All",
-          "type": "Scope"
-        },
-        {
           "id": "WindowsUpdates.ReadWrite.All",
           "type": "Scope"
         },

@@ -39,10 +39,20 @@ function landingPage(opts: {
   body: string;
   tone: "ok" | "error";
   origin: string;
+  /**
+   * Where "Return to PatchPilot" sends the admin — e.g. "/setup/app-registration"
+   * so a Sync/Test Connection/redirect-URI-sync return lands back on the page
+   * that started it, not the bare origin (which the SPA's router sends to the
+   * dashboard). Defaults to the origin root for flows with no single obvious
+   * page (e.g. admin-consent, which can be started from either App Registration
+   * or the Tenants page).
+   */
+  returnPath?: string;
 }): string {
   const accent = opts.tone === "ok" ? "#16a34a" : "#dc2626";
   const escape = (s: string) =>
     s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  const returnUrl = `${opts.origin}${opts.returnPath ?? ""}`;
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -62,9 +72,14 @@ function landingPage(opts: {
   <span class="badge">${opts.tone === "ok" ? "✓" : "!"}</span>
   <h1>${escape(opts.heading)}</h1>
   <p>${opts.body}</p>
-  <p><a href="${escape(opts.origin)}">Return to PatchPilot →</a></p>
+  <p><a href="${escape(returnUrl)}">Return to PatchPilot →</a></p>
 </div></body></html>`;
 }
+
+/** Every app-registration step-up flow (sync, test-connection, domain-sync)
+ * only ever starts from this one page, so their landing pages should return
+ * here rather than the bare origin (which the SPA sends to the dashboard). */
+const APP_REGISTRATION_PATH = "/setup/app-registration";
 
 /**
  * OIDC Authorization Code + PKCE login against the MSP tenant.
@@ -192,6 +207,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(400).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — sync permissions",
               heading: "This link is no longer valid",
@@ -267,6 +283,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: result.warnings.length > 0 ? "error" : "ok",
               title: "PatchPilot — sync permissions",
               heading: result.warnings.length > 0 ? "Permissions synced with warnings" : "Permissions synced",
@@ -293,6 +310,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(500).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — sync permissions",
               heading: "Permission sync failed",
@@ -331,6 +349,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(400).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — test connection",
               heading: "This link is no longer valid",
@@ -376,6 +395,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: failed > 0 ? "error" : "ok",
               title: "PatchPilot — test connection",
               heading: "Connection test complete",
@@ -400,6 +420,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(500).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — test connection",
               heading: "Connection test failed",
@@ -438,6 +459,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(400).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — sync redirect URIs",
               heading: "This link is no longer valid",
@@ -470,6 +492,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "ok",
               title: "PatchPilot — sync redirect URIs",
               heading: result.added.length ? "Redirect URIs updated" : "Already up to date",
@@ -496,6 +519,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(500).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — sync redirect URIs",
               heading: "Redirect URI sync failed",
