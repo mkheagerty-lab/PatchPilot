@@ -15,10 +15,10 @@ User.Read
 # Microsoft Threat Protection (Defender) delegated scopes
 Machine.LiveResponse
 Library.Manage
-Machine.Read.All
-Vulnerability.Read.All
-SecurityRecommendation.Read.All
-Software.Read.All
+Machine.Read
+Vulnerability.Read
+SecurityRecommendation.Read
+Software.Read
 
 # Microsoft Partner Center API
 user_impersonation

@@ -59,8 +59,16 @@ function ScopeList({
 }) {
   return (
     <div>
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-        {title}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          {title}
+        </span>
+        <span
+          title="PatchPilot only ever requests Delegated (signed-in user) permissions, never Application (app-only) ones — GDAP doesn't support app-only access to customer tenants, and it keeps every action attributable to an engineer. If this same permission name shows a different 'Application' type in the Entra portal, that grant isn't the one PatchPilot's delegated tokens actually use."
+          className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500"
+        >
+          Delegated
+        </span>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {scopes.map((s) => {

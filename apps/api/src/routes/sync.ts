@@ -222,7 +222,7 @@ export async function syncRoutes(app: FastifyInstance): Promise<void> {
       const devices = await syncDevices(engineer, tenantId);
       const vulnerabilities = await syncVulnerabilities(engineer, tenantId);
       // Defender's consolidated recommendations (best-effort — zero if the tenant
-      // lacks SecurityRecommendation.Read.All / MDE). This is the noise-reduced
+      // lacks SecurityRecommendation.Read / MDE). This is the noise-reduced
       // "Update <product>" roll-up that fronts the per-CVE list.
       const recommendations = await syncRecommendations(engineer, tenantId);
       // Backfills per-CVE rows for recommendations the per-machine vulnerability
@@ -231,11 +231,11 @@ export async function syncRoutes(app: FastifyInstance): Promise<void> {
       // syncRecommendations since it needs those freshly-upserted rows.
       const osBackfill = await backfillOsRecommendationVulnerabilities(engineer, tenantId);
       // Full software inventory (Ask 3) — best-effort, zero if the tenant lacks
-      // Software.Read.All/Software.Read; covers software Defender enumerates but
-      // never emits a CVE finding for, which the vulnerabilities sync misses.
+      // Software.Read; covers software Defender enumerates but never emits a
+      // CVE finding for, which the vulnerabilities sync misses.
       const softwareInventory = await syncSoftwareInventory(engineer, tenantId);
       // Per-device missing-KB list (Defender getmissingkbs) — best-effort, zero if
-      // the tenant lacks Software.Read.All. Backs "By OS" / Missing KBs and the
+      // the tenant lacks Software.Read. Backs "By OS" / Missing KBs and the
       // Expedited Quality Update / Live Response KB-remediation dispatch paths.
       const missingKbs = await syncMissingKbs(engineer, tenantId);
       // Live-synced windowsFeatureUpdateProfiles — both PatchPilot's own campaigns

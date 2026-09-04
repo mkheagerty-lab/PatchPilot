@@ -726,7 +726,7 @@ async function loadCveMetadata(
  * lighter `/vulnerabilities/machinesVulnerabilities` list, this one reliably
  * carries `firstSeenTimestamp` — Defender's true per-finding first-detected, which
  * anchors an accurate SLA clock instead of falling back to sync time. Same
- * `Vulnerability.Read.All` scope, so no additional consent.
+ * `Vulnerability.Read` scope, so no additional consent.
  */
 interface SoftwareVulnerabilityByMachine {
   cveId: string;
@@ -1823,7 +1823,7 @@ export function normalizeCveAddressed(
  * throttle-mitigation idiom as loadCveMetadata's per-CVE fan-out).
  *
  * Best-effort like the other Ask-3 syncs, but a 401/403 means the tenant lacks
- * `Software.Read.All` for every device identically, so the first such response
+ * `Software.Read` for every device identically, so the first such response
  * aborts the rest of the fan-out rather than burning one failed call per device.
  */
 export async function syncMissingKbs(
@@ -1998,7 +1998,7 @@ export function mapRecommendation(
  * `vulnerabilities` table remains as the drill-down detail.
  *
  * Best-effort, like the vulnerability sync: a tenant without the
- * `SecurityRecommendation.Read.All` scope (or no MDE license) yields zero
+ * `SecurityRecommendation.Read` scope (or no MDE license) yields zero
  * recommendations (403 → empty) rather than failing the whole sync.
  *
  * Upsert on (tenantId, recommendationId): `status` (engineer-set triage) is
@@ -2032,7 +2032,7 @@ export async function syncRecommendations(
       "/recommendations",
     ));
   } catch {
-    // No SecurityRecommendation.Read.All / MDE not licensed — nothing to ingest.
+    // No SecurityRecommendation.Read / MDE not licensed — nothing to ingest.
     return { count: 0 };
   }
 

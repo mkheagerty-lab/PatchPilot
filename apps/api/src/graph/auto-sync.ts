@@ -145,7 +145,7 @@ async function syncOneTenant(
       const recommendations = await syncRecommendations(engineer, tenantId);
       const softwareInventory = await syncSoftwareInventory(engineer, tenantId);
       // Best-effort like softwareInventory above — zero if the tenant lacks
-      // Software.Read.All. Without this, missing_kbs only ever gets refreshed
+      // Software.Read. Without this, missing_kbs only ever gets refreshed
       // by the manual "Sync Data" route, which nobody has reason to click once
       // auto-sync is keeping lastSyncedAt looking fresh on its own.
       const missingKbs = await syncMissingKbs(engineer, tenantId);
