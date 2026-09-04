@@ -224,11 +224,27 @@ export const APP_REGISTRATION_SYNC_SCOPES = [
 ];
 
 /**
- * Redeems a one-time step-up consent authorization code for an elevated,
- * short-lived access token (Application.ReadWrite.All +
- * DelegatedPermissionGrant.ReadWrite.All), used once server-side to sync
- * PatchPilot's requested API permissions onto its own app registration (see
- * packages/graph/src/app-registration-sync.ts).
+ * Scopes requested for the one-time "Test Connection" step-up consent (Setup ->
+ * App Registration, Requested API permissions). Read-only counterpart to
+ * APP_REGISTRATION_SYNC_SCOPES above: Application.Read.All covers reading
+ * service principals' published oauth2PermissionScopes, and Directory.Read.All
+ * covers listing oauth2PermissionGrants — both are documented as sufficient for
+ * those reads without ever granting write access. testAppRegistrationScopes
+ * (app-registration-sync.ts) only issues GETs, so there's no reason to put the
+ * heavier ReadWrite pair — and its admin-approval prompt — in front of an admin
+ * for what's meant to be a frequent, low-friction status check.
+ */
+export const APP_REGISTRATION_TEST_SCOPES = ["Application.Read.All", "Directory.Read.All"];
+
+/**
+ * Redeems a one-time step-up consent authorization code for a short-lived
+ * access token, used once server-side to sync PatchPilot's requested API
+ * permissions onto its own app registration, or to test their live status
+ * (see packages/graph/src/app-registration-sync.ts). `scopes` must match
+ * whatever was requested in the original getAuthCodeUrl call the code came
+ * from — defaults to APP_REGISTRATION_SYNC_SCOPES (the write-capable pair)
+ * for the sync/redirect-URI callers; pass APP_REGISTRATION_TEST_SCOPES for
+ * the read-only "Test Connection" caller instead.
  *
  * Unlike redeemLoginCode, this NEVER persists anything: no Redis cache entry,
  * no cache plugin. A fresh in-memory client is used and simply discarded once
@@ -240,6 +256,7 @@ export const APP_REGISTRATION_SYNC_SCOPES = [
 export async function redeemStepUpConsentCode(
   code: string,
   redirectUri: string,
+  scopes: string[] = APP_REGISTRATION_SYNC_SCOPES,
 ): Promise<AuthenticationResult> {
   if (env.DEMO_MODE) {
     throw new Error("Step-up consent redemption must never run in DEMO_MODE");
@@ -247,7 +264,7 @@ export async function redeemStepUpConsentCode(
   const client = new ConfidentialClientApplication(getMsalConfig());
   const result = await client.acquireTokenByCode({
     code,
-    scopes: APP_REGISTRATION_SYNC_SCOPES,
+    scopes,
     redirectUri,
   });
   if (!result?.accessToken) {

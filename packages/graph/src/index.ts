@@ -20,6 +20,7 @@ export {
   getCca,
   getLoginScopes,
   APP_REGISTRATION_SYNC_SCOPES,
+  APP_REGISTRATION_TEST_SCOPES,
   ccaForEngineer,
   clearMsalCache,
   redeemLoginCode,

@@ -10,6 +10,7 @@ import {
   getLoginScopes,
   redeemLoginCode,
   redeemStepUpConsentCode,
+  APP_REGISTRATION_TEST_SCOPES,
   syncAppRegistrationScopes,
   testAppRegistrationScopes,
   updateAppRegistrationRedirectUris,
@@ -339,7 +340,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         }
 
         try {
-          const stepUp = await redeemStepUpConsentCode(code, `${origin}/auth/callback`);
+          const stepUp = await redeemStepUpConsentCode(
+            code,
+            `${origin}/auth/callback`,
+            APP_REGISTRATION_TEST_SCOPES,
+          );
           const result = await testAppRegistrationScopes({
             accessToken: stepUp.accessToken,
             clientId: config.ENTRA_CLIENT_ID,
