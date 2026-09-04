@@ -1,10 +1,14 @@
 import type { FastifyInstance } from "fastify";
+import { eq } from "drizzle-orm";
 import { db, tables, demoTenants, type TenantRow } from "@patchpilot/db";
 import {
   buildConsentUrl,
   GRAPH_SCOPES,
   DEFENDER_SCOPES,
   PARTNER_CENTER_SCOPES,
+  currentScopeBaseline,
+  scopeBaselinesMatch,
+  type ScopeBaseline,
 } from "@patchpilot/shared";
 import { getCca, APP_REGISTRATION_SYNC_SCOPES, auditSafe } from "@patchpilot/graph";
 import { config, webOrigins } from "../config.js";
@@ -71,6 +75,22 @@ interface OnboardingReport {
    * started" panel's Step 2 "Completed" tag.
    */
   homeTenantConsented: boolean;
+  /**
+   * True once the app registration's requested scopes are known to have
+   * drifted from what packages/shared/src/scopes.ts currently requests —
+   * i.e. PatchPilot's own code shipped a new/changed permission since the
+   * registration was last written (pairing or a prior "Sync permissions"
+   * run). No live Graph read: that would need its own elevated consent just
+   * to check, defeating the point of a passive hint. Instead compares
+   * against the baseline stamped in the `entra-scopes-baseline` settings row
+   * by onboarding-pairing.ts (on pair) and auth/routes.ts (on sync success).
+   * False — not true — when no baseline row exists yet (self-hosted installs
+   * that hand-wrote .env, or any instance paired before this field shipped):
+   * an absent baseline means "unknown", and defaulting an existing, working
+   * instance to a scary "Sync needed" the moment this ships would be a false
+   * alarm, not a real one.
+   */
+  scopesSyncNeeded: boolean;
   scopes: {
     graph: readonly string[];
     defender: readonly string[];
@@ -92,10 +112,27 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
     return db.select().from(tables.tenants);
   }
 
+  async function scopesSyncNeeded(): Promise<boolean> {
+    if (config.DEMO_MODE) return false;
+    const [row] = await db
+      .select()
+      .from(tables.settings)
+      .where(eq(tables.settings.key, "entra-scopes-baseline"));
+    if (!row) return false; // no baseline recorded yet — see field's doc comment
+    const baseline = row.value as { includeWriteScopes?: boolean } & Partial<ScopeBaseline>;
+    if (!Array.isArray(baseline.graph) || !Array.isArray(baseline.defender) || !Array.isArray(baseline.partnerCenter)) {
+      return false; // malformed/unexpected row shape — fail closed to "no hint", not a crash
+    }
+    return !scopeBaselinesMatch(
+      { graph: baseline.graph, defender: baseline.defender, partnerCenter: baseline.partnerCenter },
+      currentScopeBaseline(baseline.includeWriteScopes === true),
+    );
+  }
+
   app.get("/api/onboarding", async () => {
     // Admin consent redirects back to the registered redirect URI.
     const redirectUri = config.AUTH_REDIRECT_URI;
-    const tenants = await allTenants();
+    const [tenants, syncNeeded] = await Promise.all([allTenants(), scopesSyncNeeded()]);
 
     const consentTargets: ConsentTarget[] = tenants
       // The MSP home tenant consents during app deployment, not via a per-customer URL.
@@ -118,6 +155,7 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
       redirectUris: webOrigins.map((o) => `${o}/auth/callback`),
       homeConsentUrl: buildConsentUrl(config.ENTRA_TENANT_ID, config.ENTRA_CLIENT_ID, redirectUri),
       homeTenantConsented: tenants.some((t) => t.isMspTenant),
+      scopesSyncNeeded: syncNeeded,
       scopes: {
         graph: GRAPH_SCOPES,
         defender: DEFENDER_SCOPES,

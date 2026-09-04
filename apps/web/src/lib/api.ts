@@ -854,6 +854,11 @@ export interface OnboardingReport {
   /** True once the MSP's own home tenant has completed admin consent (a
    * `tenants` row for it exists server-side) — see routes/onboarding.ts. */
   homeTenantConsented: boolean;
+  /** True when the live app registration's requested scopes are known to
+   * have drifted from what this build of PatchPilot currently requests —
+   * see routes/onboarding.ts. False (not a live check) when no baseline has
+   * ever been recorded, e.g. a self-hosted install that hand-wrote .env. */
+  scopesSyncNeeded: boolean;
   scopes: {
     graph: string[];
     defender: string[];
