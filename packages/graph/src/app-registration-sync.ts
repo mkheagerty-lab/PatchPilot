@@ -315,6 +315,7 @@ export async function testAppRegistrationScopes(input: {
 
 export interface UpdateRedirectUrisResult {
   added: string[];
+  removed: string[];
   alreadyPresent: string[];
   current: string[];
 }
@@ -323,19 +324,30 @@ export interface UpdateRedirectUrisResult {
  * Additively merges "<origin>/auth/callback" for every origin in
  * redirectOrigins into the app registration's Web platform redirect URIs,
  * using the same one-time step-up access token as syncAppRegistrationScopes
- * above. Idempotent: issues no PATCH at all if every wanted URI is already
- * present — this is the "won't create duplicated or unexpected changes"
- * guarantee for the in-app "update via browser" button (apps/api/src/routes/domains.ts),
- * mirroring scripts/Deploy-PatchPilot.ps1's Merge-RedirectUris/Test-RedirectUriExists
+ * above, and — only when the caller explicitly asks via removeUris — drops
+ * specific existing URIs at the same time, in the same PATCH. Idempotent:
+ * issues no PATCH at all if nothing would actually change — this is the
+ * "won't create duplicated or unexpected changes" guarantee for the in-app
+ * "update via browser" button (apps/api/src/routes/domains.ts), mirroring
+ * scripts/Deploy-PatchPilot.ps1's Merge-RedirectUris/Test-RedirectUriExists
  * functions. Deliberately does not touch the Spa platform — that PKCE-conflict
  * cleanup is a first-time-app-creation concern, not relevant to an incremental add.
+ *
+ * removeUris is intersected against `existing` here (nothing else this
+ * function does can remove a URI), but the caller is still responsible for
+ * making sure none of them is a URI this instance itself relies on to log
+ * in — removing this instance's own active redirect URI would lock every
+ * admin out of the app registration entirely (see routes/domains.ts's
+ * protectedUris filter and auth/routes.ts's matching re-check right before
+ * this is called).
  */
 export async function updateAppRegistrationRedirectUris(input: {
   accessToken: string;
   clientId: string;
   redirectOrigins: string[];
+  removeUris?: string[];
 }): Promise<UpdateRedirectUrisResult> {
-  const { accessToken, clientId, redirectOrigins } = input;
+  const { accessToken, clientId, redirectOrigins, removeUris = [] } = input;
   const appObjectId = await findApplicationObjectId(accessToken, clientId);
   const current = await graphFetch<{ web?: { redirectUris?: string[] } }>(
     accessToken,
@@ -344,11 +356,13 @@ export async function updateAppRegistrationRedirectUris(input: {
   );
   const existing = current.web?.redirectUris ?? [];
   const wanted = redirectOrigins.map((o) => `${o.replace(/\/+$/, "")}/auth/callback`);
+  const toRemove = new Set(removeUris);
 
   const added: string[] = [];
   const alreadyPresent: string[] = [];
-  const merged = [...existing];
+  let merged = [...existing];
   for (const uri of wanted) {
+    if (toRemove.has(uri)) continue; // being explicitly removed this same run — don't re-add it
     if (existing.includes(uri)) {
       alreadyPresent.push(uri);
       continue;
@@ -358,13 +372,45 @@ export async function updateAppRegistrationRedirectUris(input: {
       added.push(uri);
     }
   }
+  const removed = existing.filter((uri) => toRemove.has(uri));
+  merged = merged.filter((uri) => !toRemove.has(uri));
   const deduped = Array.from(new Set(merged));
 
-  if (added.length > 0) {
+  if (added.length > 0 || removed.length > 0) {
     await graphFetch(accessToken, "PATCH", `/applications/${appObjectId}`, {
       web: { redirectUris: deduped },
     });
   }
 
-  return { added, alreadyPresent, current: deduped };
+  return { added, removed, alreadyPresent, current: deduped };
+}
+
+/**
+ * Carries a redirect-URI removal request across the full-page OAuth redirect
+ * to Microsoft and back, appended onto the `patchpilot-syncdomains:${sessionId}`
+ * state string built in apps/api/src/routes/domains.ts and read back apart in
+ * apps/api/src/auth/routes.ts's callback. base64url so it can't introduce a
+ * `:` that would break that state string's `sessionId:payload` split, and JSON
+ * so the two ends don't have to agree on a delimiter for the URIs themselves
+ * (which contain their own `:` and `/`).
+ *
+ * This payload is round-tripped through the user's browser and Microsoft's
+ * redirect, so it's treated as untrusted on the way back in: both ends of
+ * this call still re-filter against a `protectedUris` set derived from this
+ * instance's own webOrigins (once when domains.ts builds the state, again in
+ * auth/routes.ts immediately before updateAppRegistrationRedirectUris is
+ * called) rather than trusting that a URI surviving decode is safe to remove.
+ */
+export function encodeRedirectUriRemoval(uris: string[]): string {
+  return Buffer.from(JSON.stringify(uris), "utf8").toString("base64url");
+}
+
+export function decodeRedirectUriRemoval(payload: string | undefined): string[] {
+  if (!payload) return [];
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
 }

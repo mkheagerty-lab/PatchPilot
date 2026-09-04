@@ -664,10 +664,10 @@ function RegistrationCommand({ domainId }: { domainId: string }) {
  * Cloudflare API in v1) or a fully custom hostname, verifies it with a read-only CNAME
  * lookup (apps/api/src/routes/domains.ts never writes a DNS record itself),
  * and then pushes the resulting redirect URI(s) into the real Entra app
- * registration — either via the same step-up browser consent
- * RequestedPermissionsStep uses, or by copying the PowerShell one-liner
- * below. Hidden in demo mode, where nothing here could resolve or authorize
- * anything real.
+ * registration — either via Application identity's "Sync redirect URIs"
+ * button above (same step-up browser consent RequestedPermissionsStep
+ * uses), or by copying the PowerShell one-liner below. Hidden in demo mode,
+ * where nothing here could resolve or authorize anything real.
  */
 function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
   const qc = useQueryClient();
@@ -989,56 +989,30 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
 
       {hasActive && (
         <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-700">
-                Update app registration domains
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Push every active domain&apos;s redirect URI into the real
-                Entra app registration in one pass. Additive only —
-                already-registered URIs are left untouched, nothing is ever
-                duplicated.
-              </p>
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Registration command
             </div>
-            <button
-              type="button"
-              disabled={!canWrite}
-              title={!canWrite ? "Your role doesn't include settings write access." : undefined}
-              onClick={() => {
-                window.location.href = "/api/domains/sync-registration/start";
-              }}
-              className="shrink-0 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Update via browser
-            </button>
+            <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              Manual
+            </span>
           </div>
-
-          <div className="mt-4 border-t border-slate-200 pt-3">
-            <div className="flex items-center gap-2">
-              <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Registration command
-              </div>
-              <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                Manual
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-slate-400">
-              Same effect as &quot;Update via browser&quot; above, run by hand
-              instead — for an elevated PowerShell on a machine that isn&apos;t
-              hosted in Azure. Additive/idempotent, so re-running an
-              already-registered domain&apos;s command is always safe.
-            </p>
-            <div className="mt-2 space-y-2">
-              {domains
-                .filter((d) => d.status === "active")
-                .map((d) => (
-                  <div key={d.id}>
-                    <div className="font-mono text-xs text-slate-500">{d.hostname}</div>
-                    <RegistrationCommand domainId={d.id} />
-                  </div>
-                ))}
-            </div>
+          <p className="mt-1 text-xs text-slate-400">
+            Same effect as Application identity&apos;s &quot;Sync redirect
+            URIs&quot; above, run by hand instead — for an elevated PowerShell
+            on a machine that isn&apos;t hosted in Azure. Additive/idempotent,
+            so re-running an already-registered domain&apos;s command is
+            always safe.
+          </p>
+          <div className="mt-2 space-y-2">
+            {domains
+              .filter((d) => d.status === "active")
+              .map((d) => (
+                <div key={d.id}>
+                  <div className="font-mono text-xs text-slate-500">{d.hostname}</div>
+                  <RegistrationCommand domainId={d.id} />
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -1083,10 +1057,46 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
 }
 
 export function AppRegistration() {
+  const canWrite = useCan("settings:write");
   const { data: report, isLoading } = useQuery({
     queryKey: ["onboarding"],
     queryFn: () => api.get<OnboardingReport>("/api/onboarding"),
   });
+
+  // "Orphaned" = live in the real Entra app registration but not one this
+  // instance itself expects (report.redirectUris, the webOrigins-derived
+  // list) — the only URIs ever offered for removal. A URI this instance
+  // relies on to log in is never rendered as a checkbox in the first place;
+  // the server re-derives and re-enforces the same filter regardless (see
+  // apps/api/src/routes/domains.ts's protectedUris).
+  const live = report?.liveRedirectUris ?? null;
+  const orphaned = live ? live.redirectUris.filter((uri) => !(report?.redirectUris ?? []).includes(uri)) : [];
+  const [selectedRemovals, setSelectedRemovals] = useState<Set<string>>(new Set());
+  const [confirmingSync, setConfirmingSync] = useState(false);
+
+  function toggleRemoval(uri: string) {
+    setSelectedRemovals((prev) => {
+      const next = new Set(prev);
+      if (next.has(uri)) next.delete(uri);
+      else next.add(uri);
+      return next;
+    });
+  }
+
+  function startSync() {
+    if (selectedRemovals.size > 0) {
+      setConfirmingSync(true);
+      return;
+    }
+    window.location.href = "/api/domains/sync-registration/start";
+  }
+
+  function confirmSyncWithRemovals() {
+    const remove = Array.from(selectedRemovals)
+      .map((uri) => encodeURIComponent(uri))
+      .join(",");
+    window.location.href = `/api/domains/sync-registration/start?remove=${remove}`;
+  }
 
   return (
     <div>
@@ -1123,26 +1133,106 @@ export function AppRegistration() {
               <Field label="Client ID" value={report.clientId} />
               <Field label="Home tenant ID" value={report.tenantId} />
               <div className="sm:col-span-2">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Redirect URIs
+                <div className="flex items-center gap-2">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Redirect URIs
+                  </div>
+                  {report.liveRedirectUris && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                      Verified live in Entra
+                    </span>
+                  )}
                 </div>
-                <div className="mt-1 space-y-1.5">
-                  {report.redirectUris.map((uri) => (
-                    <div key={uri} className="flex items-center gap-2">
-                      <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">
-                        {uri}
-                      </code>
-                      <CopyButton value={uri} />
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-1.5 text-xs text-slate-400">
-                  Every origin this instance currently accepts an OAuth callback from — the primary origin plus any
-                  active custom domain below. Reflects this server&apos;s own allowlist, not a live read of the real
-                  Entra app registration; use Custom domains&apos; &quot;Update via browser&quot; (or the PowerShell
-                  command) to push a newly-active domain into the real app registration.
-                </p>
+                {(() => {
+                  const shown = live ? live.redirectUris : report.redirectUris;
+                  const pending = live
+                    ? report.redirectUris.filter((uri) => !live.redirectUris.includes(uri))
+                    : [];
+                  return (
+                    <>
+                      <div className="mt-1 space-y-1.5">
+                        {shown.map((uri) => (
+                          <div key={uri} className="flex items-center gap-2">
+                            <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">
+                              {uri}
+                            </code>
+                            <CopyButton value={uri} />
+                          </div>
+                        ))}
+                      </div>
+                      {live ? (
+                        <>
+                          <p className="mt-1.5 text-xs text-slate-400">
+                            Read directly from the Entra app registration by the last
+                            &quot;Sync redirect URIs&quot; run, {new Date(live.checkedAt).toLocaleString()}.
+                          </p>
+                          {pending.length > 0 && (
+                            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                              This instance also expects{" "}
+                              {pending.map((uri) => (
+                                <code key={uri} className="mx-0.5 font-mono">
+                                  {uri}
+                                </code>
+                              ))}
+                              , not confirmed in Entra yet — run Sync redirect URIs below to push{" "}
+                              {pending.length === 1 ? "it" : "them"} in.
+                            </div>
+                          )}
+                          {orphaned.length > 0 && (
+                            <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+                              <p className="text-xs font-medium text-rose-700">
+                                Live in Entra but not expected by this instance — check any that are stale
+                                to delete them from the app registration on the next sync:
+                              </p>
+                              <div className="mt-1.5 space-y-1">
+                                {orphaned.map((uri) => (
+                                  <label key={uri} className="flex items-center gap-2 text-xs text-rose-700">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedRemovals.has(uri)}
+                                      disabled={!canWrite}
+                                      onChange={() => toggleRemoval(uri)}
+                                    />
+                                    <code className="flex-1 truncate font-mono">{uri}</code>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="mt-1.5 text-xs text-slate-400">
+                          This server&apos;s own computed allowlist — the primary origin plus any active
+                          custom domain below. Not yet verified against the real Entra app registration; run
+                          Sync redirect URIs below to check and push it in.
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
+              {!report.demoMode && (
+                <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">
+                    Reads the real redirect URIs from the Entra app registration, then additively pushes
+                    in anything this instance expects that&apos;s missing. Already-registered URIs are left
+                    untouched unless you&apos;ve checked one above as an orphaned URI to remove.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={!canWrite}
+                    title={!canWrite ? "Your role doesn't include settings write access." : undefined}
+                    onClick={startSync}
+                    className={`shrink-0 rounded-md px-3.5 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                      selectedRemovals.size > 0 ? "bg-rose-600 hover:bg-rose-500" : "bg-slate-900 hover:bg-slate-700"
+                    }`}
+                  >
+                    {selectedRemovals.size > 0
+                      ? `Sync & remove ${selectedRemovals.size} selected`
+                      : "Sync redirect URIs"}
+                  </button>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -1156,6 +1246,52 @@ export function AppRegistration() {
           )}
 
           <CustomDomainsCard demoMode={report.demoMode} />
+        </div>
+      )}
+
+      {confirmingSync && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setConfirmingSync(false)}
+            aria-hidden
+          />
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900">
+              Remove {selectedRemovals.size} redirect {selectedRemovals.size === 1 ? "URI" : "URIs"}?
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              This deletes the following directly from the live Entra app registration, in the same
+              step as the sync. This can&apos;t be undone from here — only by adding it back manually
+              in Azure Portal or here.
+            </p>
+            <div className="mt-2 space-y-1">
+              {Array.from(selectedRemovals).map((uri) => (
+                <code
+                  key={uri}
+                  className="block truncate rounded bg-rose-50 px-2 py-1 font-mono text-xs text-rose-700"
+                >
+                  {uri}
+                </code>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmingSync(false)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmSyncWithRemovals}
+                className="rounded-md bg-rose-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-rose-500"
+              >
+                Remove &amp; sync
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

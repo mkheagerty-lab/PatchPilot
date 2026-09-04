@@ -66,6 +66,17 @@ interface OnboardingReport {
    */
   redirectUris: string[];
   /**
+   * The real, verified redirect URI list, as last read directly from the
+   * Entra app registration — set by the "Sync redirect URIs" step-up flow
+   * (its GET-before-PATCH inside updateAppRegistrationRedirectUris returns
+   * every existing URI, not just the ones it added; see
+   * apps/api/src/auth/routes.ts's SYNC_DOMAINS_STATE_PREFIX branch). Null
+   * until that flow has ever completed once. This is the trustworthy answer
+   * to "what does Entra actually have" — redirectUris above is only ever
+   * this server's own computed guess.
+   */
+  liveRedirectUris: { checkedAt: string; redirectUris: string[] } | null;
+  /**
    * One-click admin-consent URL for the MSP's OWN (home) tenant. A Global
    * Administrator opens this to grant PatchPilot's read-only permissions in the
    * home tenant — the step that makes the first "Discover tenants" succeed. It is
@@ -154,13 +165,26 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
     return { checkedAt: value.checkedAt, results: value.results };
   }
 
+  async function loadLiveRedirectUris(): Promise<OnboardingReport["liveRedirectUris"]> {
+    if (config.DEMO_MODE) return null;
+    const [row] = await db
+      .select()
+      .from(tables.settings)
+      .where(eq(tables.settings.key, "entra-redirect-uris-live"));
+    if (!row) return null;
+    const value = row.value as { checkedAt?: string; redirectUris?: string[] };
+    if (!Array.isArray(value.redirectUris) || typeof value.checkedAt !== "string") return null;
+    return { checkedAt: value.checkedAt, redirectUris: value.redirectUris };
+  }
+
   app.get("/api/onboarding", async () => {
     // Admin consent redirects back to the registered redirect URI.
     const redirectUri = config.AUTH_REDIRECT_URI;
-    const [tenants, syncNeeded, scopeStatus] = await Promise.all([
+    const [tenants, syncNeeded, scopeStatus, liveRedirectUris] = await Promise.all([
       allTenants(),
       scopesSyncNeeded(),
       loadScopeStatus(),
+      loadLiveRedirectUris(),
     ]);
 
     const consentTargets: ConsentTarget[] = tenants
@@ -182,6 +206,7 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
       tenantId: config.ENTRA_TENANT_ID,
       redirectUri,
       redirectUris: webOrigins.map((o) => `${o}/auth/callback`),
+      liveRedirectUris,
       homeConsentUrl: buildConsentUrl(config.ENTRA_TENANT_ID, config.ENTRA_CLIENT_ID, redirectUri),
       homeTenantConsented: tenants.some((t) => t.isMspTenant),
       scopesSyncNeeded: syncNeeded,

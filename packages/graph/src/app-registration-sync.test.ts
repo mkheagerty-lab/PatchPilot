@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RESOURCE_APP_IDS, GRAPH_READONLY_SCOPES, DEFENDER_READONLY_SCOPES } from "@patchpilot/shared";
-import { syncAppRegistrationScopes, updateAppRegistrationRedirectUris } from "./app-registration-sync.js";
+import {
+  syncAppRegistrationScopes,
+  updateAppRegistrationRedirectUris,
+  encodeRedirectUriRemoval,
+  decodeRedirectUriRemoval,
+} from "./app-registration-sync.js";
 import { APP_REGISTRATION_TEST_SCOPES } from "./msal.js";
 
 const CLIENT_ID = "11111111-1111-1111-1111-111111111111";
@@ -343,5 +348,76 @@ describe("updateAppRegistrationRedirectUris", () => {
       ]),
     );
     expect(merged).toHaveLength(3);
+  });
+
+  it("removes an explicitly requested existing URI in the same PATCH, without re-adding it", async () => {
+    const { patchCalls } = installRedirectUriFetchMock([
+      "https://patchpilot.example.com/auth/callback",
+      "https://stale-domain.example.net/auth/callback",
+    ]);
+
+    const result = await updateAppRegistrationRedirectUris({
+      accessToken: "tok",
+      clientId: CLIENT_ID,
+      redirectOrigins: ["https://patchpilot.example.com"],
+      removeUris: ["https://stale-domain.example.net/auth/callback"],
+    });
+
+    expect(result.removed).toEqual(["https://stale-domain.example.net/auth/callback"]);
+    expect(result.added).toEqual([]);
+    expect(patchCalls).toHaveLength(1);
+    const merged = (patchCalls[0]!.body as { web: { redirectUris: string[] } }).web.redirectUris;
+    expect(merged).toEqual(["https://patchpilot.example.com/auth/callback"]);
+  });
+
+  it("ignores a removeUris entry that isn't actually present — never reports it as removed, never PATCHes for it alone", async () => {
+    const { patchCalls } = installRedirectUriFetchMock(["https://patchpilot.example.com/auth/callback"]);
+
+    const result = await updateAppRegistrationRedirectUris({
+      accessToken: "tok",
+      clientId: CLIENT_ID,
+      redirectOrigins: ["https://patchpilot.example.com"],
+      removeUris: ["https://never-was-there.example.net/auth/callback"],
+    });
+
+    expect(result.removed).toEqual([]);
+    expect(result.added).toEqual([]);
+    expect(patchCalls).toEqual([]);
+  });
+
+  it("never re-adds a wanted URI that's also in removeUris this same run", async () => {
+    const { patchCalls } = installRedirectUriFetchMock(["https://patchpilot.example.com/auth/callback"]);
+
+    const result = await updateAppRegistrationRedirectUris({
+      accessToken: "tok",
+      clientId: CLIENT_ID,
+      // Wants this origin's URI, but also asks to remove that exact URI —
+      // removal wins, so it should end up neither "added" nor present.
+      redirectOrigins: ["https://patchpilot.example.com"],
+      removeUris: ["https://patchpilot.example.com/auth/callback"],
+    });
+
+    expect(result.added).toEqual([]);
+    expect(result.removed).toEqual(["https://patchpilot.example.com/auth/callback"]);
+    const merged = (patchCalls[0]!.body as { web: { redirectUris: string[] } }).web.redirectUris;
+    expect(merged).toEqual([]);
+  });
+});
+
+describe("encodeRedirectUriRemoval / decodeRedirectUriRemoval", () => {
+  it("round-trips a list of URIs through the base64url JSON payload", () => {
+    const uris = ["https://acme.patchpilot365.com/auth/callback", "https://stale.example.net/auth/callback"];
+    const encoded = encodeRedirectUriRemoval(uris);
+    expect(encoded).not.toMatch(/[:/+=]/); // must be state-string-safe (no ":" especially)
+    expect(decodeRedirectUriRemoval(encoded)).toEqual(uris);
+  });
+
+  it("decodes an empty/undefined payload to an empty list rather than throwing", () => {
+    expect(decodeRedirectUriRemoval(undefined)).toEqual([]);
+    expect(decodeRedirectUriRemoval("")).toEqual([]);
+  });
+
+  it("decodes garbage input to an empty list rather than throwing", () => {
+    expect(decodeRedirectUriRemoval("not-valid-base64url-json!!!")).toEqual([]);
   });
 });

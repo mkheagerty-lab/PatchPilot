@@ -139,6 +139,8 @@ export {
   type ScopeStatusEntry,
   updateAppRegistrationRedirectUris,
   type UpdateRedirectUrisResult,
+  encodeRedirectUriRemoval,
+  decodeRedirectUriRemoval,
 } from "./app-registration-sync.js";
 export {
   loadStoredEntitlement,
