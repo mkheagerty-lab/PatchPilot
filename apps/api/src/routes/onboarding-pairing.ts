@@ -7,7 +7,7 @@ import { z } from "zod";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
 import { encrypt, sha256Hex, auditSafe } from "@patchpilot/graph";
-import { SYSTEM_ACTORS, can, CREDENTIALS_ROTATED_CHANNEL } from "@patchpilot/shared";
+import { SYSTEM_ACTORS, can, CREDENTIALS_ROTATED_CHANNEL, currentScopeBaseline } from "@patchpilot/shared";
 import { config } from "../config.js";
 import { connection } from "../queue.js";
 import { exitAfterReply } from "../restart-after-reply.js";
@@ -136,6 +136,24 @@ export async function onboardingPairingRoutes(app: FastifyInstance): Promise<voi
           })
           .onConflictDoNothing({ target: tables.settings.key });
       }
+
+      // Stamps the drift baseline routes/onboarding.ts compares against for
+      // "Sync permissions" needed hint. Deploy-PatchPilot.ps1 is only ever
+      // reached here after being downloaded live from THIS instance's own
+      // /api/onboarding/pairing-script (see that route below), byte-identical
+      // to the currently-deployed script — so whatever scopes.ts requests
+      // right now is exactly what the script that produced this pairing just
+      // requested. Always read-only (false): a fresh/rotated pairing never
+      // carries the write-scopes opt-in, which is a "Sync permissions"-only
+      // checkbox — see EnableRemediationWriteScopes in the script itself for
+      // the equivalent switch on a manual run.
+      await db
+        .insert(tables.settings)
+        .values({ key: "entra-scopes-baseline", value: { includeWriteScopes: false, ...currentScopeBaseline(false) } })
+        .onConflictDoUpdate({
+          target: tables.settings.key,
+          set: { value: { includeWriteScopes: false, ...currentScopeBaseline(false) }, updatedAt: new Date() },
+        });
 
       await auditSafe({
         engineer: SYSTEM_ACTORS.onboardingPairing,

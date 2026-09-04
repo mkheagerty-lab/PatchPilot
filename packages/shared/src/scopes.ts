@@ -109,6 +109,39 @@ export const RESOURCE_APP_IDS = {
   partnerCenter: "fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd",
 } as const;
 
+/**
+ * The exact scope sets `Deploy-PatchPilot.ps1` / "Sync permissions" would
+ * request *right now*, for a given write-scopes preference — the drift
+ * baseline compared against whatever was last actually written to the app
+ * registration (see routes/onboarding.ts's `scopesSyncNeeded`). Sorted so two
+ * baselines can be compared element-by-element regardless of array order.
+ */
+export interface ScopeBaseline {
+  graph: string[];
+  defender: string[];
+  partnerCenter: string[];
+}
+
+export function currentScopeBaseline(includeWriteScopes: boolean): ScopeBaseline {
+  return {
+    graph: [...(includeWriteScopes ? GRAPH_SCOPES : GRAPH_READONLY_SCOPES)].sort(),
+    defender: [...(includeWriteScopes ? DEFENDER_SCOPES : DEFENDER_READONLY_SCOPES)].sort(),
+    partnerCenter: [...PARTNER_CENTER_SCOPES].sort(),
+  };
+}
+
+function sameScopeList(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
+}
+
+export function scopeBaselinesMatch(a: ScopeBaseline, b: ScopeBaseline): boolean {
+  return (
+    sameScopeList(a.graph, b.graph) &&
+    sameScopeList(a.defender, b.defender) &&
+    sameScopeList(a.partnerCenter, b.partnerCenter)
+  );
+}
+
 /** Builds the per-customer admin consent URL (matches Deploy-PatchPilot.ps1). */
 export function buildConsentUrl(
   customerTenantId: string,

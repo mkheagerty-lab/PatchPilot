@@ -295,7 +295,15 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
  * Deploy-PatchPilot.ps1 — hidden entirely in demo mode, where nothing here
  * could authorize anything real.
  */
-function SyncPermissionsCard({ demoMode }: { demoMode: boolean }) {
+function SyncPermissionsCard({
+  demoMode,
+  scopesSyncNeeded,
+}: {
+  demoMode: boolean;
+  /** See OnboardingReport.scopesSyncNeeded — true when the last known-applied
+   * scope set doesn't match what this build of PatchPilot currently requests. */
+  scopesSyncNeeded: boolean;
+}) {
   const canWrite = useCan("settings:write");
   const [confirming, setConfirming] = useState(false);
   const [includeWriteScopes, setIncludeWriteScopes] = useState(false);
@@ -303,15 +311,29 @@ function SyncPermissionsCard({ demoMode }: { demoMode: boolean }) {
   if (demoMode) return null;
 
   return (
-    <Card>
+    <Card className={scopesSyncNeeded ? "border-amber-300" : undefined}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-slate-700">Sync permissions</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-slate-700">Sync permissions</h2>
+            {scopesSyncNeeded && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                Sync needed
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-sm text-slate-500">
             Already ran the installer once? Refresh this app registration&apos;s
             requested permissions and admin consent to match the list above,
             without re-running Deploy-PatchPilot.ps1.
           </p>
+          {scopesSyncNeeded && (
+            <p className="mt-1.5 text-xs text-amber-700">
+              PatchPilot now requests different permissions than this app
+              registration was last synced to — likely a recent upgrade. Run a
+              sync to bring it up to date.
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -910,7 +932,10 @@ export function AppRegistration() {
             </div>
           </Card>
 
-          <SyncPermissionsCard demoMode={report.demoMode} />
+          <SyncPermissionsCard
+            demoMode={report.demoMode}
+            scopesSyncNeeded={report.scopesSyncNeeded}
+          />
 
           <CustomDomainsCard demoMode={report.demoMode} />
 

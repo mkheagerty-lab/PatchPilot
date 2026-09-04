@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
-import { permissionsFor } from "@patchpilot/shared";
+import { permissionsFor, currentScopeBaseline } from "@patchpilot/shared";
 import { config, webOrigins } from "../config.js";
 import { resolveWebOrigin } from "./origin.js";
 import {
@@ -205,6 +205,21 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
             clientId: config.ENTRA_CLIENT_ID,
             includeWriteScopes,
           });
+
+          // Stamps the same drift baseline onboarding-pairing.ts sets on a
+          // fresh pairing — this sync just wrote the app registration to
+          // match scopes.ts, so that's now the known-good state, regardless
+          // of whether every resource applied cleanly (a partial failure
+          // still moved the registration closer to this baseline than
+          // whatever it had before, and a stale "Sync needed" hint would be
+          // more misleading than a slightly-optimistic cleared one here).
+          if (result.applied.length > 0) {
+            const value = { includeWriteScopes, ...currentScopeBaseline(includeWriteScopes) };
+            await db
+              .insert(tables.settings)
+              .values({ key: "entra-scopes-baseline", value })
+              .onConflictDoUpdate({ target: tables.settings.key, set: { value, updatedAt: new Date() } });
+          }
 
           await auditSafe({
             engineer: engineer.upn,
