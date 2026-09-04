@@ -8,6 +8,7 @@ import {
   type CustomDomain,
   type DomainsReport,
   type DomainType,
+  type DomainAvailability,
 } from "../../lib/api";
 import { GRAPH_WRITE_GATED_SCOPES, DEFENDER_WRITE_GATED_SCOPES } from "@patchpilot/shared";
 import { Card, PageHeader, CopyButton } from "../../components/ui";
@@ -614,6 +615,10 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
   const [hostname, setHostname] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  // Result of the last "Check" click — cleared on any edit to type/label/hostname
+  // below so it can never be shown (or gate Add domain) against a value the
+  // engineer has since changed away from.
+  const [checkResult, setCheckResult] = useState<DomainAvailability | null>(null);
 
   const { data: report } = useQuery({
     queryKey: ["domains"],
@@ -630,11 +635,36 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
     onSuccess: (row) => {
       setLabel("");
       setHostname("");
+      setCheckResult(null);
       setMessage({ tone: "ok", text: `Added ${row.hostname} — follow the instructions below to activate it.` });
       void qc.invalidateQueries({ queryKey: ["domains"] });
     },
     onError: (err) =>
       setMessage({ tone: "error", text: err instanceof ApiError ? err.message : "Failed to add domain." }),
+  });
+
+  const checkDomain = useMutation({
+    mutationFn: (vars: { type: DomainType; value: string }) => {
+      const params = new URLSearchParams({ type: vars.type });
+      params.set(vars.type === "subdomain" ? "label" : "hostname", vars.value);
+      return api.get<DomainAvailability>(`/api/domains/check?${params.toString()}`);
+    },
+    onSuccess: (res, vars) => {
+      // The field the check was for may have changed while the request was
+      // in flight — a result for stale input is worse than no result.
+      const stillCurrent = vars.type === type && vars.value === (type === "subdomain" ? label.trim() : hostname.trim());
+      if (stillCurrent) setCheckResult(res);
+    },
+    onError: (err, vars) => {
+      const stillCurrent = vars.type === type && vars.value === (type === "subdomain" ? label.trim() : hostname.trim());
+      if (stillCurrent) {
+        setCheckResult({
+          hostname: null,
+          available: false,
+          reason: err instanceof ApiError ? err.message : "Check failed.",
+        });
+      }
+    },
   });
 
   const verifyDomain = useMutation({
@@ -724,12 +754,22 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
             <input
               type="radio"
               checked={type === "subdomain"}
-              onChange={() => setType("subdomain")}
+              onChange={() => {
+                setType("subdomain");
+                setCheckResult(null);
+              }}
             />
             PatchPilot subdomain
           </label>
           <label className="flex items-center gap-1.5">
-            <input type="radio" checked={type === "custom"} onChange={() => setType("custom")} />
+            <input
+              type="radio"
+              checked={type === "custom"}
+              onChange={() => {
+                setType("custom");
+                setCheckResult(null);
+              }}
+            />
             Custom domain
           </label>
         </div>
@@ -743,7 +783,10 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
               <div className="mt-1 flex items-center gap-2">
                 <input
                   value={label}
-                  onChange={(e) => setLabel(e.target.value)}
+                  onChange={(e) => {
+                    setLabel(e.target.value);
+                    setCheckResult(null);
+                  }}
                   placeholder="acme"
                   className="w-40 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                 />
@@ -757,7 +800,10 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
               </label>
               <input
                 value={hostname}
-                onChange={(e) => setHostname(e.target.value)}
+                onChange={(e) => {
+                  setHostname(e.target.value);
+                  setCheckResult(null);
+                }}
                 placeholder="patching.acme.com"
                 className="mt-1 w-full max-w-xs rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
               />
@@ -768,8 +814,25 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
             disabled={
               !canWrite ||
               !cnameTargetUsable ||
-              addDomain.isPending ||
+              checkDomain.isPending ||
               (type === "subdomain" ? !label.trim() : !hostname.trim())
+            }
+            onClick={() => {
+              setMessage(null);
+              checkDomain.mutate({ type, value: type === "subdomain" ? label.trim() : hostname.trim() });
+            }}
+            className="shrink-0 rounded-md border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {checkDomain.isPending ? "Checking…" : "Check"}
+          </button>
+          <button
+            type="button"
+            disabled={
+              !canWrite ||
+              !cnameTargetUsable ||
+              addDomain.isPending ||
+              (type === "subdomain" ? !label.trim() : !hostname.trim()) ||
+              (checkResult !== null && !checkResult.available)
             }
             onClick={() => {
               setMessage(null);
@@ -780,6 +843,11 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
             {addDomain.isPending ? "Adding…" : "Add domain"}
           </button>
         </div>
+        {checkResult && (
+          <p className={`mt-2 text-xs font-medium lowercase ${checkResult.available ? "text-emerald-600" : "text-rose-600"}`}>
+            {checkResult.available ? "available" : `not available (${checkResult.reason ?? "already in use"})`}
+          </p>
+        )}
         <p className="mt-2 text-xs text-slate-400">
           Will resolve as{" "}
           <code className="font-mono">{previewHostname}</code>, pointed at{" "}

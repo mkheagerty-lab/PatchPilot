@@ -135,6 +135,47 @@ const createBodySchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("custom"), hostname: z.string().trim().min(1).max(253) }),
 ]);
 
+// Same shape as createBodySchema, but read from a querystring (GET /api/domains/check)
+// instead of a JSON body — every value arrives as a string either way.
+const checkQuerySchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("subdomain"), label: z.string().trim().min(1).max(63) }),
+  z.object({ type: z.literal("custom"), hostname: z.string().trim().min(1).max(253) }),
+]);
+
+type HostnameInput = z.infer<typeof createBodySchema>;
+type HostnameResolution = { ok: true; hostname: string } | { ok: false; error: string };
+
+// Shared by the create route and the pre-flight check route below, so "would
+// this be rejected" and "is this actually rejected" can never drift apart.
+// Resolves a subdomain label or custom hostname down to the canonical
+// lowercase hostname PatchPilot would store, or the exact validation error
+// the create route would return for it. Deliberately doesn't touch the
+// database — callers decide separately whether the resolved hostname is
+// already taken.
+function resolveHostname(input: HostnameInput): HostnameResolution {
+  if (input.type === "subdomain") {
+    const label = input.label.trim().toLowerCase();
+    if (!LABEL_RE.test(label)) {
+      return { ok: false, error: "invalid subdomain label" };
+    }
+    return { ok: true, hostname: `${label}.${config.PLATFORM_BASE_DOMAIN}` };
+  }
+
+  const hostname = input.hostname.trim().toLowerCase().replace(/\.$/, "");
+  if (!HOSTNAME_RE.test(hostname)) {
+    return { ok: false, error: "invalid hostname" };
+  }
+  const platformSuffix = `.${config.PLATFORM_BASE_DOMAIN}`;
+  if (hostname === config.PLATFORM_BASE_DOMAIN.toLowerCase() || hostname.endsWith(platformSuffix)) {
+    return { ok: false, error: `use the subdomain option for ${config.PLATFORM_BASE_DOMAIN} hostnames` };
+  }
+  const primaryHost = new URL(config.PUBLIC_URL).host.toLowerCase();
+  if (hostname === primaryHost) {
+    return { ok: false, error: "this is already the instance's primary domain" };
+  }
+  return { ok: true, hostname };
+}
+
 export async function domainsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", async (req, reply) => {
     if (!req.session.engineer) {
@@ -154,6 +195,42 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
     const rows = await db.select().from(tables.customDomains).orderBy(desc(tables.customDomains.createdAt));
     return { primaryOrigin, platformBaseDomain, cnameTarget, cnameTargetUsable, domains: rows.map(toDomainReport) };
   });
+
+  // Pre-flight availability check for the "Check" button next to Add domain —
+  // resolves the same way the create route would and reports whether the
+  // resulting hostname is free, without creating anything. Never a substitute
+  // for the create route's own validation (a hostname can go from available
+  // to taken between the two calls), just a fast, cheap way to give the
+  // engineer feedback before they submit.
+  app.get<{ Querystring: Record<string, string | undefined> }>(
+    "/api/domains/check",
+    { preHandler: requirePermission("settings:write") },
+    async (req, reply) => {
+      if (config.DEMO_MODE) {
+        return reply.code(400).send({ error: "not_available_in_demo_mode" });
+      }
+      const parsed = checkQuerySchema.safeParse(req.query ?? {});
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "invalid query" });
+      }
+
+      const resolved = resolveHostname(parsed.data);
+      if (!resolved.ok) {
+        return reply.send({ hostname: null, available: false, reason: resolved.error });
+      }
+
+      const [existing] = await db
+        .select({ id: tables.customDomains.id })
+        .from(tables.customDomains)
+        .where(eq(tables.customDomains.hostname, resolved.hostname));
+
+      return reply.send({
+        hostname: resolved.hostname,
+        available: !existing,
+        reason: existing ? "a domain with this hostname already exists" : undefined,
+      });
+    },
+  );
 
   app.get<{ Params: { id: string } }>("/api/domains/:id/registration-command", async (req, reply) => {
     const [row] = await db
@@ -185,29 +262,11 @@ export async function domainsRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      let hostname: string;
-      if (parsed.data.type === "subdomain") {
-        const label = parsed.data.label.toLowerCase();
-        if (!LABEL_RE.test(label)) {
-          return reply.code(400).send({ error: "invalid subdomain label" });
-        }
-        hostname = `${label}.${config.PLATFORM_BASE_DOMAIN}`;
-      } else {
-        hostname = parsed.data.hostname.toLowerCase().replace(/\.$/, "");
-        if (!HOSTNAME_RE.test(hostname)) {
-          return reply.code(400).send({ error: "invalid hostname" });
-        }
-        const platformSuffix = `.${config.PLATFORM_BASE_DOMAIN}`;
-        if (hostname === config.PLATFORM_BASE_DOMAIN.toLowerCase() || hostname.endsWith(platformSuffix)) {
-          return reply
-            .code(400)
-            .send({ error: `use the subdomain option for ${config.PLATFORM_BASE_DOMAIN} hostnames` });
-        }
-        const primaryHost = new URL(config.PUBLIC_URL).host.toLowerCase();
-        if (hostname === primaryHost) {
-          return reply.code(400).send({ error: "this is already the instance's primary domain" });
-        }
+      const resolved = resolveHostname(parsed.data);
+      if (!resolved.ok) {
+        return reply.code(400).send({ error: resolved.error });
       }
+      const hostname = resolved.hostname;
 
       const actor = req.session.engineer!;
 

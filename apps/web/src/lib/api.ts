@@ -913,6 +913,15 @@ export interface DomainsReport {
   domains: CustomDomain[];
 }
 
+/** GET /api/domains/check — pre-flight result for the Custom Domains "Check" button. */
+export interface DomainAvailability {
+  /** The canonical hostname this input resolves to, or null if it failed validation. */
+  hostname: string | null;
+  available: boolean;
+  /** Why it's unavailable (invalid, reserved, or already taken) — absent when available. */
+  reason?: string;
+}
+
 /** Whether a tenant's licensing could actually be read, independent of reachability. */
 export type LicenseStatus = "detected" | "unavailable";
 
