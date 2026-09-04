@@ -11,7 +11,7 @@ import {
   type EntitlementView,
 } from "../../lib/api";
 import { useCan } from "../../lib/auth";
-import { Card, PageHeader } from "../../components/ui";
+import { Card, PageHeader, CopyButton } from "../../components/ui";
 
 // GDAP relationship lifecycle (NOT the same as admin consent). Customer values
 // are relabeled to read as a relationship state; the MSP's own tenant is handled
@@ -64,6 +64,19 @@ function ExternalLinkIcon() {
 
 type SortKey = "name" | "gdap" | "reachability" | "mode" | "licenses" | "lastSynced";
 type SortDir = "asc" | "desc";
+
+type ConsentSortKey = "name" | "reachability" | "consent";
+
+// Pre-fills a mailto: draft with the tenant's consent URL — the plain-text
+// fallback for MSPs who'd rather forward the link than click "Open" and hand
+// off to a customer's Global Administrator directly.
+function consentMailto(tenantName: string, consentUrl: string): string {
+  const subject = encodeURIComponent(`Action needed: approve PatchPilot access for ${tenantName}`);
+  const body = encodeURIComponent(
+    `Hi,\n\nPatchPilot needs a Global Administrator to approve read-only access for ${tenantName}. Please open the link below while signed in as a Global Admin and approve the consent prompt:\n\n${consentUrl}\n\nThanks!`,
+  );
+  return `mailto:?subject=${subject}&body=${body}`;
+}
 
 // Per-key comparators. The MSP home tenant has no GDAP relationship, so it sorts
 // to the end of the GDAP column ("zzz") rather than masquerading as a value.
@@ -139,6 +152,11 @@ export function Tenants() {
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "name", dir: "asc" });
+  // Independent search/sort for the "Per-tenant admin consent" section below —
+  // deliberately separate from the main table's `search`/`sort` above so
+  // filtering one doesn't affect the other.
+  const [consentSearch, setConsentSearch] = useState("");
+  const [consentSortKey, setConsentSortKey] = useState<ConsentSortKey>("name");
   // Set when the engineer opens an admin-consent tab; the next window focus
   // auto-re-probes so the row reflects the freshly granted access.
   const pendingRecheck = useRef(false);
@@ -378,6 +396,29 @@ export function Tenants() {
     return sorted;
   }, [tenants, search, sort]);
 
+  // Same admin-consent targets the onboarding report already computes
+  // (routes/onboarding.ts) — every customer tenant (the MSP's own home
+  // tenant consents during deployment, not via a per-customer URL).
+  const consentTargets = onboarding?.consentTargets ?? [];
+
+  const visibleConsentTargets = useMemo(() => {
+    const q = consentSearch.trim().toLowerCase();
+    const filtered = q
+      ? consentTargets.filter(
+          (t) =>
+            t.displayName.toLowerCase().includes(q) ||
+            t.tenantId.toLowerCase().includes(q),
+        )
+      : consentTargets;
+    const keyOf = (t: (typeof consentTargets)[number]) =>
+      consentSortKey === "reachability"
+        ? reachMeta(t.reachability).label.toLowerCase()
+        : consentSortKey === "consent"
+          ? gdapMeta(t.consentStatus).label.toLowerCase()
+          : t.displayName.toLowerCase();
+    return [...filtered].sort((a, b) => keyOf(a).localeCompare(keyOf(b)));
+  }, [consentTargets, consentSearch, consentSortKey]);
+
   return (
     <div>
       <PageHeader
@@ -441,8 +482,7 @@ export function Tenants() {
             <>
               The <span className="font-medium text-slate-600">Licenses</span> column and{" "}
               <span className="font-medium text-slate-600">Reachability</span> refresh on Discover
-              (not Sync data). Per-tenant admin-consent links also live on the{" "}
-              <span className="font-medium text-slate-600">Setup → App Registration</span> page.
+              (not Sync data). Per-tenant admin-consent links are below.
             </>
           )}
         </p>
@@ -706,6 +746,143 @@ export function Tenants() {
           </>
         )}
       </Card>
+
+      {!demoMode && (
+        <div className="mt-5">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-slate-700">
+              Per-tenant admin consent
+            </h2>
+            {consentTargets.length > 0 && (
+              <button
+                type="button"
+                disabled={!canWrite || discover.isPending}
+                onClick={() => {
+                  setMessage(null);
+                  discover.mutate();
+                }}
+                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Re-probe every tenant's access and consent status."
+              >
+                {discover.isPending ? "Re-checking…" : "Re-check access"}
+              </button>
+            )}
+          </div>
+
+          <Card className="p-0">
+            {consentTargets.length === 0 ? (
+              <div className="p-5 text-sm text-slate-500">
+                No customer tenants to consent yet.
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2 border-b border-slate-100 p-3 sm:flex-row sm:items-center">
+                  <input
+                    type="search"
+                    value={consentSearch}
+                    onChange={(e) => setConsentSearch(e.target.value)}
+                    placeholder="Search by name or tenant ID…"
+                    className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                  <label className="flex items-center gap-2 text-xs text-slate-500">
+                    Sort
+                    <select
+                      value={consentSortKey}
+                      onChange={(e) => setConsentSortKey(e.target.value as ConsentSortKey)}
+                      className="rounded-md border border-slate-200 px-2 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    >
+                      <option value="name">Name</option>
+                      <option value="reachability">Reachability</option>
+                      <option value="consent">Consent status</option>
+                    </select>
+                  </label>
+                </div>
+                {visibleConsentTargets.length === 0 ? (
+                  <div className="p-5 text-sm text-slate-500">
+                    No tenants match “{consentSearch}”.
+                  </div>
+                ) : (
+                  <ul>
+                    {visibleConsentTargets.map((t) => (
+                      <li
+                        key={t.tenantId}
+                        className="border-b border-slate-100 px-5 py-4 last:border-0"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-slate-800">
+                              {t.displayName}
+                            </div>
+                            <div className="font-mono text-xs text-slate-400">
+                              {t.tenantId}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                reachMeta(t.reachability).style
+                              }`}
+                              title="Whether PatchPilot can actually call Graph for this tenant (probed via Discover)."
+                            >
+                              {reachMeta(t.reachability).label}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                gdapMeta(t.consentStatus).style
+                              }`}
+                            >
+                              {gdapMeta(t.consentStatus).label}
+                            </span>
+                          </div>
+                        </div>
+
+                        {t.reachability === "consent-needed" && (
+                          <p className="mt-2 text-xs text-amber-700">
+                            App-only tokens mint but Graph returns 403. Re-run{" "}
+                            <code className="font-mono">Deploy-PatchPilot.ps1</code>{" "}
+                            to grant customer access (adds the SP to the GDAP
+                            group), then Discover to re-probe.
+                          </p>
+                        )}
+                        {t.reachability === "reachable" && t.licenses.length === 0 && (
+                          <p className="mt-2 text-xs text-slate-400">
+                            Reachable, but no managed licenses detected
+                            (reseller-only or unlicensed) — informational only,
+                            no action needed.
+                          </p>
+                        )}
+                        <div className="mt-2 flex items-center gap-2">
+                          <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+                            {t.consentUrl}
+                          </code>
+                          <CopyButton value={t.consentUrl} />
+                          <a
+                            href={consentMailto(t.displayName, t.consentUrl)}
+                            className="shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                          >
+                            Email
+                          </a>
+                          <a
+                            href={t.consentUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => {
+                              pendingRecheck.current = true;
+                            }}
+                            className="shrink-0 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-slate-700"
+                          >
+                            Open
+                          </a>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </Card>
+        </div>
+      )}
 
       {pendingWrite && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4">

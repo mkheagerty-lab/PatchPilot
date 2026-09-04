@@ -864,7 +864,17 @@ export interface OnboardingReport {
     defender: string[];
     partnerCenter: string[];
   };
+  /** Live per-scope status from the last "Test Connection" run — null until
+   * one has ever been run. See routes/onboarding.ts. */
+  scopeStatus: { checkedAt: string; results: ScopeStatusEntry[] } | null;
   consentTargets: ConsentTarget[];
+}
+
+/** One requested scope's live status, from a read-only "Test Connection" run. */
+export interface ScopeStatusEntry {
+  resource: "graph" | "defender" | "partnerCenter";
+  scope: string;
+  status: "ok" | "skipped" | "failed";
 }
 
 /** "<label>.patchpilot365.com" (PatchPilot Support creates the DNS record) vs. a fully custom hostname. */

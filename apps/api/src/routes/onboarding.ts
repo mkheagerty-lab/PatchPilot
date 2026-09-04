@@ -10,7 +10,12 @@ import {
   scopeBaselinesMatch,
   type ScopeBaseline,
 } from "@patchpilot/shared";
-import { getCca, APP_REGISTRATION_SYNC_SCOPES, auditSafe } from "@patchpilot/graph";
+import {
+  getCca,
+  APP_REGISTRATION_SYNC_SCOPES,
+  auditSafe,
+  type ScopeStatusEntry,
+} from "@patchpilot/graph";
 import { config, webOrigins } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
 import { resolveWebOrigin } from "../auth/origin.js";
@@ -96,6 +101,13 @@ interface OnboardingReport {
     defender: readonly string[];
     partnerCenter: readonly string[];
   };
+  /**
+   * Live per-scope status from the last "Test Connection" run (read-only —
+   * see testAppRegistrationScopes), persisted in the `entra-scope-status`
+   * settings row. Null until a test has ever been run, so the UI can tell
+   * "never tested" apart from "tested and every scope failed".
+   */
+  scopeStatus: { checkedAt: string; results: ScopeStatusEntry[] } | null;
   consentTargets: ConsentTarget[];
 }
 
@@ -129,10 +141,26 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
     );
   }
 
+  async function loadScopeStatus(): Promise<OnboardingReport["scopeStatus"]> {
+    if (config.DEMO_MODE) return null;
+    const [row] = await db
+      .select()
+      .from(tables.settings)
+      .where(eq(tables.settings.key, "entra-scope-status"));
+    if (!row) return null;
+    const value = row.value as { checkedAt?: string; results?: ScopeStatusEntry[] };
+    if (!Array.isArray(value.results) || typeof value.checkedAt !== "string") return null;
+    return { checkedAt: value.checkedAt, results: value.results };
+  }
+
   app.get("/api/onboarding", async () => {
     // Admin consent redirects back to the registered redirect URI.
     const redirectUri = config.AUTH_REDIRECT_URI;
-    const [tenants, syncNeeded] = await Promise.all([allTenants(), scopesSyncNeeded()]);
+    const [tenants, syncNeeded, scopeStatus] = await Promise.all([
+      allTenants(),
+      scopesSyncNeeded(),
+      loadScopeStatus(),
+    ]);
 
     const consentTargets: ConsentTarget[] = tenants
       // The MSP home tenant consents during app deployment, not via a per-customer URL.
@@ -161,6 +189,7 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
         defender: DEFENDER_SCOPES,
         partnerCenter: PARTNER_CENTER_SCOPES,
       },
+      scopeStatus,
       consentTargets,
     };
     return report;
@@ -211,4 +240,39 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
       return reply.redirect(url);
     },
   );
+
+  // Starts the one-time "Test Connection" step-up consent redirect — the
+  // read-only counterpart to sync-permissions/start above (see
+  // testAppRegistrationScopes in packages/graph/src/app-registration-sync.ts).
+  // Kept on the router's default settings:read gate rather than elevated to
+  // settings:write: nothing here mutates the app registration or its consent
+  // grants, only reports each requested scope's live status.
+  app.get("/api/onboarding/test-connection/start", async (req, reply) => {
+    if (config.DEMO_MODE) {
+      return reply.code(400).send({ error: "not_available_in_demo_mode" });
+    }
+
+    const origin = resolveWebOrigin(req);
+    const state = `patchpilot-testconn:${req.session.sessionId}`;
+    const url = await getCca().getAuthCodeUrl({
+      scopes: APP_REGISTRATION_SYNC_SCOPES,
+      redirectUri: `${origin}/auth/callback`,
+      state,
+    });
+
+    await auditSafe({
+      engineer: req.session.engineer!.upn,
+      tenantId: config.ENTRA_TENANT_ID,
+      endpoint: "/api/onboarding/test-connection/start",
+      method: "GET",
+      action: "app-registration:test-connection-start",
+      resourceType: "application",
+      resourceId: config.ENTRA_CLIENT_ID,
+      summary: `${req.session.engineer!.upn} started a permissions connection test`,
+      outcome: "success",
+      responseStatus: 302,
+    });
+
+    return reply.redirect(url);
+  });
 }

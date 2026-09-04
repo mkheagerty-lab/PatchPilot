@@ -223,6 +223,74 @@ export async function syncAppRegistrationScopes(input: {
   return { applied, consentGranted, warnings };
 }
 
+export interface ScopeStatusEntry {
+  resource: ResourceKey;
+  scope: string;
+  /** ok = published + currently granted. skipped = published but not yet
+   * granted (needs a sync). failed = not published on the resource's own
+   * service principal at all (or the SP/app couldn't be found). */
+  status: "ok" | "skipped" | "failed";
+}
+
+export interface ScopeTestResult {
+  results: ScopeStatusEntry[];
+}
+
+/**
+ * Read-only counterpart to syncAppRegistrationScopes above: reports the live
+ * status of every scope PatchPilot could ever request (the full write-gated
+ * list per resource, matching what the "Requested API permissions" section
+ * always displays) without issuing a single PATCH/POST. Backs that section's
+ * per-scope status tags and its "Test Connection" button — same one-time
+ * step-up token as a sync, but this function never mutates the app
+ * registration or its consent grants, so it's safe to run as often as wanted.
+ */
+export async function testAppRegistrationScopes(input: {
+  accessToken: string;
+  clientId: string;
+}): Promise<ScopeTestResult> {
+  const { accessToken, clientId } = input;
+  const results: ScopeStatusEntry[] = [];
+
+  const [servicePrincipals, clientSp] = await Promise.all([
+    Promise.all(RESOURCES.map((r) => findServicePrincipal(accessToken, r.resourceAppId))),
+    findServicePrincipal(accessToken, clientId),
+  ]);
+
+  let grants: Oauth2PermissionGrant[] = [];
+  if (clientSp) {
+    const res = await graphFetch<{ value: Oauth2PermissionGrant[] }>(
+      accessToken,
+      "GET",
+      `/oauth2PermissionGrants?$filter=${encodeURIComponent(`clientId eq '${clientSp.id}' and consentType eq 'AllPrincipals'`)}`,
+    );
+    grants = res.value;
+  }
+
+  for (const [i, resource] of RESOURCES.entries()) {
+    const sp = servicePrincipals[i];
+    // Always the maximal (write-gated) list — the section this backs shows
+    // every scope PatchPilot could ever ask for, regardless of whether write
+    // scopes happen to be opted in right now.
+    const wanted = scopesFor(resource.key, true);
+    const published = new Set((sp?.oauth2PermissionScopes ?? []).map((s) => s.value));
+    const grant = sp ? grants.find((g) => g.resourceId === sp.id) : undefined;
+    const granted = new Set(grant?.scope ? grant.scope.split(/\s+/).filter(Boolean) : []);
+
+    for (const value of wanted) {
+      if (!sp || !published.has(value)) {
+        results.push({ resource: resource.key, scope: value, status: "failed" });
+      } else if (!granted.has(value)) {
+        results.push({ resource: resource.key, scope: value, status: "skipped" });
+      } else {
+        results.push({ resource: resource.key, scope: value, status: "ok" });
+      }
+    }
+  }
+
+  return { results };
+}
+
 export interface UpdateRedirectUrisResult {
   added: string[];
   alreadyPresent: string[];

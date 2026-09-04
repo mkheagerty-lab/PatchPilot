@@ -133,6 +133,9 @@ export {
 export {
   syncAppRegistrationScopes,
   type ScopeSyncResult,
+  testAppRegistrationScopes,
+  type ScopeTestResult,
+  type ScopeStatusEntry,
   updateAppRegistrationRedirectUris,
   type UpdateRedirectUrisResult,
 } from "./app-registration-sync.js";
