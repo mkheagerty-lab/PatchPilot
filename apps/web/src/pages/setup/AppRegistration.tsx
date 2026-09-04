@@ -367,8 +367,16 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
  * anything, just reports each scope's live status as a colour-coded pill,
  * which also drives the failed-scope banners below (a "failed" status means
  * the scope isn't published on the resource's own service principal at all —
- * for Defender that's almost always a licensing gap, for Partner Center a
- * GDAP misconfiguration). First-time creation still needs
+ * for Partner Center that's almost always a GDAP misconfiguration; for
+ * Defender/Graph it usually just means Deploy-PatchPilot.ps1/Sync hasn't run
+ * yet). Licensing is a separate, genuine question a "failed" status can't
+ * answer — a resource's delegated-permission catalog ships identically to
+ * every tenant regardless of subscription tier, so a Defender/Intune scope
+ * can be published *and* granted (an "ok" pill) on a tenant with no matching
+ * license at all. That real answer comes from checkTenantLicensing's
+ * `/organization` assignedPlans read, riding along on the same Test
+ * Connection run, and renders as the separate amber "Not licensed" banner
+ * below when it finds a gap. First-time creation still needs
  * Deploy-PatchPilot.ps1. In demo mode neither action could authorize or check
  * anything real, so this falls back to a plain read-only list.
  */
@@ -467,6 +475,22 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
     },
   ].filter((b) => b.scopes.length > 0);
 
+  // Real licensing signal (checkTenantLicensing, packages/graph/src/app-registration-sync.ts) —
+  // independent of the scope-publish/grant checks above, which can't see licensing
+  // at all: a Defender/Intune scope can be published and granted (no "failed"
+  // banner) yet still be backed by no license. "unavailable" (no result yet, or
+  // the read couldn't run) never renders anything here — only a real "this
+  // tenant doesn't hold that license" answer does.
+  const licensing = report.scopeStatus?.licensing;
+  const missingCapabilities: string[] =
+    licensing?.status === "detected"
+      ? [
+          !licensing.licenses.some((l) => l === "mde-p2" || l === "defender-business-premium") &&
+            "Defender for Endpoint",
+          !licensing.licenses.includes("intune") && "Intune",
+        ].filter((v): v is string => typeof v === "string")
+      : [];
+
   return (
     <div className={scopesSyncNeeded ? "rounded-lg border border-amber-300 p-3" : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -541,6 +565,18 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
           {b.hint && <span className="font-medium"> {b.hint}</span>}
         </div>
       ))}
+
+      {missingCapabilities.length > 0 && (
+        <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <span className="font-medium">Not licensed:</span> this tenant&apos;s{" "}
+          <code className="font-mono text-[11px]">/organization</code> record shows no{" "}
+          {missingCapabilities.join(" and ")} entitlement. The matching permissions above can
+          still show as granted — a scope being published and consented doesn&apos;t require a
+          license, only actually using the feature does — so remediation through{" "}
+          {missingCapabilities.join(" or ")} won&apos;t work here until this tenant is licensed
+          for it.
+        </div>
+      )}
 
       <div className="mt-4 space-y-4">
         <ScopeList

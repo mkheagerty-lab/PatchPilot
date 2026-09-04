@@ -871,7 +871,7 @@ export interface OnboardingReport {
   };
   /** Live per-scope status from the last "Test Connection" run — null until
    * one has ever been run. See routes/onboarding.ts. */
-  scopeStatus: { checkedAt: string; results: ScopeStatusEntry[] } | null;
+  scopeStatus: { checkedAt: string; results: ScopeStatusEntry[]; licensing?: LicenseCheckResult } | null;
   consentTargets: ConsentTarget[];
 }
 
@@ -880,6 +880,20 @@ export interface ScopeStatusEntry {
   resource: "graph" | "defender" | "partnerCenter";
   scope: string;
   status: "ok" | "skipped" | "failed";
+}
+
+/**
+ * The tenant's real Defender/Intune-class entitlement, from the same "Test
+ * Connection" run's `/organization` assignedPlans read (see
+ * checkTenantLicensing in packages/graph/src/app-registration-sync.ts) — the
+ * thing that actually determines whether a granted scope will *work*,
+ * independent of whether it's published/consented. "unavailable" means the
+ * check couldn't run (e.g. no active SSO session yet), never "not licensed".
+ */
+export interface LicenseCheckResult {
+  status: "detected" | "unavailable";
+  licenses: ("intune" | "defender-business-premium" | "mde-p2")[];
+  detail?: string;
 }
 
 /** "<label>.patchpilot365.com" (PatchPilot Support creates the DNS record) vs. a fully custom hostname. */

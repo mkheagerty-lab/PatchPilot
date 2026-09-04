@@ -5,6 +5,7 @@ import {
   updateAppRegistrationRedirectUris,
   encodeRedirectUriRemoval,
   decodeRedirectUriRemoval,
+  checkTenantLicensing,
 } from "./app-registration-sync.js";
 import { APP_REGISTRATION_TEST_SCOPES } from "./msal.js";
 
@@ -419,5 +420,63 @@ describe("encodeRedirectUriRemoval / decodeRedirectUriRemoval", () => {
 
   it("decodes garbage input to an empty list rather than throwing", () => {
     expect(decodeRedirectUriRemoval("not-valid-base64url-json!!!")).toEqual([]);
+  });
+});
+
+describe("checkTenantLicensing", () => {
+  // Real, globally-stable service plan GUIDs (see packages/shared/src/licensing.ts's
+  // LICENSE_SERVICE_PLANS) — a fixture using made-up GUIDs would prove nothing
+  // about mapAssignedPlansToLicenses actually recognizing them.
+  const INTUNE_PLAN_ID = "c1ec4a95-1f05-45b3-a911-aa3fa01094f5";
+  const MDE_P2_PLAN_ID = "871d91ec-ec1a-452b-a83f-bd76c7d770ef";
+
+  function stubOrganizationResponse(response: Response | (() => Response)): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => (typeof response === "function" ? response() : response)),
+    );
+  }
+
+  it("reports the tenant's real licenses from assignedPlans — the signal scope publish/grant checks can't see", async () => {
+    stubOrganizationResponse(
+      jsonRes(200, {
+        value: [
+          {
+            assignedPlans: [
+              { servicePlanId: INTUNE_PLAN_ID, service: "SCO", capabilityStatus: "Enabled" },
+              { servicePlanId: MDE_P2_PLAN_ID, service: "WindowsDefenderATP", capabilityStatus: "Enabled" },
+            ],
+          },
+        ],
+      }),
+    );
+    const result = await checkTenantLicensing("token");
+    expect(result.status).toBe("detected");
+    expect(result.licenses.sort()).toEqual(["intune", "mde-p2"]);
+  });
+
+  it("excludes a disabled plan from the detected licenses", async () => {
+    stubOrganizationResponse(
+      jsonRes(200, {
+        value: [{ assignedPlans: [{ servicePlanId: MDE_P2_PLAN_ID, capabilityStatus: "Disabled" }] }],
+      }),
+    );
+    const result = await checkTenantLicensing("token");
+    expect(result.status).toBe("detected");
+    expect(result.licenses).toEqual([]);
+  });
+
+  it("reports unavailable — never 'no licenses' — when assignedPlans comes back empty", async () => {
+    stubOrganizationResponse(jsonRes(200, { value: [{ assignedPlans: [] }] }));
+    const result = await checkTenantLicensing("token");
+    expect(result.status).toBe("unavailable");
+    expect(result.licenses).toEqual([]);
+  });
+
+  it("reports unavailable rather than throwing when the Graph call itself fails", async () => {
+    stubOrganizationResponse(jsonRes(403, { error: { message: "Forbidden" } }));
+    const result = await checkTenantLicensing("token");
+    expect(result.status).toBe("unavailable");
+    expect(result.detail).toBeTruthy();
   });
 });
