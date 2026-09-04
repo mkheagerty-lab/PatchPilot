@@ -170,60 +170,77 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
           Run the installer once as a Global Administrator. It creates the Entra
           app, configures the read-only permissions below, and either writes your{" "}
           <code className="font-mono text-xs">.env</code> (self-hosted) or pairs
-          directly with this instance (hosted).
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <a
-              href="/api/onboarding/pairing-script"
-              download
-              title={
-                !canWrite ? "Your role doesn't include settings write access." : undefined
-              }
-              onClick={(e) => {
-                if (!canWrite) e.preventDefault();
-              }}
-              aria-disabled={!canWrite}
-              className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-slate-900"
-            >
-              Download personalized installer
-            </a>
-            <span className="text-xs text-slate-400">
-              Pre-fills the pairing token — this instance restarts automatically
-              once it runs.
-            </span>
-          </div>
-          <p className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-400">
-            <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
-              Recommended
-            </span>
-            Run it from Azure Cloud Shell — no local PowerShell needed, and
-            your tenant ID is detected automatically from the signed-in
-            session. Paste this:
-          </p>
-          <div className="mt-1.5 flex items-start gap-2">
-            <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
-              {cloudShellCommand}
-            </code>
-            <CopyButton value={cloudShellCommand} />
-          </div>
-          <a
-            href="https://shell.azure.com/powershell"
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-[#0078d4] px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#106ebe]"
-          >
-            Open Azure Cloud Shell ↗
-          </a>
+          directly with this instance (hosted). Choose whichever matches how
+          you're set up:
 
-          <p className="mt-2.5 text-xs text-slate-400">
-            Prefer to run it unmodified and hand-edit{" "}
-            <code className="font-mono text-xs">.env</code> yourself? Copy this
-            into an elevated PowerShell from the repo root instead:
-          </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
-              {deployCmd}
-            </code>
-            <CopyButton value={deployCmd} />
+          <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              Option 1: Azure Cloud Shell
+              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+                Recommended
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              No local PowerShell needed, and your tenant ID is detected
+              automatically from the signed-in session. Paste this:
+            </p>
+            <div className="mt-1.5 flex items-start gap-2">
+              <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
+                {cloudShellCommand}
+              </code>
+              <CopyButton value={cloudShellCommand} />
+            </div>
+            <a
+              href="https://shell.azure.com/powershell"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-[#0078d4] px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#106ebe]"
+            >
+              Open Azure Cloud Shell ↗
+            </a>
+          </div>
+
+          <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              Option 2: PowerShell
+              <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                Manual
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              For local machines or instances that aren't hosted in Azure.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <a
+                href="/api/onboarding/pairing-script"
+                download
+                title={
+                  !canWrite ? "Your role doesn't include settings write access." : undefined
+                }
+                onClick={(e) => {
+                  if (!canWrite) e.preventDefault();
+                }}
+                aria-disabled={!canWrite}
+                className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-slate-900"
+              >
+                Download personalized installer
+              </a>
+              <span className="text-xs text-slate-400">
+                Pre-fills the pairing token — this instance restarts
+                automatically once it runs.
+              </span>
+            </div>
+            <p className="mt-2.5 text-xs text-slate-400">
+              Prefer to run it unmodified and hand-edit{" "}
+              <code className="font-mono text-xs">.env</code> yourself? Copy
+              this into an elevated PowerShell from the repo root instead:
+            </p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+                {deployCmd}
+              </code>
+              <CopyButton value={deployCmd} />
+            </div>
           </div>
 
           <p className="mt-3 border-t border-slate-200 pt-2.5 text-xs text-slate-400">
