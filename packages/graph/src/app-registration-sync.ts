@@ -241,9 +241,10 @@ export interface ScopeTestResult {
  * status of every scope PatchPilot could ever request (the full write-gated
  * list per resource, matching what the "Requested API permissions" section
  * always displays) without issuing a single PATCH/POST. Backs that section's
- * per-scope status tags and its "Test Connection" button — same one-time
- * step-up token as a sync, but this function never mutates the app
- * registration or its consent grants, so it's safe to run as often as wanted.
+ * per-scope status tags and its "Test Connection" button — a lighter,
+ * read-only step-up token (APP_REGISTRATION_TEST_SCOPES, not a sync's
+ * write-capable pair), and this function never mutates the app registration
+ * or its consent grants, so it's safe to run as often as wanted.
  */
 export async function testAppRegistrationScopes(input: {
   accessToken: string;

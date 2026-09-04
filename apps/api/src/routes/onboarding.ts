@@ -13,6 +13,7 @@ import {
 import {
   getCca,
   APP_REGISTRATION_SYNC_SCOPES,
+  APP_REGISTRATION_TEST_SCOPES,
   auditSafe,
   type ScopeStatusEntry,
 } from "@patchpilot/graph";
@@ -244,6 +245,9 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
   // Starts the one-time "Test Connection" step-up consent redirect — the
   // read-only counterpart to sync-permissions/start above (see
   // testAppRegistrationScopes in packages/graph/src/app-registration-sync.ts).
+  // Requests APP_REGISTRATION_TEST_SCOPES (Application.Read.All +
+  // Directory.Read.All), NOT the sync flow's write-capable pair — this only
+  // ever reads, so it has no business asking an admin to approve write access.
   // Kept on the router's default settings:read gate rather than elevated to
   // settings:write: nothing here mutates the app registration or its consent
   // grants, only reports each requested scope's live status.
@@ -255,7 +259,7 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
     const origin = resolveWebOrigin(req);
     const state = `patchpilot-testconn:${req.session.sessionId}`;
     const url = await getCca().getAuthCodeUrl({
-      scopes: APP_REGISTRATION_SYNC_SCOPES,
+      scopes: APP_REGISTRATION_TEST_SCOPES,
       redirectUri: `${origin}/auth/callback`,
       state,
     });
