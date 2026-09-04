@@ -1319,6 +1319,18 @@ LOG_LEVEL=info
                 $adminUpn = $azContext.Account.Id
             }
         }
+        # Reject anything that doesn't actually look like an email/UPN.
+        # Live-observed: on at least one Cloud Shell session, Get-AzContext's
+        # Account.Id came back as the literal string "MSI@50342" - Az
+        # PowerShell's placeholder for a Managed Identity login (MSI@<local
+        # IMDS port>), not a human's UPN. That garbage value becomes the sole
+        # bootstrap admin (apps/api/src/auth/bootstrap.ts) and locks the real
+        # signed-in admin out with "Your account isn't set up in PatchPilot" -
+        # strictly worse than sending no adminUpn at all, which just leaves
+        # provisioning to the normal Settings -> Users flow.
+        if ($adminUpn -notmatch '^[^@\s]+@[^@\s]+\.[^@\s]+$') {
+            $adminUpn = $null
+        }
 
         $pairingBody = @{
             token        = $PairingToken

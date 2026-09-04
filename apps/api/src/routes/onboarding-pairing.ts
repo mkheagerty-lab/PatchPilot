@@ -117,7 +117,16 @@ export async function onboardingPairingRoutes(app: FastifyInstance): Promise<voi
       // this row is only ever a *fallback* default, so re-pairing (e.g. a
       // client secret rotation) can't silently reassign who bootstraps as
       // admin just because a different person happened to run the script.
-      if (body.adminUpn) {
+      //
+      // Shape-checked, not just non-empty: Deploy-PatchPilot.ps1 now filters
+      // this itself (see its own comment on $adminUpn), but a live-observed
+      // failure mode is worth guarding here too — Get-AzContext's Account.Id
+      // came back as the literal string "MSI@50342" (Az PowerShell's
+      // placeholder for a Managed Identity login) on at least one Cloud
+      // Shell session. Writing that as the sole bootstrap admin
+      // (auth/bootstrap.ts) locks the real signed-in admin out entirely,
+      // which is worse than leaving this row unwritten.
+      if (body.adminUpn && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.adminUpn)) {
         await db
           .insert(tables.settings)
           .values({
