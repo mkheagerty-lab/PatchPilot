@@ -191,21 +191,13 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
               once it runs.
             </span>
           </div>
-          <p className="mt-2.5 text-xs text-slate-400">
-            Prefer to run it unmodified and hand-edit{" "}
-            <code className="font-mono text-xs">.env</code> yourself? Copy this
-            into an elevated PowerShell from the repo root instead:
-          </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
-              {deployCmd}
-            </code>
-            <CopyButton value={deployCmd} />
-          </div>
-          <p className="mt-2.5 text-xs text-slate-400">
-            Re-registering from an Azure Cloud Shell instead? Paste this —
+          <p className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-400">
+            <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+              Recommended
+            </span>
+            Run it from Azure Cloud Shell — no local PowerShell needed, and
             your tenant ID is detected automatically from the signed-in
-            Cloud Shell session:
+            session. Paste this:
           </p>
           <div className="mt-1.5 flex items-start gap-2">
             <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
@@ -217,10 +209,22 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
             href="https://shell.azure.com/powershell"
             target="_blank"
             rel="noreferrer"
-            className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-[#0078d4] px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#106ebe]"
           >
             Open Azure Cloud Shell ↗
           </a>
+
+          <p className="mt-2.5 text-xs text-slate-400">
+            Prefer to run it unmodified and hand-edit{" "}
+            <code className="font-mono text-xs">.env</code> yourself? Copy this
+            into an elevated PowerShell from the repo root instead:
+          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+              {deployCmd}
+            </code>
+            <CopyButton value={deployCmd} />
+          </div>
 
           <p className="mt-3 border-t border-slate-200 pt-2.5 text-xs text-slate-400">
             Client secret expired or leaked? Add{" "}
@@ -275,7 +279,7 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
           <div className="mt-2.5">
             <Link
               to="/settings/tenants"
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
             >
               Go to Tenants → Discover
             </Link>
@@ -383,7 +387,7 @@ function SyncPermissionsCard({
                 className="mt-0.5"
               />
               <span>
-                Include Phase 5 remediation write scopes
+                Include remediation write scopes
                 <span className="block text-xs text-slate-400">
                   Adds the Intune/Windows Update write permissions used for
                   in-app remediation dispatch. Leave unchecked to stay

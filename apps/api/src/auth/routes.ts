@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
-import { permissionsFor, currentScopeBaseline } from "@patchpilot/shared";
+import { permissionsFor, currentScopeBaseline, type ScopeBaseline } from "@patchpilot/shared";
 import { config, webOrigins } from "../config.js";
 import { resolveWebOrigin } from "./origin.js";
 import {
@@ -207,14 +207,32 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           });
 
           // Stamps the same drift baseline onboarding-pairing.ts sets on a
-          // fresh pairing — this sync just wrote the app registration to
-          // match scopes.ts, so that's now the known-good state, regardless
-          // of whether every resource applied cleanly (a partial failure
-          // still moved the registration closer to this baseline than
-          // whatever it had before, and a stale "Sync needed" hint would be
-          // more misleading than a slightly-optimistic cleared one here).
+          // fresh pairing — but ONLY for the resources syncAppRegistrationScopes
+          // actually confirmed applied. Earlier this unconditionally stamped all
+          // three resources whenever result.applied was non-empty, which marked
+          // Defender/Partner Center as "synced" even on a run where their scopes
+          // were entirely missing/skipped (a resource with zero matches never
+          // reaches the app registration's requiredResourceAccess at all — see
+          // app-registration-sync.ts) — the "Sync needed" badge would then clear
+          // itself despite those resources still being out of date. Resources not
+          // in this run keep whatever baseline they already had, so a still-broken
+          // resource keeps flagging drift instead of silently reporting all-clear.
           if (result.applied.length > 0) {
-            const value = { includeWriteScopes, ...currentScopeBaseline(includeWriteScopes) };
+            const [existingRow] = await db
+              .select()
+              .from(tables.settings)
+              .where(eq(tables.settings.key, "entra-scopes-baseline"));
+            const prior = (existingRow?.value ?? {}) as Partial<ScopeBaseline>;
+            const fresh = currentScopeBaseline(includeWriteScopes);
+            const appliedResources = new Set(result.applied.map((a) => a.resource));
+            const value = {
+              includeWriteScopes,
+              graph: appliedResources.has("graph") ? fresh.graph : (prior.graph ?? []),
+              defender: appliedResources.has("defender") ? fresh.defender : (prior.defender ?? []),
+              partnerCenter: appliedResources.has("partnerCenter")
+                ? fresh.partnerCenter
+                : (prior.partnerCenter ?? []),
+            };
             await db
               .insert(tables.settings)
               .values({ key: "entra-scopes-baseline", value })
