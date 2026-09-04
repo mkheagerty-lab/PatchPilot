@@ -11,6 +11,7 @@ import {
   redeemLoginCode,
   redeemStepUpConsentCode,
   syncAppRegistrationScopes,
+  testAppRegistrationScopes,
   updateAppRegistrationRedirectUris,
   storeToken,
   clearTokens,
@@ -297,6 +298,109 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
               body: `Microsoft returned an error while syncing permissions: ${
                 err instanceof Error ? err.message : "unknown error"
               }. No changes may have been applied — check Azure Portal, or try again from PatchPilot.`,
+            }),
+          );
+        }
+      }
+
+      // "Test Connection" step-up return (Setup -> App Registration, Requested
+      // API permissions section). Same step-up mechanics as the syncperm
+      // branch above, discriminated by state prefix (apps/api/src/routes/onboarding.ts),
+      // but calls the read-only testAppRegistrationScopes instead of
+      // syncAppRegistrationScopes — nothing here is ever written back to Entra.
+      const TEST_CONN_STATE_PREFIX = "patchpilot-testconn:";
+      if (code && state?.startsWith(TEST_CONN_STATE_PREFIX)) {
+        const sessionId = state.slice(TEST_CONN_STATE_PREFIX.length);
+        const engineer = req.session.engineer;
+
+        if (!engineer || sessionId !== req.session.sessionId) {
+          await auditSafe({
+            engineer: engineer?.upn ?? ANONYMOUS,
+            tenantId: config.ENTRA_TENANT_ID,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:test-connection-failed",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: "Connection test callback rejected — session mismatch",
+            outcome: "failure",
+            responseStatus: 400,
+          });
+
+          return reply.type("text/html").code(400).send(
+            landingPage({
+              origin,
+              tone: "error",
+              title: "PatchPilot — test connection",
+              heading: "This link is no longer valid",
+              body: "This connection-test link doesn't match your current PatchPilot session. Start the test again from Setup → App Registration.",
+            }),
+          );
+        }
+
+        try {
+          const stepUp = await redeemStepUpConsentCode(code, `${origin}/auth/callback`);
+          const result = await testAppRegistrationScopes({
+            accessToken: stepUp.accessToken,
+            clientId: config.ENTRA_CLIENT_ID,
+          });
+
+          const value = { checkedAt: new Date().toISOString(), results: result.results };
+          await db
+            .insert(tables.settings)
+            .values({ key: "entra-scope-status", value })
+            .onConflictDoUpdate({ target: tables.settings.key, set: { value, updatedAt: new Date() } });
+
+          const ok = result.results.filter((r) => r.status === "ok").length;
+          const skipped = result.results.filter((r) => r.status === "skipped").length;
+          const failed = result.results.filter((r) => r.status === "failed").length;
+
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:test-connection-success",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: `${engineer.upn} tested app registration permissions (${ok} ok, ${skipped} skipped, ${failed} failed)`,
+            outcome: failed > 0 ? "partial" : "success",
+            responseStatus: 200,
+          });
+
+          return reply.type("text/html").send(
+            landingPage({
+              origin,
+              tone: failed > 0 ? "error" : "ok",
+              title: "PatchPilot — test connection",
+              heading: "Connection test complete",
+              body: `${ok} permission${ok === 1 ? "" : "s"} OK, ${skipped} skipped, ${failed} failed. Nothing was changed — this was a read-only check. Return to PatchPilot and see Setup → App Registration for the breakdown.`,
+            }),
+          );
+        } catch (err) {
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:test-connection-failed",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: `${engineer.upn}'s connection test failed`,
+            outcome: "failure",
+            detail: err instanceof Error ? err.message : String(err),
+            responseStatus: 500,
+          });
+
+          return reply.type("text/html").code(500).send(
+            landingPage({
+              origin,
+              tone: "error",
+              title: "PatchPilot — test connection",
+              heading: "Connection test failed",
+              body: `Microsoft returned an error while testing the connection: ${
+                err instanceof Error ? err.message : "unknown error"
+              }. Nothing was changed — try again from PatchPilot.`,
             }),
           );
         }

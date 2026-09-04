@@ -241,6 +241,13 @@ export const AUDIT_ACTIONS = [
   "app-registration:domain-sync-start",
   "app-registration:domain-sync-success",
   "app-registration:domain-sync-failed",
+  // Read-only counterpart of "app-registration:sync-*" above — the "Test
+  // Connection" action (Setup → App Registration, Requested API permissions
+  // section) reports each requested scope's live status without writing
+  // anything back to Entra.
+  "app-registration:test-connection-start",
+  "app-registration:test-connection-success",
+  "app-registration:test-connection-failed",
   // Onboarding pairing — the "phone home" flow that replaces writing Entra
   // credentials to a local .env (see apps/api/src/routes/onboarding-pairing.ts).
   // "issued" is written by the authenticated admin who generated the
@@ -411,6 +418,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "app-registration:domain-sync-success": "Redirect URIs synced",
   "app-registration:domain-sync-failed": "Redirect URI sync failed",
 
+  "app-registration:test-connection-start": "Connection test started",
+  "app-registration:test-connection-success": "Connection test completed",
+  "app-registration:test-connection-failed": "Connection test failed",
+
   "onboarding:pairing-token-issued": "Pairing script downloaded",
   "onboarding:paired": "Instance paired with Entra app registration",
 
@@ -558,6 +569,9 @@ export const AUDIT_ACTION_GROUPS: ReadonlyArray<{
       "app-registration:domain-sync-start",
       "app-registration:domain-sync-success",
       "app-registration:domain-sync-failed",
+      "app-registration:test-connection-start",
+      "app-registration:test-connection-success",
+      "app-registration:test-connection-failed",
     ],
   },
   {
