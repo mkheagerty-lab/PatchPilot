@@ -17,7 +17,15 @@ export const GRAPH_SCOPES = [
   "DeviceManagementConfiguration.ReadWrite.All",
   "DeviceManagementApps.ReadWrite.All",
   "SecurityEvents.Read.All",
-  "Vulnerability.Read.All",
+  // NOTE: no Graph-side "Vulnerability.Read.All" here. An earlier revision
+  // requested it, but nothing in PatchPilot calls a Microsoft Graph vulnerability
+  // endpoint — every CVE/vulnerability read goes through Defender's own API
+  // (see DEFENDER_SCOPES's "Vulnerability.Read" below), and live syncing
+  // confirmed Microsoft Graph's own service principal doesn't even publish a
+  // delegated oauth2PermissionScope by that name (Sync API Permissions reported
+  // "Microsoft Graph missing delegated scope: Vulnerability.Read.All" and it
+  // never resolved past "skipped"/"failed"). It was almost certainly copy-pasted
+  // from the Defender scope list by mistake — dropped as unused dead weight.
   "WindowsUpdates.ReadWrite.All",
   // Reads /subscribedSkus for licensing detection. Without it the home-tenant
   // OBO licensing probe 403s, surfacing as a false "needs consent" reachability
@@ -42,22 +50,37 @@ export const DEFENDER_SCOPES = [
   // supported), so onboarding needs no manual Defender-portal upload. Without it
   // the library list/upload 403s and the channel can't run.
   "Library.Manage",
-  "Machine.Read.All",
-  "Vulnerability.Read.All",
+  // Defender for Endpoint gives Application and Delegated permissions
+  // DIFFERENT literal names for the same read — e.g. get-machines documents
+  // Machine.Read.All (Application) vs. Machine.Read (Delegated):
+  // https://learn.microsoft.com/en-us/defender-endpoint/api/get-machines.
+  // PatchPilot's Defender calls are exclusively delegated (see msal.ts's
+  // module doc comment — GDAP only supports "app + user" access), so every
+  // scope below must be the Delegated name, never the "Read.All"-suffixed
+  // Application one. Requesting the Application name here silently fails: it
+  // doesn't exist as a delegated oauth2PermissionScope on the resource's
+  // service principal, so Entra can never publish/grant it for a delegated
+  // token no matter how thoroughly an admin consents — it just shows
+  // "Failed" on the Test Connection status forever. Confirmed live: an
+  // earlier revision requested the four Application-style names below and
+  // they all failed while Machine.LiveResponse/Library.Manage (genuine
+  // Delegated names) worked.
+  "Machine.Read",
+  "Vulnerability.Read",
   // Reads /recommendations (Defender's TVM security recommendations) so the
   // Vulnerabilities surface can consolidate hundreds of per-CVE findings into one
   // actionable "Update <product>" row per software, the way the Defender portal
   // does. Without it the recommendations sync 403s and PatchPilot falls back to
   // the flat per-CVE list.
-  "SecurityRecommendation.Read.All",
+  "SecurityRecommendation.Read",
   // Reads /api/software and /api/machines/{id}/software (Defender's Software
-  // Inventory), which is a separate permission from Vulnerability.Read.All.
+  // Inventory), which is a separate permission from Vulnerability.Read.
   // Powers the Software Inventory page, including software Defender detects
   // but doesn't run CVE/weakness matching against. Added after the initial
   // rollout — customer tenants that already granted admin consent must
   // re-consent before their Software Inventory sync will succeed; until then
   // it 403s for that tenant.
-  "Software.Read.All",
+  "Software.Read",
 ] as const;
 
 export const PARTNER_CENTER_SCOPES = ["user_impersonation"] as const;

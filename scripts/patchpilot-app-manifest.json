@@ -48,10 +48,6 @@
           "type": "Scope"
         },
         {
-          "id": "Vulnerability.Read.All",
-          "type": "Scope"
-        },
-        {
           "id": "WindowsUpdates.ReadWrite.All",
           "type": "Scope"
         },
@@ -86,19 +82,19 @@
           "type": "Scope"
         },
         {
-          "id": "Machine.Read.All",
+          "id": "Machine.Read",
           "type": "Scope"
         },
         {
-          "id": "Vulnerability.Read.All",
+          "id": "Vulnerability.Read",
           "type": "Scope"
         },
         {
-          "id": "SecurityRecommendation.Read.All",
+          "id": "SecurityRecommendation.Read",
           "type": "Scope"
         },
         {
-          "id": "Software.Read.All",
+          "id": "Software.Read",
           "type": "Scope"
         }
       ]

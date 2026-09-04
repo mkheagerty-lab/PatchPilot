@@ -39,10 +39,20 @@ function landingPage(opts: {
   body: string;
   tone: "ok" | "error";
   origin: string;
+  /**
+   * Where "Return to PatchPilot" sends the admin — e.g. "/setup/app-registration"
+   * so a Sync/Test Connection/redirect-URI-sync return lands back on the page
+   * that started it, not the bare origin (which the SPA's router sends to the
+   * dashboard). Defaults to the origin root for flows with no single obvious
+   * page (e.g. admin-consent, which can be started from either App Registration
+   * or the Tenants page).
+   */
+  returnPath?: string;
 }): string {
   const accent = opts.tone === "ok" ? "#16a34a" : "#dc2626";
   const escape = (s: string) =>
     s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  const returnUrl = `${opts.origin}${opts.returnPath ?? ""}`;
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -62,8 +72,30 @@ function landingPage(opts: {
   <span class="badge">${opts.tone === "ok" ? "✓" : "!"}</span>
   <h1>${escape(opts.heading)}</h1>
   <p>${opts.body}</p>
-  <p><a href="${escape(opts.origin)}">Return to PatchPilot →</a></p>
+  <p><a href="${escape(returnUrl)}">Return to PatchPilot →</a></p>
 </div></body></html>`;
+}
+
+/** Every app-registration step-up flow (sync, test-connection, domain-sync)
+ * only ever starts from this one page, so their landing pages should return
+ * here rather than the bare origin (which the SPA sends to the dashboard). */
+const APP_REGISTRATION_PATH = "/setup/app-registration";
+
+/**
+ * Tiny same-origin postMessage bridge for a step-up flow run inside a hidden
+ * `<iframe>` (see SILENT_TEST_CONN_STATE_PREFIX below) instead of a top-level
+ * navigation. landingPage() assumes the whole tab just navigated here and
+ * offers a "Return to PatchPilot" link — inside a hidden iframe that would be
+ * both invisible and pointless. This just hands the outcome back to
+ * `window.parent` and lets the parent page redraw in place (or fall back to
+ * the normal visible redirect if `ok` is false).
+ */
+function postMessagePage(payload: { ok: boolean }, targetOrigin: string): string {
+  const json = JSON.stringify({ source: "patchpilot-test-connection", ...payload }).replace(/</g, "\\u003c");
+  const safeOrigin = JSON.stringify(targetOrigin);
+  return `<!doctype html><html><head><meta charset="utf-8" /></head><body><script>
+  try { window.parent.postMessage(${json}, ${safeOrigin}); } catch (e) {}
+</script></body></html>`;
 }
 
 /**
@@ -133,6 +165,87 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       // step-up start) sent as redirectUri, so this always matches.
       const origin = resolveWebOrigin(req);
 
+      // Silent SSO "Test Connection" (hidden iframe, prompt=none) — see
+      // onboarding.ts's ?silent=1 branch and AppRegistration.tsx's
+      // runTestConnection. Same read-only testAppRegistrationScopes as the
+      // visible TEST_CONN_STATE_PREFIX flow further down, but this callback
+      // loads inside a hidden iframe, not the top-level page, so it must
+      // never render landingPage()'s HTML — it postMessages a tiny {ok}
+      // result back to the parent window instead. Checked before the generic
+      // `if (error)` block below: a failed prompt=none silent attempt (no
+      // active SSO session, a Conditional Access step-up) comes back as
+      // `error=interaction_required` with no code, and that generic block
+      // doesn't look at `state` at all — left unchecked it would render the
+      // full error landingPage inside the hidden iframe instead of letting
+      // the parent's fallback kick in immediately.
+      const SILENT_TEST_CONN_STATE_PREFIX = "patchpilot-testconn-silent:";
+      if (state?.startsWith(SILENT_TEST_CONN_STATE_PREFIX)) {
+        const sessionId = state.slice(SILENT_TEST_CONN_STATE_PREFIX.length);
+        const engineer = req.session.engineer;
+
+        if (error || !code || !engineer || sessionId !== req.session.sessionId) {
+          // Every failure path here is an expected, silent outcome (no SSO
+          // session, MFA step-up, a rotated session) — the parent's
+          // timeout/fallback to the visible flow handles it, and a human
+          // driving that visible retry already produces its own audit trail,
+          // so this doesn't need one of its own beyond the start event above.
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin));
+        }
+
+        try {
+          const stepUp = await redeemStepUpConsentCode(
+            code,
+            `${origin}/auth/callback`,
+            APP_REGISTRATION_TEST_SCOPES,
+          );
+          const result = await testAppRegistrationScopes({
+            accessToken: stepUp.accessToken,
+            clientId: config.ENTRA_CLIENT_ID,
+          });
+
+          const value = { checkedAt: new Date().toISOString(), results: result.results };
+          await db
+            .insert(tables.settings)
+            .values({ key: "entra-scope-status", value })
+            .onConflictDoUpdate({ target: tables.settings.key, set: { value, updatedAt: new Date() } });
+
+          const ok = result.results.filter((r) => r.status === "ok").length;
+          const skipped = result.results.filter((r) => r.status === "skipped").length;
+          const failed = result.results.filter((r) => r.status === "failed").length;
+
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:test-connection-success",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: `${engineer.upn} tested app registration permissions silently (${ok} ok, ${skipped} skipped, ${failed} failed)`,
+            outcome: failed > 0 ? "partial" : "success",
+            responseStatus: 200,
+          });
+
+          return reply.type("text/html").send(postMessagePage({ ok: true }, origin));
+        } catch (err) {
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "app-registration:test-connection-failed",
+            resourceType: "application",
+            resourceId: config.ENTRA_CLIENT_ID,
+            summary: `${engineer.upn}'s silent connection test failed`,
+            outcome: "failure",
+            detail: err instanceof Error ? err.message : String(err),
+            responseStatus: 500,
+          });
+
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin));
+        }
+      }
+
       // An error from either the login or the admin-consent flow.
       if (error) {
         // Only the two named params, never the raw query string: it can carry a
@@ -192,6 +305,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(400).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — sync permissions",
               heading: "This link is no longer valid",
@@ -267,6 +381,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: result.warnings.length > 0 ? "error" : "ok",
               title: "PatchPilot — sync permissions",
               heading: result.warnings.length > 0 ? "Permissions synced with warnings" : "Permissions synced",
@@ -293,6 +408,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(500).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — sync permissions",
               heading: "Permission sync failed",
@@ -331,6 +447,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(400).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — test connection",
               heading: "This link is no longer valid",
@@ -376,6 +493,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: failed > 0 ? "error" : "ok",
               title: "PatchPilot — test connection",
               heading: "Connection test complete",
@@ -400,6 +518,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(500).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — test connection",
               heading: "Connection test failed",
@@ -438,6 +557,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(400).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — sync redirect URIs",
               heading: "This link is no longer valid",
@@ -470,6 +590,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "ok",
               title: "PatchPilot — sync redirect URIs",
               heading: result.added.length ? "Redirect URIs updated" : "Already up to date",
@@ -496,6 +617,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           return reply.type("text/html").code(500).send(
             landingPage({
               origin,
+              returnPath: APP_REGISTRATION_PATH,
               tone: "error",
               title: "PatchPilot — sync redirect URIs",
               heading: "Redirect URI sync failed",

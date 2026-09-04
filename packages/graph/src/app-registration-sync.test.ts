@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RESOURCE_APP_IDS, GRAPH_READONLY_SCOPES, DEFENDER_READONLY_SCOPES } from "@patchpilot/shared";
 import { syncAppRegistrationScopes, updateAppRegistrationRedirectUris } from "./app-registration-sync.js";
+import { APP_REGISTRATION_TEST_SCOPES } from "./msal.js";
 
 const CLIENT_ID = "11111111-1111-1111-1111-111111111111";
 const APP_OBJECT_ID = "app-obj-1";
@@ -90,7 +91,15 @@ function installFetchMock(scenario: {
 }
 
 const FULLY_PUBLISHED = {
-  graphSp: { id: GRAPH_SP_ID, oauth2PermissionScopes: publishedScopes(GRAPH_READONLY_SCOPES) },
+  // Real Microsoft Graph publishes Application.Read.All/Directory.Read.All as
+  // standard delegated scopes alongside everything PatchPilot requests — the
+  // fixture includes them so syncAppRegistrationScopes's testScopesFor()
+  // merge (see app-registration-sync.ts) resolves cleanly here too, matching
+  // real-world behavior rather than reporting a phantom "missing scope".
+  graphSp: {
+    id: GRAPH_SP_ID,
+    oauth2PermissionScopes: publishedScopes([...GRAPH_READONLY_SCOPES, ...APP_REGISTRATION_TEST_SCOPES]),
+  },
   defenderSp: { id: DEFENDER_SP_ID, oauth2PermissionScopes: publishedScopes(DEFENDER_READONLY_SCOPES) },
   partnerSp: { id: PARTNER_SP_ID, oauth2PermissionScopes: publishedScopes(["user_impersonation"]) },
   clientSp: { id: CLIENT_SP_ID },
@@ -223,7 +232,10 @@ describe("syncAppRegistrationScopes", () => {
       clientId: CLIENT_SP_ID,
       resourceId: GRAPH_SP_ID,
       consentType: "AllPrincipals",
-      scope: GRAPH_READONLY_SCOPES.join(" "),
+      // Must cover the test-connection scopes too, or syncAppRegistrationScopes
+      // sees them as "missing" against this grant and issues a PATCH-merge,
+      // defeating the point of this "already fully covered" scenario.
+      scope: [...GRAPH_READONLY_SCOPES, ...APP_REGISTRATION_TEST_SCOPES].join(" "),
     };
     const noChangeNeeded = { ...FULLY_PUBLISHED, existingGrants: [fullyGrantedAlready] };
     const { patchCalls } = installFetchMock(noChangeNeeded);
@@ -236,7 +248,7 @@ describe("syncAppRegistrationScopes", () => {
 
     expect(patchCalls.some((c) => c.path === "/oauth2PermissionGrants/grant-graph-1")).toBe(false);
     const graphConsent = result.consentGranted.find((c) => c.resource === "graph");
-    expect(graphConsent?.scopeCount).toBe(GRAPH_READONLY_SCOPES.length);
+    expect(graphConsent?.scopeCount).toBe(GRAPH_READONLY_SCOPES.length + APP_REGISTRATION_TEST_SCOPES.length);
   });
 });
 

@@ -676,10 +676,15 @@ try {
     # READ-ONLY BY DEFAULT (invariant #11): the arrays below request only read scopes,
     # which are all sync needs. The Phase 5 remediation WRITE scopes are appended only
     # when -EnableRemediationWriteScopes is passed (see $remediation*WriteScopes).
+    # NOTE: no Graph-side "Vulnerability.Read.All" here. Nothing in PatchPilot
+    # calls a Microsoft Graph vulnerability endpoint - every CVE/vulnerability
+    # read goes through Defender's own API ($defenderScopes's "Vulnerability.Read"
+    # below). Live syncing confirmed Microsoft Graph's own service principal
+    # doesn't even publish a delegated oauth2PermissionScope by that name; it
+    # was almost certainly copy-pasted from the Defender list by mistake.
     $graphScopes = @(
         "DelegatedAdminRelationship.Read.All",
         "SecurityEvents.Read.All",
-        "Vulnerability.Read.All",
         # Reads /subscribedSkus for licensing detection over the home-tenant OBO
         # path. Without it the licensing probe 403s and the MSP tenant shows a
         # false "needs consent" with an empty Licenses column.
@@ -687,19 +692,29 @@ try {
         "User.Read"
     )
 
+    # Defender for Endpoint names its Application and Delegated permissions
+    # DIFFERENTLY for the same read (e.g. get-machines: Machine.Read.All is
+    # Application-only, Machine.Read is the Delegated equivalent -
+    # https://learn.microsoft.com/en-us/defender-endpoint/api/get-machines).
+    # Resolve-ResourceAccess below only ever looks up Oauth2PermissionScopes
+    # (Delegated) on the resource SP, so an Application-style "*.Read.All"
+    # name here resolves to nothing and is silently skipped with a warning -
+    # it can never be granted for the delegated tokens PatchPilot actually
+    # requests. Use the Delegated name (no ".All" suffix) for every scope
+    # below.
     $defenderScopes = @(
-        "Machine.Read.All",
-        "Vulnerability.Read.All",
+        "Machine.Read",
+        "Vulnerability.Read",
         # Reads /recommendations (Defender TVM security recommendations) so the
         # Vulnerabilities surface can consolidate per-CVE noise into one
         # "Update <product>" row per software. Without it that sync 403s and
         # PatchPilot falls back to the flat per-CVE list.
-        "SecurityRecommendation.Read.All",
+        "SecurityRecommendation.Read",
         # Reads /machines/{id}/getmissingkbs (per-device missing Windows Updates)
         # so the "By OS" tab can show real KB-level detail instead of the single
         # rolled-up "Microsoft Windows 11" recommendation. Without it that sync
         # 403s and missing_kbs stays empty.
-        "Software.Read.All"
+        "Software.Read"
     )
 
     # ---- Phase 5 remediation WRITE scopes (opt-in; off by default) ----

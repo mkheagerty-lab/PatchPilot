@@ -5,7 +5,6 @@ DeviceManagementManagedDevices.PrivilegedOperations.All
 DeviceManagementConfiguration.ReadWrite.All
 DeviceManagementApps.ReadWrite.All
 SecurityEvents.Read.All
-Vulnerability.Read.All
 WindowsUpdates.ReadWrite.All
 Organization.Read.All
 Group.Read.All
@@ -15,10 +14,10 @@ User.Read
 # Microsoft Threat Protection (Defender) delegated scopes
 Machine.LiveResponse
 Library.Manage
-Machine.Read.All
-Vulnerability.Read.All
-SecurityRecommendation.Read.All
-Software.Read.All
+Machine.Read
+Vulnerability.Read
+SecurityRecommendation.Read
+Software.Read
 
 # Microsoft Partner Center API
 user_impersonation
