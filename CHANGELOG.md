@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.7.0] - 2026-09-05
+
 - Fix Settings > Branding's "Match colours to logo" actually applying the
   saved primary/secondary/accent/sidebar colours app-wide, not just saving
   them; add the default PatchPilot logo to the device pairing page.
