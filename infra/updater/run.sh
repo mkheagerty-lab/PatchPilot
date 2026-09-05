@@ -66,16 +66,41 @@ while true; do
     TAG="${ROW#*|}"
     echo "[updater] claimed run $RUN_ID -> $TAG"
 
-    OUT=$(cd "$REPO_DIR" && {
-      git fetch --tags --force &&
-      git checkout --force "$TAG" &&
-      docker compose -f infra/docker-compose.yml --env-file .env up -d --build $SERVICES
-    } 2>&1) && STATUS=succeeded || STATUS=failed
+    # Run the actual update in the background, teeing to a log file, so this
+    # loop can flush partial output back to the row every few seconds — the
+    # Settings > Updates page polls every 5s and shows a live log while
+    # status='running', instead of nothing until the whole thing finishes
+    # (a `docker compose ... --build` can easily take minutes).
+    LOGFILE=$(mktemp)
+    (
+      cd "$REPO_DIR" && {
+        echo "== Fetching tags ==" &&
+        git fetch --tags --force &&
+        echo "== Checking out $TAG ==" &&
+        git checkout --force "$TAG" &&
+        echo "== Building and restarting containers ==" &&
+        docker compose -f infra/docker-compose.yml --env-file .env up -d --build $SERVICES
+      }
+    ) >"$LOGFILE" 2>&1 &
+    BUILD_PID=$!
 
-    echo "[updater] run $RUN_ID finished: $STATUS"
+    while kill -0 "$BUILD_PID" 2>/dev/null; do
+      sleep 3
+      PARTIAL=$(tail -c 20000 "$LOGFILE" 2>/dev/null || true)
+      # Best-effort: a flush failing mid-run (e.g. postgres briefly restarting
+      # as part of $SERVICES) just means one skipped log update, not a
+      # crash — the final write below is the one that must succeed.
+      psql "$DATABASE_URL" -q -c "UPDATE update_runs SET output='$(sql_escape "$PARTIAL")' WHERE id='$(sql_escape "$RUN_ID")';" \
+        >/dev/null 2>&1 || true
+    done
+
+    wait "$BUILD_PID" && STATUS=succeeded || STATUS=failed
     # Bound what gets written back — a runaway build log shouldn't blow out
     # the `output` column.
-    OUT=$(printf '%s' "$OUT" | tail -c 20000)
+    OUT=$(tail -c 20000 "$LOGFILE" 2>/dev/null || true)
+    rm -f "$LOGFILE"
+
+    echo "[updater] run $RUN_ID finished: $STATUS"
     psql "$DATABASE_URL" -q -c "UPDATE update_runs SET status='$(sql_escape "$STATUS")', finished_at=now(), output='$(sql_escape "$OUT")' WHERE id='$(sql_escape "$RUN_ID")';" \
       || echo "[updater] WARNING: failed to write back status for run $RUN_ID — it will stay stuck at 'running' until fixed manually." >&2
   fi
