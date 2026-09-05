@@ -1,6 +1,6 @@
 # Contributing
 
-PatchPilot is an internal Black Iron Technology Group project — this doc is for
+PatchPilot is an internal project — this doc is for
 whoever's touching the code next (including a future Claude Code session), not
 an external contributor process.
 
