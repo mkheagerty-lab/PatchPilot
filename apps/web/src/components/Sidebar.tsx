@@ -117,8 +117,8 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                   [
                     "block rounded-md px-3 py-2 text-sm transition-colors",
                     isActive
-                      ? "bg-indigo-600/90 text-white"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white",
+                      ? "bg-[var(--pp-primary)]/90 text-white"
+                      : "text-slate-300 hover:bg-[var(--pp-secondary)]/10 hover:text-white",
                   ].join(" ")
                 }
               >
@@ -137,8 +137,8 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             [
               "block rounded-md px-3 py-2 text-sm transition-colors",
               isActive
-                ? "bg-indigo-600/90 text-white"
-                : "text-slate-300 hover:bg-white/5 hover:text-white",
+                ? "bg-[var(--pp-primary)]/90 text-white"
+                : "text-slate-300 hover:bg-[var(--pp-secondary)]/10 hover:text-white",
             ].join(" ")
           }
         >
@@ -184,7 +184,7 @@ export function Sidebar() {
 
   if (collapsed) {
     return (
-      <aside className="hidden h-screen w-6 shrink-0 flex-col items-center bg-[#0b1020] py-5 print:hidden lg:flex">
+      <aside className="hidden h-screen w-6 shrink-0 flex-col items-center bg-[var(--pp-bg)] py-5 print:hidden lg:flex">
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -199,7 +199,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 flex-col bg-[#0b1020] text-slate-300 print:hidden lg:flex">
+    <aside className="hidden h-screen w-64 shrink-0 flex-col bg-[var(--pp-bg)] text-slate-300 print:hidden lg:flex">
       <div className="flex items-center gap-2 px-5 py-5">
         <img
           src={branding?.logoUrl || DEFAULT_LOGO_URL}

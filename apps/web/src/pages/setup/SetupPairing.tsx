@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { CopyButton } from "../../components/ui";
+import { DEFAULT_LOGO_URL, PRODUCT_NAME } from "../../lib/branding";
 
 /**
  * Shown by <AuthGate> instead of the normal login redirect when the instance
@@ -47,6 +48,14 @@ export function SetupPairing() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10">
       <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <img
+            src={DEFAULT_LOGO_URL}
+            alt={PRODUCT_NAME}
+            className="h-10 w-10 rounded-xl object-contain"
+          />
+          <span className="text-base font-semibold text-slate-900">{PRODUCT_NAME}</span>
+        </div>
         <h1 className="text-lg font-semibold text-slate-900">Pair this instance</h1>
         <p className="mt-2 text-sm text-slate-500">
           This PatchPilot instance hasn&apos;t been connected to a Microsoft 365

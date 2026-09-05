@@ -283,7 +283,7 @@ export function AuditLog() {
                 onClick={() => set("category", value)}
                 className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                   filters.category === value
-                    ? "bg-indigo-600 text-white"
+                    ? "bg-[var(--pp-primary)] text-white"
                     : "bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >

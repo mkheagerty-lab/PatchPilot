@@ -5,6 +5,10 @@
  * lib/theme.tsx from the signed-in engineer's own preference, not the OS. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Pre-hydration fallback only — matches lib/branding.ts's BRANDING_DEFAULTS.
+ * Once the saved branding settings load, lib/branding.ts's
+ * useApplyBrandingVars() overwrites these on <html> with the real values, so
+ * anything styled via var(--pp-*) picks up a tenant's actual palette. */
 :root {
   --pp-bg: #0b1020;
   --pp-primary: #4f46e5;
