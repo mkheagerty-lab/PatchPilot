@@ -135,6 +135,5 @@ Merged to `main` alongside the rest of Phase 5.
   check, and push the resulting redirect URI(s) into the real Entra app
   registration with one click.
 - Templated Azure VM deployment (Bicep + cloud-init, no SSH).
-- Removed "BITG"/"Black Iron" branding from all user-facing support,
-  instructions, and app-registration text in favor of "PatchPilot Support"
+- Added PatchPilot365 branding from all user-facing support,
   (`support@patchpilot365.com`).
