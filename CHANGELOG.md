@@ -12,6 +12,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Add a branded login splash page (PatchPilot365 logo, a single "Sign in
+  with Microsoft 365" button using the official 4-color Microsoft squares
+  mark) shown whenever an already-paired instance has no active session,
+  replacing the previous instant, unbranded redirect straight to Microsoft.
+  Signing out now returns to this screen instead of bouncing straight back
+  into Microsoft's login page.
+
 ## [0.4.2] - 2026-09-05
 
 - Fix the self-update sidecar leaving a run permanently stuck at "running"
