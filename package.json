@@ -19,7 +19,8 @@
     "infra:down": "docker compose -f infra/docker-compose.yml --env-file .env down",
     "db:generate": "pnpm --filter @patchpilot/db generate",
     "db:migrate": "pnpm --filter @patchpilot/db migrate",
-    "db:seed": "pnpm --filter @patchpilot/db seed"
+    "db:seed": "pnpm --filter @patchpilot/db seed",
+    "version:bump": "node scripts/bump-version.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

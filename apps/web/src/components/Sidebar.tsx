@@ -60,6 +60,7 @@ const GROUPS: NavGroup[] = [
       { label: "Target Build", to: "/settings/feature-updates" },
       { label: "Tenants", to: "/settings/tenants" },
       { label: "License", to: "/settings/license" },
+      { label: "Updates", to: "/settings/updates" },
       { label: "Users", to: "/settings/users", permission: "users:manage" },
     ],
   },

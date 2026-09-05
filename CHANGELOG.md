@@ -1,13 +1,18 @@
 # Changelog
 
-All notable changes to PatchPilot are recorded here, grouped by development
-phase. This project does not yet follow semantic versioning (no tagged
-releases exist) — entries are ordered oldest-first within each phase, matching
-commit order.
+All notable changes to PatchPilot are recorded here. Phase 0-5 entries below
+are grouped by development phase, ordered oldest-first, from before this
+project had tagged releases. From here on, changes land under "Unreleased"
+and get cut into a dated "## [X.Y.Z]" section by `scripts/bump-version.mjs`
+and `.github/workflows/release.yml` when a version is tagged (see
+Settings > Updates for how a running instance picks up a new release).
 
-Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Once
-this ships as a versioned product, new entries should move to an "Unreleased"
-section at the top and get cut into dated version sections on release.
+Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
+
+## Unreleased
+
+- Settings > Updates — GitHub Releases polling, an in-app update-available
+  banner, and a self-update sidecar to run/schedule applying a new release.
 
 ## Phase 0 — Scaffold
 

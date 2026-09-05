@@ -133,6 +133,30 @@ services:
     networks:
       - patchpilot
 
+  # Settings > Updates self-update sidecar. The ONLY container with both the
+  # Docker socket and a repo checkout mounted in — api/worker never get
+  # either. Polls `update_runs` (see packages/db/src/schema.ts) for a
+  # queued-and-due row and, when it finds one, does the actual
+  # git-pull + rebuild + restart. See infra/updater/run.sh for the loop and
+  # why it can never rebuild/kill itself.
+  updater:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.updater
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://patchpilot:${POSTGRES_PASSWORD}@postgres:5432/patchpilot
+      REPO_DIR: /repo
+      POLL_INTERVAL_SECONDS: "15"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ..:/repo
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - patchpilot
+
   # Local LLM inference for the AI feature set (summaries, reports, chatbot).
   # No published port — reachable only from api/worker on the internal network,
   # never from Caddy/the internet. Model weights are pulled once, after first
