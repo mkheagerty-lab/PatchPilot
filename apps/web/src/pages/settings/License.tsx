@@ -52,6 +52,7 @@ export function License() {
   const canWrite = useCan("settings:write");
   const [token, setToken] = useState("");
   const [saved, setSaved] = useState(false);
+  const [devicesAssigned, setDevicesAssigned] = useState(false);
 
   const { data: report } = useQuery({
     queryKey: ["onboarding"],
@@ -82,6 +83,15 @@ export function License() {
     },
   });
 
+  const autoAssignMutation = useMutation({
+    mutationFn: () => api.post<EntitlementView>("/api/settings/entitlement/auto-assign-devices", {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["settings", "entitlement"] });
+      setDevicesAssigned(true);
+      setTimeout(() => setDevicesAssigned(false), 2000);
+    },
+  });
+
   if (demoMode) return null;
 
   const canSave = canWrite && token.trim().length > 0 && !mutation.isPending;
@@ -96,7 +106,7 @@ export function License() {
             onClick={() => mutation.mutate(token.trim())}
             disabled={!canSave}
             title={!canWrite ? "Your role doesn't include settings write access." : undefined}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-md bg-[var(--pp-primary)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-90 disabled:opacity-50"
           >
             {mutation.isPending ? "Saving…" : saved ? "Saved ✓" : data?.hasEntitlement ? "Rotate" : "Save"}
           </button>
@@ -218,7 +228,7 @@ export function License() {
                     onClick={() => trialMutation.mutate()}
                     disabled={!canWrite || trialMutation.isPending}
                     title={!canWrite ? "Your role doesn't include settings write access." : undefined}
-                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                    className="rounded-md bg-[var(--pp-primary)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-90 disabled:opacity-50"
                   >
                     {trialMutation.isPending ? "Starting…" : "Start 30-day trial"}
                   </button>
@@ -241,13 +251,42 @@ export function License() {
 
           {data && (data.valid || data.trialActive) && data.perTenantDeviceUsage.length > 0 && (
             <Card className="max-w-lg">
-              <div className="mb-1 text-sm font-medium text-slate-700">
-                Live Response device usage by tenant
+              <div className="mb-1 flex items-start justify-between gap-3">
+                <div className="text-sm font-medium text-slate-700">
+                  Live Response device usage by tenant
+                </div>
+                {!data.unlimited && (data.deviceLicensePool ?? 0) > 0 && (
+                  <button
+                    onClick={() => autoAssignMutation.mutate()}
+                    disabled={!canWrite || autoAssignMutation.isPending}
+                    title={
+                      !canWrite
+                        ? "Your role doesn't include settings write access."
+                        : "Evenly splits the pool across every write-enabled tenant and sets read-only tenants to 0. Overwrites any manual per-tenant allocation set on Settings → Tenants."
+                    }
+                    className="shrink-0 rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    {autoAssignMutation.isPending ? "Assigning…" : "Auto-assign"}
+                  </button>
+                )}
               </div>
               <p className="mb-3 text-xs text-slate-500">
-                Each tenant's allocation is your own split of the pool above — change it under{" "}
-                <span className="font-medium text-slate-600">Settings → Tenants</span>.
+                Each tenant's allocation is your own split of the pool above — adjust one tenant at
+                a time under <span className="font-medium text-slate-600">Settings → Tenants</span>,
+                or use <span className="font-medium text-slate-600">Auto-assign</span> to split the
+                whole pool evenly across every write-enabled tenant (read-only tenants are set to 0
+                — they have no Live Response dispatch path to use a device on).
               </p>
+              {autoAssignMutation.isError && (
+                <p className="mb-3 text-xs text-rose-600">
+                  {autoAssignMutation.error instanceof ApiError
+                    ? autoAssignMutation.error.message
+                    : "Could not auto-assign device licenses."}
+                </p>
+              )}
+              {devicesAssigned && (
+                <p className="mb-3 text-xs text-emerald-600">Devices re-assigned ✓</p>
+              )}
               <div className="space-y-2">
                 {data.perTenantDeviceUsage.map((t) => (
                   <div key={t.tenantId} className="flex items-center justify-between text-sm">

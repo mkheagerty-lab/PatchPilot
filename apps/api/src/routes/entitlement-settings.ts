@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { db, tables, demoTenants, type TenantRow } from "@patchpilot/db";
 import {
   audit,
@@ -331,6 +331,100 @@ export async function entitlementSettingsRoutes(app: FastifyInstance): Promise<v
         summary: "Started the free 30-day trial",
         outcome: "success",
         payload: { tenantLimit: FREE_TIER_TENANT_CAP, deviceLicensePool: TRIAL_DEVICE_POOL },
+        responseStatus: 200,
+      });
+
+      return loadView();
+    },
+  );
+
+  // Bulk alternative to Settings > Tenants' one-row-at-a-time
+  // liveResponseDeviceLimit input (see data.ts's PATCH /api/tenants/:tenantId)
+  // — splits the instance's whole device pool evenly across every
+  // write-enabled tenant in one shot, and zeroes out read-only ones (a
+  // read-only tenant has no dispatch path for Live Response to use a device
+  // license on, so an allocation there is just pool sitting idle). Deliberately
+  // a dedicated, audited action rather than the client looping the per-tenant
+  // PATCH itself, matching this route file's existing pattern for every other
+  // entitlement-affecting write.
+  app.post(
+    "/api/settings/entitlement/auto-assign-devices",
+    { preHandler: requirePermission("settings:write") },
+    async (req, reply) => {
+      if (config.DEMO_MODE) {
+        return reply
+          .code(409)
+          .send({ error: "tenant settings are read-only in demo mode" });
+      }
+
+      const view = await loadView();
+      if (view.unlimited) {
+        return reply.code(400).send({
+          error:
+            "This license has an unlimited device pool — there's no fixed number to split. Set each tenant's allocation manually on Settings → Tenants.",
+        });
+      }
+      const pool = view.deviceLicensePool ?? 0;
+      if (pool <= 0) {
+        return reply.code(400).send({
+          error: view.trialActive
+            ? "The free trial's device pool is 0 — nothing to assign."
+            : "This instance has no device license pool yet. Upload a license key or start the free trial first.",
+        });
+      }
+
+      const tenants = await db.select().from(tables.tenants);
+      // Stable order so re-running with no membership changes reproduces the
+      // same split rather than shuffling who gets the remainder each time.
+      const writeEnabled = tenants
+        .filter((t) => !t.readOnly)
+        .sort((a, b) => a.displayName.localeCompare(b.displayName) || a.tenantId.localeCompare(b.tenantId));
+
+      if (writeEnabled.length === 0) {
+        return reply.code(400).send({
+          error: "No tenants are write-enabled — flip at least one to write-enabled on Settings → Tenants first.",
+        });
+      }
+
+      const base = Math.floor(pool / writeEnabled.length);
+      const remainder = pool % writeEnabled.length;
+      // First `remainder` tenants (by the same stable sort) absorb the one
+      // extra device each so the whole pool is used, not just floor(pool/n).
+      const nextLimitFor = new Map<string, number>(
+        writeEnabled.map((t, i) => [t.tenantId, base + (i < remainder ? 1 : 0)]),
+      );
+      for (const t of tenants) {
+        if (!nextLimitFor.has(t.tenantId)) nextLimitFor.set(t.tenantId, 0);
+      }
+
+      const changed = tenants.filter((t) => t.liveResponseDeviceLimit !== nextLimitFor.get(t.tenantId));
+      if (changed.length > 0) {
+        await db.transaction(async (tx) => {
+          for (const t of changed) {
+            await tx
+              .update(tables.tenants)
+              .set({ liveResponseDeviceLimit: nextLimitFor.get(t.tenantId)! })
+              .where(eq(tables.tenants.tenantId, t.tenantId));
+          }
+        });
+      }
+
+      const engineer = req.session.engineer!.upn;
+      await audit({
+        engineer,
+        endpoint: "/api/settings/entitlement/auto-assign-devices",
+        method: "POST",
+        action: "entitlement:auto-assign-devices",
+        resourceType: "setting",
+        resourceId: SETTINGS_KEY,
+        resourceLabel: SETTINGS_KEY,
+        summary: `Auto-assigned the ${pool}-device pool across ${writeEnabled.length} write-enabled tenant${writeEnabled.length === 1 ? "" : "s"} (${base}${remainder > 0 ? `–${base + 1}` : ""} each); ${tenants.length - writeEnabled.length} read-only tenant${tenants.length - writeEnabled.length === 1 ? "" : "s"} set to 0`,
+        outcome: "success",
+        payload: {
+          pool,
+          writeEnabledCount: writeEnabled.length,
+          assignments: Object.fromEntries(nextLimitFor),
+        },
         responseStatus: 200,
       });
 
