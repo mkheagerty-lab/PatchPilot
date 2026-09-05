@@ -12,7 +12,11 @@
 # across the very rebuild cycle it triggers (which briefly restarts redis).
 set -eu
 
-REPO_DIR="${REPO_DIR:-/repo}"
+# Must equal the checkout's real path on the HOST, not just inside this
+# container — see the long comment on the `updater` service in
+# infra/docker-compose.yml for why a mismatch here breaks bind-mounted
+# services (caddy, backup) the next time this script recreates them.
+REPO_DIR="${REPO_DIR:-/opt/patchpilot}"
 INTERVAL="${POLL_INTERVAL_SECONDS:-15}"
 # Every compose service EXCEPT this one (`updater`) — so the rebuild command
 # can never touch its own container, regardless of whether a future release's
