@@ -5,6 +5,7 @@ import { db, tables } from "@patchpilot/db";
 import { permissionsFor, currentScopeBaseline, type ScopeBaseline } from "@patchpilot/shared";
 import { config, webOrigins } from "../config.js";
 import { resolveWebOrigin } from "./origin.js";
+import { findDemoEngineerByUpn } from "./demo-engineers.js";
 import {
   getCca,
   getLoginScopes,
@@ -888,9 +889,39 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         ...req.session.engineer,
         role: req.currentUser.role,
         permissions: permissionsFor(req.currentUser.role),
+        theme: req.currentUser.theme,
       },
       csrfToken: req.session.csrfToken,
     };
+  });
+
+  // Self-service only — an engineer's own display preference, not something an
+  // admin sets for someone else (contrast /api/users/:id's receiveJobAlerts).
+  // No permission check beyond being signed in: every role may toggle their
+  // own theme.
+  app.patch<{ Body: { theme?: string } }>("/auth/me/theme", async (req, reply) => {
+    if (!req.session.engineer || !req.currentUser) {
+      return reply.code(401).send({ error: "unauthenticated" });
+    }
+    const theme = req.body?.theme;
+    if (theme !== "light" && theme !== "dark") {
+      return reply.code(400).send({ error: "invalid_theme" });
+    }
+
+    if (config.DEMO_MODE) {
+      const existing = findDemoEngineerByUpn(req.currentUser.upn);
+      if (existing) {
+        existing.theme = theme;
+        existing.updatedAt = new Date().toISOString();
+      }
+    } else {
+      await db
+        .update(tables.engineers)
+        .set({ theme, updatedAt: new Date() })
+        .where(eq(tables.engineers.id, req.currentUser.id));
+    }
+
+    return reply.send({ theme });
   });
 
   app.post("/auth/logout", async (req, reply) => {

@@ -30,6 +30,7 @@ function engineer(overrides: Partial<Engineer> = {}): Engineer {
     homeTenantId: "tenant-1",
     role: "admin",
     permissions: ["operations:write"],
+    theme: "light",
     ...overrides,
   };
 }

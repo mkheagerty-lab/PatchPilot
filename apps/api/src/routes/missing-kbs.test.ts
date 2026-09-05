@@ -141,7 +141,7 @@ async function buildApp() {
   app.addHook("onRequest", async (req) => {
     // Test-only session stand-in — the real shape comes from @fastify/session.
     req.session = { engineer: ENGINEER } as FastifyRequest["session"];
-    req.currentUser = { id: "engineer-1", upn: ENGINEER.upn, displayName: ENGINEER.displayName, role: "admin" };
+    req.currentUser = { id: "engineer-1", upn: ENGINEER.upn, displayName: ENGINEER.displayName, role: "admin", theme: "light" };
   });
   await app.register(missingKbRoutes);
   await app.ready();

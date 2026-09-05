@@ -34,7 +34,7 @@ export async function resolveCurrentUser(req: FastifyRequest, reply: FastifyRepl
       await req.session.destroy();
       return reply.code(403).send({ error: "not_provisioned" });
     }
-    req.currentUser = { id: row.id, upn: row.upn, displayName: row.displayName, role: row.role };
+    req.currentUser = { id: row.id, upn: row.upn, displayName: row.displayName, role: row.role, theme: row.theme };
     return;
   }
 
@@ -45,5 +45,5 @@ export async function resolveCurrentUser(req: FastifyRequest, reply: FastifyRepl
     await req.session.destroy();
     return reply.code(403).send({ error: "not_provisioned" });
   }
-  req.currentUser = { id: row.id, upn: row.upn, displayName: row.displayName, role: row.role };
+  req.currentUser = { id: row.id, upn: row.upn, displayName: row.displayName, role: row.role, theme: row.theme };
 }
