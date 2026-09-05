@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.4.0] - 2026-09-05
+
 - Branding — default PatchPilot365 shield logo and favicon, a locked product
   name (enforced server-side too), drag-and-drop/browse logo upload, and a
   "Match colours to logo" button that derives a theme palette from an
