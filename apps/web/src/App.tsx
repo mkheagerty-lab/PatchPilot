@@ -8,6 +8,7 @@ import { TenantProvider } from "./lib/tenant";
 import { AuthGate, useEngineer, useCan, useLogout } from "./lib/auth";
 import { ThemeProvider, ThemeToggle } from "./lib/theme";
 import { SidebarUiProvider, useSidebarUi } from "./lib/sidebarUi";
+import { useApplyBrandingVars } from "./lib/branding";
 import { PageHeader, Placeholder } from "./components/ui";
 import { Dashboard } from "./pages/dashboard/Dashboard";
 import { Vulnerabilities } from "./pages/Vulnerabilities";
@@ -104,6 +105,7 @@ function RequirePermission({
 
 function Layout() {
   const canUseAi = useCan("ai:use");
+  useApplyBrandingVars();
   return (
     <ThemeProvider>
       <SidebarUiProvider>

@@ -61,7 +61,7 @@ export function FeatureUpdates() {
             onClick={() => mutation.mutate(selected === DEFAULT_VALUE ? null : selected)}
             disabled={!canWrite || !activeTenant || !dirty || mutation.isPending}
             title={!canWrite ? "Your role doesn't include settings write access." : undefined}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-md bg-[var(--pp-primary)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-90 disabled:opacity-50"
           >
             {mutation.isPending ? "Saving…" : saved ? "Saved ✓" : "Save"}
           </button>

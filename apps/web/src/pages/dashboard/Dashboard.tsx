@@ -120,7 +120,7 @@ export function Dashboard() {
               onClick={() => setWindowDays(opt.days)}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 windowDays === opt.days
-                  ? "bg-indigo-600 text-white"
+                  ? "bg-[var(--pp-primary)] text-white"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
             >

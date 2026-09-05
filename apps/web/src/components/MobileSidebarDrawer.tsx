@@ -29,7 +29,7 @@ export function MobileSidebarDrawer() {
   return (
     <div className="fixed inset-0 z-40 flex lg:hidden print:hidden">
       <div className="absolute inset-0 bg-slate-900/30" onClick={closeMobile} aria-hidden />
-      <aside className="relative z-10 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-[#0b1020] text-slate-300 shadow-xl">
+      <aside className="relative z-10 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-[var(--pp-bg)] text-slate-300 shadow-xl">
         <div className="flex items-center gap-2 px-5 py-5">
           <img
             src={branding?.logoUrl || DEFAULT_LOGO_URL}
