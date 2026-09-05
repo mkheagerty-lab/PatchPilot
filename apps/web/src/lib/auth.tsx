@@ -1,14 +1,18 @@
 // Client-side auth gate. The browser holds only a session cookie; it never sees
 // a token. On load we ask the API who we are (`GET /auth/me`); a 401 means no
-// session, so we hand the browser to the API's `/auth/login` route, which starts
-// the OIDC redirect to Microsoft. In DEMO_MODE the API injects a demo engineer,
-// so /auth/me succeeds and the gate is transparent.
+// session, so we show <LoginSplash /> — the engineer clicks its button to hand
+// the browser to the API's `/auth/login` route, which starts the OIDC redirect
+// to Microsoft. (No auto-redirect: a returning engineer who just signed out
+// should land on a branded screen, not bounce straight back into Microsoft's
+// login page.) In DEMO_MODE the API injects a demo engineer, so /auth/me
+// succeeds and the gate is transparent.
 
 import { createContext, useContext, useEffect, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Permission, Role } from "@patchpilot/shared";
 import { api, ApiError, setCsrfToken } from "./api";
 import { SetupPairing } from "../pages/setup/SetupPairing";
+import { LoginSplash } from "../pages/auth/LoginSplash";
 
 export interface Engineer {
   upn: string;
@@ -46,14 +50,23 @@ export function useCan(permission: Permission): boolean {
   return engineer.permissions.includes(permission);
 }
 
-/** Best-effort server logout, then restart the login flow. */
-export function logout(): void {
-  void api
-    .post("/auth/logout", {})
-    .catch(() => undefined)
-    .finally(() => {
-      window.location.href = "/auth/login";
-    });
+/**
+ * Best-effort server logout. Returns a callback (not a bare function) because
+ * it needs the QueryClient to tell <AuthGate> the session is gone — there's
+ * no page reload anymore to force that discovery. After the POST resolves
+ * (or fails; we log out client-side regardless), invalidating ["auth","me"]
+ * refetches AuthGate's query, which will now 401 and swap to <LoginSplash />.
+ */
+export function useLogout(): () => void {
+  const queryClient = useQueryClient();
+  return () => {
+    void api
+      .post("/auth/logout", {})
+      .catch(() => undefined)
+      .finally(() => {
+        void queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      });
+  };
 }
 
 function FullScreen({ children }: { children: ReactNode }) {
@@ -100,14 +113,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return <SetupPairing />;
   }
 
-  // No session (401) or an explicit not-authenticated body → start login. The API
-  // redirects the browser to Microsoft; silent SSO completes it when possible.
+  // No session (401) or an explicit not-authenticated body → show the splash
+  // screen. Clicking its button (not this gate) is what starts /auth/login.
   const unauthenticated =
     (isError && error instanceof ApiError && error.status === 401) ||
     (data != null && !data.authenticated);
   if (unauthenticated) {
-    window.location.href = "/auth/login";
-    return <FullScreen>Redirecting to sign in…</FullScreen>;
+    return <LoginSplash />;
   }
 
   // Any other error means the API itself is unreachable — surface it instead of
