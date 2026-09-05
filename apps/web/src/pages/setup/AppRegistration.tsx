@@ -164,12 +164,6 @@ function Step({
 function GettingStarted({ report }: { report: OnboardingReport }) {
   const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
   const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script")))`;
-  // Deploy-PatchPilot.ps1 is idempotent by default (re-running deployCmd/
-  // cloudShellCommand as-is just reuses the existing app registration), so
-  // "re-register" needs no separate command — only rotating the secret does,
-  // via the script's own -RotateClientSecret switch (see its param() block).
-  const rotateSecretCmd = `${deployCmd} -RotateClientSecret`;
-  const rotateSecretCloudShellCommand = `${cloudShellCommand} -RotateClientSecret`;
   const canWrite = useCan("settings:write");
   return (
     <Card className="border-slate-900/10 bg-gradient-to-br from-slate-50 to-white">
@@ -262,26 +256,6 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
               </code>
               <CopyButton value={deployCmd} />
             </div>
-          </div>
-
-          <p className="mt-3 border-t border-slate-200 pt-2.5 text-xs text-slate-400">
-            Client secret expired or leaked? Add{" "}
-            <code className="font-mono text-xs">-RotateClientSecret</code> to
-            reuse this same app registration and only replace the secret — no
-            new consent needed, and re-pairing restarts this instance the same
-            way as a first-time install:
-          </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
-              {rotateSecretCmd}
-            </code>
-            <CopyButton value={rotateSecretCmd} />
-          </div>
-          <div className="mt-1.5 flex items-start gap-2">
-            <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
-              {rotateSecretCloudShellCommand}
-            </code>
-            <CopyButton value={rotateSecretCloudShellCommand} />
           </div>
         </Step>
 
@@ -701,9 +675,10 @@ function RegistrationCommand({ domainId }: { domainId: string }) {
  * lookup (apps/api/src/routes/domains.ts never writes a DNS record itself),
  * and then pushes the resulting redirect URI(s) into the real Entra app
  * registration — either via Application identity's "Sync redirect URIs"
- * button above (same step-up browser consent RequestedPermissionsStep
- * uses), or by copying the PowerShell one-liner below. Hidden in demo mode,
- * where nothing here could resolve or authorize anything real.
+ * button below (same step-up browser consent RequestedPermissionsStep
+ * uses), or via the PowerShell one-liner in that same card's "Registration
+ * command" section. Hidden in demo mode, where nothing here could resolve or
+ * authorize anything real.
  */
 function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
   const qc = useQueryClient();
@@ -803,7 +778,6 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
   if (demoMode) return null;
 
   const domains = report?.domains ?? [];
-  const hasActive = domains.some((d) => d.status === "active");
   const previewHostname =
     type === "subdomain" ? `${label.trim() || "<label>"}.${report?.platformBaseDomain ?? "patchpilot365.com"}` : hostname.trim() || "<hostname>";
   const previewCnameTarget = report?.cnameTarget ?? "";
@@ -1023,36 +997,6 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
         </ul>
       )}
 
-      {hasActive && (
-        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center gap-2">
-            <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-              Registration command
-            </div>
-            <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-              Manual
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-slate-400">
-            Same effect as Application identity&apos;s &quot;Sync redirect
-            URIs&quot; above, run by hand instead — for an elevated PowerShell
-            on a machine that isn&apos;t hosted in Azure. Additive/idempotent,
-            so re-running an already-registered domain&apos;s command is
-            always safe.
-          </p>
-          <div className="mt-2 space-y-2">
-            {domains
-              .filter((d) => d.status === "active")
-              .map((d) => (
-                <div key={d.id}>
-                  <div className="font-mono text-xs text-slate-500">{d.hostname}</div>
-                  <RegistrationCommand domainId={d.id} />
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-
       {pendingDeleteDomain && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
           <div
@@ -1089,6 +1033,101 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
         </div>
       )}
     </Card>
+  );
+}
+
+/**
+ * The per-domain "Registration command" fallback for Application identity's
+ * "Sync redirect URIs" button above — same redirect-URI push, run by hand
+ * instead, for an elevated PowerShell on a machine that isn't hosted in
+ * Azure. Shares CustomDomainsCard's ["domains"] query key, so react-query
+ * dedupes the fetch rather than issuing a second request for the same data.
+ * Hidden in demo mode, and while no domain is active yet — there's nothing
+ * to push.
+ */
+function RegistrationCommands({ demoMode }: { demoMode: boolean }) {
+  const { data: report } = useQuery({
+    queryKey: ["domains"],
+    queryFn: () => api.get<DomainsReport>("/api/domains"),
+    enabled: !demoMode,
+  });
+
+  if (demoMode) return null;
+  const active = (report?.domains ?? []).filter((d) => d.status === "active");
+  if (active.length === 0) return null;
+
+  return (
+    <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-center gap-2">
+        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          Registration command
+        </div>
+        <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+          Manual
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-slate-400">
+        Same effect as &quot;Sync redirect URIs&quot; above, run by hand
+        instead — for an elevated PowerShell on a machine that isn&apos;t
+        hosted in Azure. Additive/idempotent, so re-running an
+        already-registered domain&apos;s command is always safe.
+      </p>
+      <div className="mt-2 space-y-2">
+        {active.map((d) => (
+          <div key={d.id}>
+            <div className="font-mono text-xs text-slate-500">{d.hostname}</div>
+            <RegistrationCommand domainId={d.id} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Client-secret rotation for Application identity — reuses this same app
+ * registration and only replaces the secret; no new consent needed, and
+ * re-pairing restarts this instance the same way as a first-time install.
+ * Lives here rather than in Get Started's Step 1 since it's an ongoing
+ * maintenance action on the identity above, not a one-time setup step.
+ * Hidden in demo mode, where nothing here could authorize anything real.
+ */
+function RotateClientSecretSection({ demoMode }: { demoMode: boolean }) {
+  if (demoMode) return null;
+
+  const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
+  const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script")))`;
+  const rotateSecretCmd = `${deployCmd} -RotateClientSecret`;
+  const rotateSecretCloudShellCommand = `${cloudShellCommand} -RotateClientSecret`;
+
+  return (
+    <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+        Client secret expired or leaked?
+      </div>
+      <p className="mt-1 text-xs text-slate-400">
+        Add <code className="font-mono text-xs">-RotateClientSecret</code> to
+        reuse this same app registration and only replace the secret — no new
+        consent needed, and re-pairing restarts this instance the same way as
+        a first-time install:
+      </p>
+
+      <p className="mt-2.5 text-xs font-semibold text-slate-600">PowerShell (manual)</p>
+      <div className="mt-1 flex items-center gap-2">
+        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+          {rotateSecretCmd}
+        </code>
+        <CopyButton value={rotateSecretCmd} />
+      </div>
+
+      <p className="mt-2.5 text-xs font-semibold text-slate-600">Azure Cloud Shell</p>
+      <div className="mt-1 flex items-start gap-2">
+        <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
+          {rotateSecretCloudShellCommand}
+        </code>
+        <CopyButton value={rotateSecretCloudShellCommand} />
+      </div>
+    </div>
   );
 }
 
@@ -1160,6 +1199,8 @@ export function AppRegistration() {
       ) : (
         <div className="space-y-5">
           {!report.demoMode && <GettingStarted report={report} />}
+
+          <CustomDomainsCard demoMode={report.demoMode} />
 
           <Card>
             <h2 className="mb-4 text-sm font-semibold text-slate-700">
@@ -1269,6 +1310,8 @@ export function AppRegistration() {
                   </button>
                 </div>
               )}
+              <RegistrationCommands demoMode={report.demoMode} />
+              <RotateClientSecretSection demoMode={report.demoMode} />
             </div>
           </Card>
 
@@ -1280,8 +1323,6 @@ export function AppRegistration() {
               <RequestedPermissionsStep report={report} />
             </Card>
           )}
-
-          <CustomDomainsCard demoMode={report.demoMode} />
         </div>
       )}
 
