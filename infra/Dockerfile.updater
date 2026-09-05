@@ -1,0 +1,10 @@
+# PatchPilot self-update sidecar (Settings > Updates). The ONLY container with
+# both the Docker socket and a repo checkout mounted in — api/worker never get
+# either. Deliberately not Node/pnpm-based: this image changes almost never
+# and must not depend on Redis being alive across the very rebuild cycle it's
+# about to trigger. Plain shell + psql + the docker CLI is the whole job.
+FROM docker:27-cli
+RUN apk add --no-cache git postgresql-client
+COPY infra/updater/run.sh /updater/run.sh
+RUN chmod +x /updater/run.sh
+ENTRYPOINT ["/bin/sh", "/updater/run.sh"]

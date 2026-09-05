@@ -16,6 +16,7 @@ import { Notifications } from "./pages/settings/Notifications";
 import { FeatureUpdates } from "./pages/settings/FeatureUpdates";
 import { Tenants } from "./pages/settings/Tenants";
 import { License } from "./pages/settings/License";
+import { Updates } from "./pages/settings/Updates";
 import { SetupHealth } from "./pages/setup/SetupHealth";
 import { AppRegistration } from "./pages/setup/AppRegistration";
 import { ArchitecturePage } from "./pages/setup/architecture/ArchitecturePage";
@@ -33,6 +34,7 @@ import { Users } from "./pages/settings/Users";
 import { Reports } from "./pages/Reports";
 import { Help } from "./pages/Help";
 import { ChatWidget } from "./components/ai/ChatWidget";
+import { UpdateAvailableBanner } from "./components/UpdateAvailableBanner";
 
 function EngineerMenu() {
   const engineer = useEngineer();
@@ -85,6 +87,7 @@ function Layout() {
           <TenantSwitcher />
           <EngineerMenu />
         </header>
+        <UpdateAvailableBanner />
         <main className="flex-1 overflow-y-auto bg-slate-50 px-8 py-7 print:h-auto print:overflow-visible">
           <Outlet />
         </main>
@@ -143,6 +146,7 @@ export default function App() {
           <Route path="settings/feature-updates" element={<FeatureUpdates />} />
           <Route path="settings/tenants" element={<Tenants />} />
           <Route path="settings/license" element={<License />} />
+          <Route path="settings/updates" element={<Updates />} />
           <Route path="help" element={<Help />} />
           <Route
             path="settings/users"

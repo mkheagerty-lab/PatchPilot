@@ -8,6 +8,7 @@ import { startAutoSync } from "./graph/auto-sync.js";
 import { startCatalogRefresh } from "./catalog/auto-refresh.js";
 import { startChocolateyCatalogRefresh } from "./catalog/chocolatey-auto-refresh.js";
 import { startPostureSnapshots } from "./posture/auto-snapshot.js";
+import { startUpdateAutoCheck } from "./updates/auto-check.js";
 import { registerAlertingResolver } from "./alerting-config.js";
 
 registerAlertingResolver();
@@ -63,6 +64,11 @@ const stopChocolateyCatalogRefresh = startChocolateyCatalogRefresh();
 // (the demo trend is a fixture) or when POSTURE_SNAPSHOT_INTERVAL_HOURS=0.
 const stopPostureSnapshots = startPostureSnapshots();
 
+// Background GitHub Releases poll (Settings > Updates). Unlike the schedulers
+// above, this one is NOT skipped in DEMO_MODE — see updates/auto-check.ts.
+// No-op only when UPDATE_CHECK_INTERVAL_HOURS=0.
+const stopUpdateAutoCheck = startUpdateAutoCheck();
+
 // Restart on pairing: POST /api/onboarding/pair (routes/onboarding-pairing.ts)
 // publishes here once it has stored a fresh Entra app registration, so this
 // process (which may not be the one that served that request) picks up the
@@ -101,6 +107,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
     stopCatalogRefresh();
     stopChocolateyCatalogRefresh();
     stopPostureSnapshots();
+    stopUpdateAutoCheck();
     app
       .close()
       .then(() => process.exit(0))

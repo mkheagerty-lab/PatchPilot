@@ -1064,6 +1064,47 @@ export const settings = pgTable("settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ---- update runs (Settings -> Updates: self-update sidecar hand-off) ----
+// A dedicated table, not a `settings` blob field: the updater sidecar's poll
+// needs `FOR UPDATE SKIP LOCKED` row-claiming semantics a JSON blob can't
+// give it, and a run history (what got triggered, when, by whom, with what
+// output) is exactly what `jobs` already models as a table elsewhere in this
+// schema. The "is a newer version available" side of the feature lives in
+// `settings` under the "updates" key instead — that part genuinely is
+// single-current-value config, same as "smtp"/"entitlement".
+export const updateRuns = pgTable(
+  "update_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Git tag to check out, e.g. "v0.2.0".
+    targetVersion: text("target_version").notNull(),
+    // What was actually running when this row was created — same
+    // snapshot-at-creation-time convention as jobs.software/deviceHostname.
+    // Lets the UI/audit distinguish a forward update from a rollback
+    // (targetVersion < fromVersion) without re-deriving it from CURRENT_VERSION,
+    // which changes across restarts. Null on rows created before this column
+    // existed — those just fall back to the target-only display.
+    fromVersion: text("from_version"),
+    status: jobStatusEnum("status").notNull().default("queued"),
+    // Engineer (UPN) who triggered this run. No FK — same soft-attribution
+    // style as jobs.engineer/auditLog.engineer.
+    triggeredBy: text("triggered_by").notNull(),
+    // When the updater sidecar may claim this row. "Run now" sets this to the
+    // insert time; "Schedule" sets it to the chosen future instant.
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    // Captured git/docker compose stdout+stderr from the updater sidecar,
+    // bounded there before it's written back.
+    output: text("output"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("update_runs_status_idx").on(t.status),
+    index("update_runs_scheduled_idx").on(t.scheduledAt),
+  ],
+);
+
 // ---- custom domains (Setup -> App Registration "Custom domain" section) ----
 // One row per additional hostname this instance should accept logins/OAuth
 // callbacks on, on top of the deploy-time PUBLIC_URL. "subdomain" rows are a

@@ -57,6 +57,10 @@ export const SYSTEM_ACTORS = {
   // its Entra credentials authenticated solely by a single-use token, so this
   // is the only actor a successful pairing row can carry.
   onboardingPairing: "system:onboarding-pairing",
+  // The periodic background poll of GitHub Releases (Settings > Updates),
+  // structured like catalogRefresh above — only writes an audit row on a
+  // successful version-check cycle, per apps/api/src/updates/auto-check.ts.
+  updateCheck: "system:update-check",
 } as const;
 
 export type SystemActor = (typeof SYSTEM_ACTORS)[keyof typeof SYSTEM_ACTORS];
@@ -123,6 +127,11 @@ export const AUDIT_RESOURCE_TYPES = [
   // updates) in one request. No single-row resource id: this is a
   // page/tenant-level action, not a create/update/delete of one campaign.
   "windows-updates",
+  // A row in `update_runs` (Settings > Updates) — a single triggered-or-scheduled
+  // self-update. The version-check side of the same page audits against
+  // "setting" (resourceId "updates") instead, same split as every other
+  // settings-blob page.
+  "update-run",
 ] as const;
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
 
@@ -324,6 +333,18 @@ export const AUDIT_ACTIONS = [
   // retention sweep, which writes one row for the whole batch — and nothing at
   // all when the sweep found nothing, same as the stale-job sweep.
   "report:delete",
+  // updates (Settings > Updates — the self-update sidecar hand-off)
+  // Written only on a successful GitHub Releases poll, whether from the
+  // manual "Check now" button or the background cycle under
+  // SYSTEM_ACTORS.updateCheck.
+  "update:check",
+  "update:run-now",
+  "update:schedule",
+  // Cancels a still-queued (not yet claimed by the updater sidecar) run.
+  "update:cancel",
+  // Targets a version that previously succeeded on this instance — same
+  // hand-off as update:run-now, just going backward.
+  "update:rollback",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -453,6 +474,12 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "report:generate": "Report generated",
   "report:download": "Report downloaded",
   "report:delete": "Report deleted",
+
+  "update:check": "Checked for updates",
+  "update:run-now": "Update triggered",
+  "update:schedule": "Update scheduled",
+  "update:cancel": "Scheduled update cancelled",
+  "update:rollback": "Rolled back",
 };
 
 /**
@@ -628,6 +655,10 @@ export const AUDIT_ACTION_GROUPS: ReadonlyArray<{
   {
     label: "AI",
     actions: ["ai:chat-message", "ai:tool-call-denied", "ai:summarize"],
+  },
+  {
+    label: "Updates",
+    actions: ["update:check", "update:run-now", "update:schedule", "update:cancel", "update:rollback"],
   },
 ];
 

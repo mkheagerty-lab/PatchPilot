@@ -1686,3 +1686,40 @@ export interface EntitlementView {
   /** True when the free tier's one-time self-serve trial has never been started. */
   trialAvailable: boolean;
 }
+
+/** A row in `update_runs` — a single triggered-or-scheduled self-update,
+ *  claimed and executed by the `updater` sidecar (infra/updater/run.sh). */
+export interface UpdateRun {
+  id: string;
+  targetVersion: string;
+  /** What was running when this row was created; null on rows predating this
+   *  field. Used with targetVersion to derive `kind` server-side. */
+  fromVersion: string | null;
+  /** "rollback" when targetVersion is older than fromVersion, else "update" —
+   *  computed by the API so this comparison lives in exactly one place. */
+  kind: "update" | "rollback";
+  status: "queued" | "running" | "succeeded" | "failed";
+  triggeredBy: string;
+  scheduledAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  output: string | null;
+  createdAt: string;
+}
+
+/** Settings > Updates — mirrors GET /api/settings/updates
+ *  (apps/api/src/routes/update-settings.ts). */
+export interface UpdatesSettingsView {
+  currentVersion: string;
+  latestVersion: string | null;
+  latestReleaseNotes: string | null;
+  latestReleaseUrl: string | null;
+  latestPublishedAt: string | null;
+  lastCheckedAt: string | null;
+  updateAvailable: boolean;
+  pendingRun: UpdateRun | null;
+  history: UpdateRun[];
+  /** Only present on the POST .../check response — false when the 60s
+   *  cooldown skipped an actual GitHub fetch and this is just the cached view. */
+  checked?: boolean;
+}

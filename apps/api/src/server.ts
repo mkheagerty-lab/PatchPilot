@@ -34,6 +34,7 @@ import { reportsRoutes } from "./routes/reports.js";
 import { usersRoutes } from "./routes/users.js";
 import { notificationSettingsRoutes } from "./routes/notification-settings.js";
 import { entitlementSettingsRoutes } from "./routes/entitlement-settings.js";
+import { updateSettingsRoutes } from "./routes/update-settings.js";
 import { aiRoutes } from "./routes/ai.js";
 import { intuneAppsRoutes } from "./routes/intune-apps.js";
 import { storeAppsRoutes } from "./routes/store-apps.js";
@@ -193,6 +194,7 @@ export async function buildServer() {
   await app.register(usersRoutes);
   await app.register(notificationSettingsRoutes);
   await app.register(entitlementSettingsRoutes);
+  await app.register(updateSettingsRoutes);
   await app.register(aiRoutes);
   await app.register(intuneAppsRoutes);
   await app.register(storeAppsRoutes);

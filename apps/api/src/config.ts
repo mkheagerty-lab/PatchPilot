@@ -65,6 +65,17 @@ const EnvSchema = z.object({
   // current-state. 0 disables it (the trend then only fills from post-sync
   // captures). Ignored in DEMO_MODE. See posture/auto-snapshot.ts.
   POSTURE_SNAPSHOT_INTERVAL_HOURS: z.coerce.number().int().min(0).default(24),
+  // How often the API polls GitHub Releases for a newer PatchPilot version
+  // (Settings > Updates). 0 disables the scheduler. Deliberately NOT ignored
+  // in DEMO_MODE — it's a harmless public read, and "an update is available"
+  // is a legitimate thing to show in a demo. See updates/auto-check.ts.
+  UPDATE_CHECK_INTERVAL_HOURS: z.coerce.number().int().min(0).default(6),
+  // Overridable so tests/local runs can point the version check at a stub
+  // JSON server instead of the real, unauthenticated GitHub API.
+  GITHUB_RELEASES_URL: z
+    .string()
+    .url()
+    .default("https://api.github.com/repos/mkheagerty-lab/PatchPilot/releases/latest"),
   DEMO_MODE: z
     .enum(["true", "false"])
     .default("true")
@@ -146,6 +157,8 @@ export interface Config {
   WINGET_REFRESH_INTERVAL_HOURS: number;
   CHOCOLATEY_REFRESH_INTERVAL_HOURS: number;
   POSTURE_SNAPSHOT_INTERVAL_HOURS: number;
+  UPDATE_CHECK_INTERVAL_HOURS: number;
+  GITHUB_RELEASES_URL: string;
   DEMO_MODE: boolean;
   LOG_LEVEL: string;
   BOOTSTRAP_ADMIN_UPN?: string;
