@@ -32,6 +32,12 @@ import { demoSettings } from "./settings-store.js";
 import { exposureByFinding, FINDING_KEY_SEP } from "../posture/exposure.js";
 import { requirePermission } from "../auth/rbac.js";
 
+// A branding.logoUrl uploaded as a data: URI, as text — bounds both the
+// stored settings row and (doubled, for base64 overhead) the PUT route's
+// bodyLimit override below. 2MB of source image is already generous for a
+// logo; this is the encoded-string ceiling, so a touch under 2x that.
+const LOGO_MAX_BYTES = 3_000_000;
+
 /**
  * Read-only data routes.
  *
@@ -859,10 +865,27 @@ export async function dataRoutes(app: FastifyInstance): Promise<void> {
 
   app.put(
     "/api/settings/:key",
-    { preHandler: requirePermission("settings:write") },
-    async (req) => {
+    {
+      preHandler: requirePermission("settings:write"),
+      // A logo saved as a data: URI easily clears the framework's 1MB
+      // default — the client already caps the source file at LOGO_MAX_BYTES
+      // (routes/data.ts export below), so this just needs headroom for the
+      // ~33% base64 blow-up plus the rest of the branding JSON.
+      bodyLimit: LOGO_MAX_BYTES * 2,
+    },
+    async (req, reply) => {
     const { key } = req.params as { key: string };
     const value = req.body as Record<string, unknown>;
+    if (key === "branding") {
+      // Product name is fixed, not white-label config — see
+      // apps/web/src/lib/branding.ts for why. Enforced here too so a direct
+      // API call can't rename it even though the UI no longer offers a field
+      // for it.
+      value.productName = "PatchPilot365";
+      if (typeof value.logoUrl === "string" && value.logoUrl.length > LOGO_MAX_BYTES) {
+        return reply.code(400).send({ error: "logo_too_large" });
+      }
+    }
     if (config.DEMO_MODE) {
       demoSettings[key] = value;
     } else {

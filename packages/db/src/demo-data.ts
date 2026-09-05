@@ -2382,7 +2382,7 @@ export const demoRemediationEvents: RemediationEventRow[] = buildDemoRemediation
 export const demoSla = DEFAULT_SLA;
 
 export const demoBranding = {
-  productName: "PatchPilot",
+  productName: "PatchPilot365",
   primary: "#4f46e5",
   secondary: "#0ea5e9",
   accent: "#f59e0b",
