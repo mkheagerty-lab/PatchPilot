@@ -55,12 +55,12 @@ export function TenantSwitcher() {
       : "Select tenant";
 
   return (
-    <div ref={rootRef} className="relative flex items-center gap-2 text-sm">
-      <span className="text-slate-500 dark:text-slate-400">Tenant</span>
+    <div ref={rootRef} className="relative flex min-w-0 items-center gap-2 text-sm">
+      <span className="hidden text-slate-500 sm:inline dark:text-slate-400">Tenant</span>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex min-w-[12rem] items-center justify-between gap-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+        className="flex min-w-[8rem] items-center justify-between gap-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:min-w-[12rem] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
       >
         <span className="truncate">
           {triggerLabel}
