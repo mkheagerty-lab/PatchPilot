@@ -5,18 +5,27 @@
 // package.json guard, then publishing the GitHub Release).
 //
 // Usage:
-//   pnpm release 0.2.0             cut the release for real
-//   pnpm release 0.2.0 --dry-run   preview every change, touch nothing
+//   pnpm release 0.2.0                    cut the release for real
+//   pnpm release 0.2.0 --dry-run          preview every change, touch nothing
+//   pnpm release 0.2.0 --skip-dev-refresh cut the release, skip the local dev-API restart
 //
 // This wraps scripts/bump-version.mjs (imported, not shelled out to) plus a
 // CHANGELOG.md "## Unreleased" -> "## [X.Y.Z] - <date>" cut. Both remain
 // individually usable — `pnpm version:bump` for a bare version bump, editing
 // CHANGELOG.md by hand for a bare changelog edit — this script is just the
 // documented happy path chained into one command.
+//
+// After the tag is pushed, best-effort restarts a locally running dev API
+// (see refreshLocalDevApi below) so `apps/api`'s in-memory CURRENT_VERSION —
+// read once at boot from package.json — reflects the just-cut version without
+// needing infra/updater (that sidecar only exists in the production compose
+// stack; a host-run dev instance has nothing else polling for updates).
 
-import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import { readFileSync, writeFileSync, openSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import http from "node:http";
+import os from "node:os";
 import path from "node:path";
 import { bumpVersions, compareVersions, readVersion } from "./bump-version.mjs";
 
@@ -74,7 +83,11 @@ function cutChangelog(changelog, version, date) {
 function parseArgs(argv) {
   const flags = new Set(argv.filter((a) => a.startsWith("--")));
   const positional = argv.filter((a) => !a.startsWith("--"));
-  return { version: positional[0], dryRun: flags.has("--dry-run") };
+  return {
+    version: positional[0],
+    dryRun: flags.has("--dry-run"),
+    skipDevRefresh: flags.has("--skip-dev-refresh"),
+  };
 }
 
 function repoSlugFromRemote() {
@@ -87,10 +100,162 @@ function repoSlugFromRemote() {
   }
 }
 
-function main() {
-  const { version, dryRun } = parseArgs(process.argv.slice(2));
+/** Reads apps/api's dev listen port the same way it does at boot: an
+ * `API_PORT` line in the repo-root `.env`, falling back to config.ts's
+ * default. Good enough for local convenience — no need to pull in zod/dotenv
+ * just for this. */
+function readApiPort() {
+  try {
+    const env = readFileSync(path.join(ROOT, ".env"), "utf8");
+    const match = env.match(/^API_PORT=(\d+)\s*$/m);
+    if (match) return Number(match[1]);
+  } catch {
+    // no root .env — fall through to the default
+  }
+  return 4000;
+}
+
+/** Finds the PID currently LISTENING on `port` via `netstat -ano` — more
+ * reliable in practice on this project's dev machine than
+ * `Get-NetTCPConnection`/`Get-CimInstance`, which have both silently missed
+ * real processes during manual debugging this same port. Returns null if
+ * nothing is listening (or the process can't be run at all). */
+function findListenerPid(port) {
+  let out;
+  try {
+    out = execFileSync("netstat", ["-ano"], { encoding: "utf8" });
+  } catch {
+    return null;
+  }
+  const match = out.match(new RegExp(`:${port}\\s+\\S+\\s+LISTENING\\s+(\\d+)`));
+  return match ? Number(match[1]) : null;
+}
+
+/** Best-effort: PIDs of any other process belonging to this exact dev
+ * supervisor chain (scripts/run-resilient.mjs wrapping `tsx ... index.ts` for
+ * apps/api) — not just whichever one currently holds the port — so a stale
+ * supervisor doesn't sit there re-fighting for the port after the fresh one
+ * comes up. Matched on a command-line substring specific enough that it can't
+ * plausibly hit an unrelated process. Silently returns [] if the query fails
+ * or nothing matches (this is a cleanup nicety, not load-bearing — the actual
+ * port-holder is killed separately, by exact PID, in refreshLocalDevApi). */
+function findDevApiSupervisorPids() {
+  try {
+    const out = execFileSync(
+      "powershell",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "Get-CimInstance Win32_Process | " +
+          "Where-Object { $_.CommandLine -like '*run-resilient.mjs*' -and $_.CommandLine -like '*index.ts*' } | " +
+          "Select-Object -ExpandProperty ProcessId",
+      ],
+      { encoding: "utf8" },
+    );
+    return out
+      .split(/\r?\n/)
+      .map((l) => Number(l.trim()))
+      .filter((n) => Number.isInteger(n) && n > 0);
+  } catch {
+    return [];
+  }
+}
+
+function killPid(pid) {
+  try {
+    execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+  } catch {
+    // already gone, or couldn't be killed — either way, keep going
+  }
+}
+
+/** Resolves once an HTTP request to `http://127.0.0.1:port/` gets *any*
+ * response (even a 404) — that's enough to prove Fastify itself is up,
+ * without needing an authenticated session to check a real route. */
+function pingApi(port) {
+  return new Promise((resolve) => {
+    const req = http.get({ host: "127.0.0.1", port, path: "/", timeout: 1500 }, (res) => {
+      res.resume();
+      resolve(true);
+    });
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Best-effort: if a dev `apps/api` is already running on this machine (host
+ * `pnpm dev`/`dev:resilient`, not infra/docker-compose's containers), restart
+ * it so its in-memory CURRENT_VERSION picks up the version just bumped —
+ * apps/api doesn't hot-reload a root package.json change (tsx watch only
+ * watches its own src/ tree), and there's no `updater` sidecar outside the
+ * production compose stack to do this for you.
+ *
+ * Windows-only (this project's local dev workflow always runs on Windows);
+ * skipped elsewhere. Never fails the release itself — any problem here is
+ * caught and reported as a warning, since the tag is already pushed by the
+ * time this runs.
+ */
+async function refreshLocalDevApi(version) {
+  if (process.platform !== "win32") {
+    console.log(`\nSkipping local dev-API refresh (not Windows).`);
+    return;
+  }
+
+  const port = readApiPort();
+  const existingPid = findListenerPid(port);
+  if (!existingPid) {
+    console.log(`\nNo local dev API detected on :${port} — skipping dev refresh.`);
+    return;
+  }
+
+  console.log(`\nRestarting local dev API (:${port}, was pid ${existingPid}) to pick up v${version}...`);
+  killPid(existingPid);
+  for (const pid of findDevApiSupervisorPids()) {
+    if (pid !== existingPid) killPid(pid);
+  }
+
+  // Give Windows a beat to actually release the socket before rebinding.
+  await sleep(1000);
+
+  const logPath = path.join(os.tmpdir(), `patchpilot-dev-api-${port}.log`);
+  const out = openSync(logPath, "a");
+  const err = openSync(logPath, "a");
+  const child = spawn("pnpm", ["--filter", "@patchpilot/api", "dev:resilient"], {
+    cwd: ROOT,
+    detached: true,
+    stdio: ["ignore", out, err],
+    shell: true,
+    windowsHide: true,
+  });
+  child.unref();
+
+  const ATTEMPTS = 30;
+  for (let i = 0; i < ATTEMPTS; i++) {
+    await sleep(1000);
+    if (await pingApi(port)) {
+      console.log(`Dev API back up on :${port} — now running v${version}.`);
+      return;
+    }
+  }
+  console.warn(
+    `WARNING: dev API didn't come back up on :${port} within ${ATTEMPTS}s. ` +
+      `Check ${logPath}, or start it manually: pnpm --filter @patchpilot/api dev:resilient`,
+  );
+}
+
+async function main() {
+  const { version, dryRun, skipDevRefresh } = parseArgs(process.argv.slice(2));
   if (!version) {
-    console.error("usage: release.mjs <new-version> [--dry-run]  (e.g. 0.2.0)");
+    console.error("usage: release.mjs <new-version> [--dry-run] [--skip-dev-refresh]  (e.g. 0.2.0)");
     process.exit(1);
   }
   if (!/^\d+\.\d+\.\d+$/.test(version)) {
@@ -221,6 +386,14 @@ function main() {
     console.log(`  git tag -a ${tag} -m "${tag}"`);
     console.log(`  git push origin ${branch}`);
     console.log(`  git push origin ${tag}`);
+    if (skipDevRefresh) {
+      console.log(`\n(--skip-dev-refresh passed: would not touch any locally running dev API.)`);
+    } else {
+      console.log(
+        `\nWould then also check for a locally running dev API (port from .env's API_PORT, ` +
+          `default 4000) and restart it in place, if one is running, so it reflects v${version}.`,
+      );
+    }
     console.log(`\nNo files were changed. Re-run without --dry-run to actually cut the release.`);
     return;
   }
@@ -260,6 +433,14 @@ function main() {
     console.log(`Watch the release workflow: https://github.com/${slug}/actions/workflows/release.yml`);
     console.log(`Once it finishes:            https://github.com/${slug}/releases/tag/${tag}`);
     console.log(`Or from the CLI:              gh run list --workflow=release.yml -L 1`);
+  }
+
+  if (!skipDevRefresh) {
+    try {
+      await refreshLocalDevApi(version);
+    } catch (err) {
+      console.warn(`WARNING: local dev-API refresh failed (release itself is unaffected): ${err.message}`);
+    }
   }
 }
 
