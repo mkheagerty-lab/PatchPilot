@@ -132,3 +132,56 @@ the VM's own disk only — `infra/backup.sh` is local-disk-only by design (see
 its header comment). Arrange your own off-box copy (e.g. a scheduled
 `az storage blob upload-batch` via `run-command`) — a VM-local backup does not
 survive losing the VM.
+
+## Troubleshooting
+
+Past incidents and their root causes are recorded in
+[docs/incidents.md](../../docs/incidents.md) — check there first if any of
+this looks familiar. The two entries below are the durable operational
+takeaways from the 2026-09-05 incident.
+
+### Site unreachable after a self-update
+
+Check container state before assuming anything code-level is wrong:
+
+```bash
+az vm run-command invoke -g patchpilot-rg -n patchpilot-vm \
+  --command-id RunShellScript \
+  --scripts "cd /opt/patchpilot && docker compose -f infra/docker-compose.yml --env-file .env ps && docker compose -f infra/docker-compose.yml --env-file .env logs caddy --tail 100"
+```
+
+A `caddy` (or `backup`) container stuck restarting with a "not a directory:
+are you trying to mount a directory onto a file" error means something is
+bind-mounting a file from a path that doesn't exist as expected on the host
+— see the 2026-09-05 entry in [docs/incidents.md](../../docs/incidents.md#bug-1--updater-bind-mounted-the-repo-checkout-at-a-path-that-didnt-match-its-real-location-on-the-host)
+for the exact mechanism (a mismatch between where the `updater` sidecar
+mounts the checkout and where it actually lives on the host, `/opt/patchpilot`
+— that path must stay identical on both sides of the mount everywhere it's
+referenced: `infra/docker-compose.yml`'s `updater` service, `infra/updater/run.sh`'s
+`REPO_DIR` default, `cloud-init.yaml`, and this file). Once diagnosed,
+recreate the failing service(s) directly:
+
+```bash
+az vm run-command invoke -g patchpilot-rg -n patchpilot-vm \
+  --command-id RunShellScript \
+  --scripts "cd /opt/patchpilot && docker compose -f infra/docker-compose.yml --env-file .env up -d --force-recreate caddy backup"
+```
+
+### An update is stuck at "running" in Settings > Updates
+
+If the containers are actually healthy and running the target version
+(check with the `ps`/`logs` command above, and `docker compose ... logs
+updater --tail 100` for the sidecar's own log line reporting
+`succeeded`/`failed`) but the run in Settings > Updates never leaves
+"running", the update itself likely succeeded and only the database
+write-back recording that failed — see the 2026-09-05 entry in
+[docs/incidents.md](../../docs/incidents.md#bug-2--a-run-could-succeed-but-its-db-write-back-could-still-fail-stranding-it-at-statusrunning)
+(fixed in v0.4.2, but recorded here in case a similar write-back failure
+ever recurs for a different reason). Confirm success independently first,
+then correct the row by hand:
+
+```bash
+az vm run-command invoke -g patchpilot-rg -n patchpilot-vm \
+  --command-id RunShellScript \
+  --scripts "cd /opt/patchpilot && docker compose -f infra/docker-compose.yml --env-file .env exec -T postgres psql -U patchpilot -c \"UPDATE update_runs SET status='succeeded', finished_at=now() WHERE status='running';\""
+```
