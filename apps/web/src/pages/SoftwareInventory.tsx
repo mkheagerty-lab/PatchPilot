@@ -16,8 +16,10 @@ import {
   MsStoreChip,
   PageHeader,
   Placeholder,
+  ResponsiveTable,
   ScopeChip,
   SlideOver,
+  type ResponsiveTableColumn,
 } from "../components/ui";
 import { RunNowModal } from "../components/RunNowModal";
 import { DetectionEvidence, SortIcon, type SortDir } from "../components/cve";
@@ -64,8 +66,10 @@ function sortValue(row: SoftwareInventoryRow, key: SortKey): string | number {
   }
 }
 
-/** A clickable inventory-table column header that sorts by `sortKey`. */
-function SortableTh({
+/** A clickable column-header label that sorts by `sortKey` — used as a
+ *  `ResponsiveTableColumn.header` (and so must render a bare label/button,
+ *  not a `<th>`; `ResponsiveTable` supplies the `<th>` itself). */
+function SortableLabel({
   label,
   sortKey,
   activeKey,
@@ -80,17 +84,15 @@ function SortableTh({
 }) {
   const active = sortKey === activeKey;
   return (
-    <th className="px-4 py-2.5 font-medium">
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700"
-      >
-        {label}
-        <SortIcon active={active} dir={dir} />
-      </button>
-    </th>
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+    >
+      {label}
+      <SortIcon active={active} dir={dir} />
+    </button>
   );
 }
 
@@ -230,6 +232,112 @@ export function SoftwareInventory() {
     downloadCsv("software-inventory.csv", csv);
   }
 
+  const inventoryColumns: ResponsiveTableColumn<SoftwareInventoryRow>[] = [
+    {
+      key: "name",
+      primary: true,
+      header: (
+        <SortableLabel label="Software" sortKey="name" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+      ),
+      cell: (s) => (
+        <span className="font-medium text-slate-800 dark:text-slate-100">
+          {s.name}
+          {s.publicExploit && (
+            <span className="ml-2 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">
+              Public exploit
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "vendor",
+      header: (
+        <SortableLabel label="Vendor" sortKey="vendor" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+      ),
+      mobileLabel: "Vendor",
+      cell: (s) => s.vendor ?? "—",
+    },
+    {
+      key: "context",
+      header: (
+        <SortableLabel label="Context" sortKey="context" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+      ),
+      mobileLabel: "Context",
+      cell: (s) => <ContextTag context={s.context} />,
+    },
+    {
+      key: "installed",
+      header: (
+        <SortableLabel
+          label="Installed on"
+          sortKey="installed"
+          activeKey={sortKey}
+          dir={sortDir}
+          onSort={toggleSort}
+        />
+      ),
+      mobileLabel: "Installed on",
+      cell: (s) => s.installedMachinesCount,
+    },
+    {
+      key: "exposed",
+      header: (
+        <SortableLabel label="Exposed" sortKey="exposed" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+      ),
+      mobileLabel: "Exposed",
+      cell: (s) => s.exposedMachinesCount,
+    },
+    {
+      key: "weaknesses",
+      header: (
+        <SortableLabel
+          label="Weaknesses"
+          sortKey="weaknesses"
+          activeKey={sortKey}
+          dir={sortDir}
+          onSort={toggleSort}
+        />
+      ),
+      mobileLabel: "Weaknesses",
+      cell: (s) => s.weaknessCount,
+    },
+    {
+      key: "version",
+      header: (
+        <SortableLabel
+          label="Latest version"
+          sortKey="version"
+          activeKey={sortKey}
+          dir={sortDir}
+          onSort={toggleSort}
+        />
+      ),
+      mobileLabel: "Latest version",
+      cell: (s) => s.matchedLatestVersion ?? "—",
+    },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      fullWidthOnMobile: true,
+      cell: (s) => (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRowFixAllTarget(s);
+            }}
+            className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+          >
+            Fix Now
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -283,72 +391,26 @@ export function SoftwareInventory() {
             </div>
           </Card>
 
-          <Card className="p-0">
-            {isLoading ? (
-              <div className="p-5 text-sm text-slate-500">Loading…</div>
-            ) : filtered.length === 0 ? (
-              <div className="p-5 text-sm text-slate-500">
+          {isLoading ? (
+            <Card className="border-dashed">
+              <p className="text-sm text-slate-500">Loading…</p>
+            </Card>
+          ) : filtered.length === 0 ? (
+            <Card className="border-dashed">
+              <p className="text-sm text-slate-500">
                 {inventory.length === 0
                   ? "No software inventory reported for this tenant yet."
                   : "No software matches your search."}
-              </div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                    <SortableTh label="Software" sortKey="name" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortableTh label="Vendor" sortKey="vendor" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortableTh label="Context" sortKey="context" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortableTh label="Installed on" sortKey="installed" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortableTh label="Exposed" sortKey="exposed" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortableTh label="Weaknesses" sortKey="weaknesses" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortableTh label="Latest version" sortKey="version" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <th className="px-4 py-2.5 font-medium uppercase tracking-wide">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((s) => {
-                    return (
-                      <tr
-                        key={s.id}
-                        onClick={() => setSelected(s)}
-                        className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                      >
-                        <td className="px-4 py-2.5 font-medium text-slate-800">
-                          {s.name}
-                          {s.publicExploit && (
-                            <span className="ml-2 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700">
-                              Public exploit
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-500">{s.vendor ?? "—"}</td>
-                        <td className="px-4 py-2.5">
-                          <ContextTag context={s.context} />
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-600">{s.installedMachinesCount}</td>
-                        <td className="px-4 py-2.5 text-slate-600">{s.exposedMachinesCount}</td>
-                        <td className="px-4 py-2.5 text-slate-600">{s.weaknessCount}</td>
-                        <td className="px-4 py-2.5 text-slate-600">{s.matchedLatestVersion ?? "—"}</td>
-                        <td className="px-4 py-2.5">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRowFixAllTarget(s);
-                            }}
-                            className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-                          >
-                            Fix Now
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </Card>
+              </p>
+            </Card>
+          ) : (
+            <ResponsiveTable
+              columns={inventoryColumns}
+              rows={sorted}
+              rowKey={(s) => s.id}
+              onRowClick={setSelected}
+            />
+          )}
         </>
       )}
 

@@ -30,6 +30,8 @@ import {
   MsStoreChip,
   PageHeader,
   prettyRemediationType,
+  ResponsiveTable,
+  type ResponsiveTableColumn,
   ScopeChip,
   SeverityChip,
   SlaChip,
@@ -675,6 +677,321 @@ export function Recommendations() {
     downloadCsv(`recommendations-${kind}.csv`, csv);
   }
 
+  const recColumns: ResponsiveTableColumn<RecWithBreakdown>[] = [
+    {
+      key: "recommendation",
+      header: (
+        <RecSortableLabel
+          label={kind === "misconfiguration" ? "Name" : "Security recommendation"}
+          sortKey="recommendation"
+          activeKey={recSortKey}
+          dir={recSortDir}
+          onSort={toggleRecSort}
+        />
+      ),
+      primary: true,
+      cell: (r) => (
+        <>
+          <div className="flex items-center gap-2 font-medium text-slate-800">
+            <span className="max-w-[26rem] truncate" title={r.recommendationName}>
+              {r.recommendationName}
+            </span>
+            {r.publicExploit && <ExploitChip />}
+            {r.exception && <ExceptionChip />}
+          </div>
+          {r.vendor && <div className="text-xs text-slate-400">{r.vendor}</div>}
+        </>
+      ),
+    },
+    {
+      key: "impact",
+      header: (
+        <RecSortableLabel
+          label={kind === "misconfiguration" ? "Devices score impact" : "Impact"}
+          sortKey={kind === "misconfiguration" ? "scoreImpact" : "impact"}
+          activeKey={recSortKey}
+          dir={recSortDir}
+          onSort={toggleRecSort}
+        />
+      ),
+      mobileLabel: kind === "misconfiguration" ? "Devices score impact" : "Impact",
+      cell: (r) =>
+        kind === "misconfiguration"
+          ? (r.configScoreImpact?.toFixed(2) ?? "—")
+          : ((r.exposureImpact ?? r.severityScore)?.toFixed(2) ?? "—"),
+    },
+    ...(showOsPlatform
+      ? [
+          {
+            key: "osPlatform",
+            header: (
+              <RecSortableLabel
+                label="OS platform"
+                sortKey="osPlatform"
+                activeKey={recSortKey}
+                dir={recSortDir}
+                onSort={toggleRecSort}
+              />
+            ),
+            mobileLabel: "OS platform",
+            cell: (r: RecWithBreakdown) => r.osPlatform ?? "—",
+          } satisfies ResponsiveTableColumn<RecWithBreakdown>,
+        ]
+      : []),
+    ...(kind === "misconfiguration"
+      ? [
+          {
+            key: "category",
+            header: (
+              <RecSortableLabel
+                label="Category"
+                sortKey="category"
+                activeKey={recSortKey}
+                dir={recSortDir}
+                onSort={toggleRecSort}
+              />
+            ),
+            mobileLabel: "Category",
+            cell: (r: RecWithBreakdown) => r.subCategory ?? r.category ?? "—",
+          } satisfies ResponsiveTableColumn<RecWithBreakdown>,
+        ]
+      : [
+          {
+            key: "cves",
+            header: (
+              <RecSortableLabel
+                label="Weaknesses"
+                sortKey="cves"
+                activeKey={recSortKey}
+                dir={recSortDir}
+                onSort={toggleRecSort}
+              />
+            ),
+            mobileLabel: "Weaknesses",
+            cell: (r: RecWithBreakdown) => (
+              <div className="flex flex-col items-start gap-1.5">
+                <WeaknessPill count={r.weaknessCount} />
+                <SeverityCounts counts={r.sevCounts} />
+              </div>
+            ),
+          } satisfies ResponsiveTableColumn<RecWithBreakdown>,
+          {
+            key: "component",
+            header: (
+              <RecSortableLabel
+                label="Related component"
+                sortKey="component"
+                activeKey={recSortKey}
+                dir={recSortDir}
+                onSort={toggleRecSort}
+              />
+            ),
+            mobileLabel: "Related component",
+            cell: (r: RecWithBreakdown) => r.relatedComponent ?? r.productName,
+          } satisfies ResponsiveTableColumn<RecWithBreakdown>,
+        ]),
+    {
+      key: "threats",
+      header: (
+        <RecSortableLabel
+          label="Threats"
+          sortKey="threats"
+          activeKey={recSortKey}
+          dir={recSortDir}
+          onSort={toggleRecSort}
+        />
+      ),
+      mobileLabel: "Threats",
+      cell: (r) => <ThreatCell rec={r} />,
+    },
+    {
+      key: "exposed",
+      header: (
+        <RecSortableLabel
+          label="Exposed devices"
+          sortKey="exposed"
+          activeKey={recSortKey}
+          dir={recSortDir}
+          onSort={toggleRecSort}
+        />
+      ),
+      mobileLabel: "Exposed devices",
+      cell: (r) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setExposedFor(r);
+          }}
+          className="rounded text-slate-700 underline-offset-2 hover:text-indigo-600 hover:underline"
+          title="View exposed devices"
+        >
+          {r.exposedMachinesCount}
+          <span className="text-slate-400">
+            {" / "}
+            {r.totalMachineCount}
+          </span>
+        </button>
+      ),
+    },
+    ...(kind === "vulnerability"
+      ? [
+          {
+            key: "remediation",
+            header: (
+              <RecSortableLabel
+                label="Remediation type"
+                sortKey="remediation"
+                activeKey={recSortKey}
+                dir={recSortDir}
+                onSort={toggleRecSort}
+              />
+            ),
+            mobileLabel: "Remediation type",
+            cell: (r: RecWithBreakdown) => prettyRemediationType(r.remediationType),
+          } satisfies ResponsiveTableColumn<RecWithBreakdown>,
+          {
+            key: "context",
+            header: (
+              <RecSortableLabel
+                label="Context"
+                sortKey="context"
+                activeKey={recSortKey}
+                dir={recSortDir}
+                onSort={toggleRecSort}
+              />
+            ),
+            mobileLabel: "Context",
+            cell: (r: RecWithBreakdown) =>
+              isOsFinding(r.productName) ? (
+                <span className="text-slate-400">—</span>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <ScopeChip scope={r.installScope} />
+                  <MsStoreChip
+                    isStoreInstall={detectMicrosoftStoreInstall(r.diskPaths, r.registryPaths)}
+                  />
+                </div>
+              ),
+          } satisfies ResponsiveTableColumn<RecWithBreakdown>,
+        ]
+      : []),
+    ...(isAllTenants
+      ? [
+          {
+            key: "tenant",
+            header: (
+              <RecSortableLabel
+                label="Customer Tenant"
+                sortKey="tenant"
+                activeKey={recSortKey}
+                dir={recSortDir}
+                onSort={toggleRecSort}
+              />
+            ),
+            mobileLabel: "Customer Tenant",
+            cell: (r: RecWithBreakdown) => tenantNames.get(r.tenantId) ?? r.tenantId,
+          } satisfies ResponsiveTableColumn<RecWithBreakdown>,
+        ]
+      : []),
+    ...(kind === "vulnerability"
+      ? [
+          {
+            key: "sla",
+            header: (
+              <RecSortableLabel
+                label="SLA"
+                sortKey="sla"
+                activeKey={recSortKey}
+                dir={recSortDir}
+                onSort={toggleRecSort}
+              />
+            ),
+            mobileLabel: "SLA",
+            cell: (r: RecWithBreakdown) => <SlaChip sla={r.sla} />,
+          } satisfies ResponsiveTableColumn<RecWithBreakdown>,
+        ]
+      : []),
+    {
+      key: "status",
+      header: (
+        <RecSortableLabel
+          label="Status"
+          sortKey="status"
+          activeKey={recSortKey}
+          dir={recSortDir}
+          onSort={toggleRecSort}
+        />
+      ),
+      mobileLabel: "Status",
+      cell: (r) => <span className="capitalize">{r.status}</span>,
+    },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      fullWidthOnMobile: true,
+      // Misconfigurations can only be excepted; vulnerabilities get both a
+      // remediation and an exception path.
+      cell: (r) => (
+        <div className="flex items-center justify-end gap-2">
+          {kind === "vulnerability" &&
+            (isOsFinding(r.productName) ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate("/vulnerabilities?view=os");
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                title="Windows Update patches ship via the Missing KBs workflow, not a package update"
+              >
+                Missing KBs →
+              </button>
+            ) : (
+              (() => {
+                const { target, reason } = fixNowState(r, vulns);
+                return (
+                  <button
+                    type="button"
+                    disabled={!target}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (target) setRunTarget(target);
+                    }}
+                    className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    title={reason}
+                  >
+                    Fix now
+                  </button>
+                );
+              })()
+            ))}
+          <button
+            type="button"
+            disabled={r.exception}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExceptionTarget({
+                recommendationId: r.recommendationIds[0] ?? null,
+                tenantId: r.tenantId,
+                label: r.recommendationName,
+              });
+            }}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            title={
+              r.exception
+                ? "An exception already covers this recommendation"
+                : "Record a local exception"
+            }
+          >
+            Create exception
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -831,224 +1148,19 @@ export function Recommendations() {
         </div>
       </Card>
 
-      <Card className="p-0">
-        {recsLoading ? (
-          <div className="p-5 text-sm text-slate-500">Loading…</div>
-        ) : sortedRecs.length === 0 ? (
-          <div className="p-5 text-sm text-slate-500">
-            No recommendations match this filter.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <RecSortableTh
-                    label={kind === "misconfiguration" ? "Name" : "Security recommendation"}
-                    sortKey="recommendation"
-                    activeKey={recSortKey}
-                    dir={recSortDir}
-                    onSort={toggleRecSort}
-                  />
-                  {kind === "misconfiguration" ? (
-                    <RecSortableTh label="Devices score impact" sortKey="scoreImpact" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  ) : (
-                    <RecSortableTh label="Impact" sortKey="impact" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  )}
-                  {showOsPlatform && (
-                    <RecSortableTh label="OS platform" sortKey="osPlatform" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  )}
-                  {kind === "misconfiguration" ? (
-                    <RecSortableTh label="Category" sortKey="category" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  ) : (
-                    <>
-                      <RecSortableTh label="Weaknesses" sortKey="cves" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                      <RecSortableTh label="Related component" sortKey="component" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                    </>
-                  )}
-                  <RecSortableTh label="Threats" sortKey="threats" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  <RecSortableTh label="Exposed devices" sortKey="exposed" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  {kind === "vulnerability" && (
-                    <>
-                      <RecSortableTh label="Remediation type" sortKey="remediation" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                      <RecSortableTh label="Context" sortKey="context" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                    </>
-                  )}
-                  {isAllTenants && (
-                    <RecSortableTh label="Customer Tenant" sortKey="tenant" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  )}
-                  {kind === "vulnerability" && (
-                    <RecSortableTh label="SLA" sortKey="sla" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  )}
-                  <RecSortableTh label="Status" sortKey="status" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  <th className="px-5 py-3 text-right font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRecs.map((r) => (
-                  <tr
-                    key={r.id}
-                    onClick={() => setSelectedRec(r)}
-                    className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                  >
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2 font-medium text-slate-800">
-                        <span className="max-w-[26rem] truncate" title={r.recommendationName}>
-                          {r.recommendationName}
-                        </span>
-                        {r.publicExploit && <ExploitChip />}
-                        {r.exception && <ExceptionChip />}
-                      </div>
-                      {r.vendor && (
-                        <div className="text-xs text-slate-400">{r.vendor}</div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">
-                      {kind === "misconfiguration"
-                        ? (r.configScoreImpact?.toFixed(2) ?? "—")
-                        : ((r.exposureImpact ?? r.severityScore)?.toFixed(2) ?? "—")}
-                    </td>
-                    {showOsPlatform && (
-                      <td className="px-5 py-3 text-slate-600">{r.osPlatform ?? "—"}</td>
-                    )}
-                    {kind === "misconfiguration" ? (
-                      <td className="px-5 py-3 text-slate-600">
-                        {r.subCategory ?? r.category ?? "—"}
-                      </td>
-                    ) : (
-                      <>
-                        <td className="px-5 py-3">
-                          <div className="flex flex-col items-start gap-1.5">
-                            <WeaknessPill count={r.weaknessCount} />
-                            <SeverityCounts counts={r.sevCounts} />
-                          </div>
-                        </td>
-                        <td className="px-5 py-3 text-slate-600">
-                          {r.relatedComponent ?? r.productName}
-                        </td>
-                      </>
-                    )}
-                    <td className="px-5 py-3">
-                      <ThreatCell rec={r} />
-                    </td>
-                    <td className="px-5 py-3">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExposedFor(r);
-                        }}
-                        className="rounded text-slate-700 underline-offset-2 hover:text-indigo-600 hover:underline"
-                        title="View exposed devices"
-                      >
-                        {r.exposedMachinesCount}
-                        <span className="text-slate-400">
-                          {" / "}
-                          {r.totalMachineCount}
-                        </span>
-                      </button>
-                    </td>
-                    {kind === "vulnerability" && (
-                      <>
-                        <td className="px-5 py-3 text-slate-600">
-                          {prettyRemediationType(r.remediationType)}
-                        </td>
-                        <td className="px-5 py-3">
-                          {/* Install scope is meaningless for the OS itself. */}
-                          {isOsFinding(r.productName) ? (
-                            <span className="text-slate-400">—</span>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <ScopeChip scope={r.installScope} />
-                              <MsStoreChip
-                                isStoreInstall={detectMicrosoftStoreInstall(
-                                  r.diskPaths,
-                                  r.registryPaths,
-                                )}
-                              />
-                            </div>
-                          )}
-                        </td>
-                      </>
-                    )}
-                    {isAllTenants && (
-                      <td className="px-5 py-3 text-slate-600">
-                        {tenantNames.get(r.tenantId) ?? r.tenantId}
-                      </td>
-                    )}
-                    {kind === "vulnerability" && (
-                      <td className="px-5 py-3">
-                        <SlaChip sla={r.sla} />
-                      </td>
-                    )}
-                    <td className="px-5 py-3 capitalize text-slate-600">
-                      {r.status}
-                    </td>
-                    {/* Misconfigurations can only be excepted; vulnerabilities get
-                        both a remediation and an exception path. */}
-                    <td className="whitespace-nowrap px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {kind === "vulnerability" &&
-                          (isOsFinding(r.productName) ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate("/vulnerabilities?view=os");
-                              }}
-                              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                              title="Windows Update patches ship via the Missing KBs workflow, not a package update"
-                            >
-                              Missing KBs →
-                            </button>
-                          ) : (
-                            (() => {
-                              const { target, reason } = fixNowState(r, vulns);
-                              return (
-                                <button
-                                  type="button"
-                                  disabled={!target}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (target) setRunTarget(target);
-                                  }}
-                                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                  title={reason}
-                                >
-                                  Fix now
-                                </button>
-                              );
-                            })()
-                          ))}
-                        <button
-                          type="button"
-                          disabled={r.exception}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExceptionTarget({
-                              recommendationId: r.recommendationIds[0] ?? null,
-                              tenantId: r.tenantId,
-                              label: r.recommendationName,
-                            });
-                          }}
-                          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                          title={
-                            r.exception
-                              ? "An exception already covers this recommendation"
-                              : "Record a local exception"
-                          }
-                        >
-                          Create exception
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      {recsLoading ? (
+        <Card className="border-dashed">
+          <p className="text-sm text-slate-500">Loading…</p>
+        </Card>
+      ) : (
+        <ResponsiveTable
+          columns={recColumns}
+          rows={sortedRecs}
+          rowKey={(r) => r.id}
+          onRowClick={setSelectedRec}
+          emptyMessage="No recommendations match this filter."
+        />
+      )}
 
       {/* ---- Recommendation (consolidated) detail panel ---- */}
       <SlideOver
@@ -1641,8 +1753,8 @@ function ExceptionsPanel({
   );
 }
 
-/** A clickable column header that sorts the table by `sortKey`. */
-function RecSortableTh({
+/** A clickable column-header label that sorts the table by `sortKey`. */
+function RecSortableLabel({
   label,
   sortKey,
   activeKey,
@@ -1657,16 +1769,14 @@ function RecSortableTh({
 }) {
   const active = sortKey === activeKey;
   return (
-    <th className="px-5 py-3 font-medium">
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700"
-      >
-        {label}
-        <SortIcon active={active} dir={dir} />
-      </button>
-    </th>
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+    >
+      {label}
+      <SortIcon active={active} dir={dir} />
+    </button>
   );
 }

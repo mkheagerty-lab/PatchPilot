@@ -441,3 +441,198 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
     </button>
   );
 }
+
+export interface ResponsiveTableColumn<T> {
+  key: string;
+  /** Usually plain text, but accepts any ReactNode — e.g. a clickable sort
+   *  label with an icon, as SoftwareInventory.tsx and Vulnerabilities.tsx use. */
+  header: ReactNode;
+  /** Plain-text label for the mobile card's label/value row. Defaults to
+   *  `header`, but set this whenever `header` is a sortable button (or any
+   *  other interactive/icon-bearing node) — otherwise the mobile card would
+   *  render that button (caret icon included) as if it were a plain label. */
+  mobileLabel?: ReactNode;
+  cell: (row: T) => ReactNode;
+  /** One column per table should set this — its cell becomes the mobile
+   *  card's title line instead of a label/value row. Defaults to the first
+   *  column if none is marked. */
+  primary?: boolean;
+  /** Omit this column from the mobile card entirely (e.g. a raw ID that's
+   *  only useful in the wide desktop table). */
+  hideOnMobile?: boolean;
+  /** Right-align in the desktop table — for numeric/action columns. */
+  align?: "left" | "right";
+  /** Render the mobile block as a bare full-width row with no label — for
+   *  action-button clusters where a "Actions" label would just be noise. */
+  fullWidthOnMobile?: boolean;
+}
+
+export interface ResponsiveTableSelection<T> {
+  isSelected: (row: T) => boolean;
+  onToggle: (row: T) => void;
+  allSelected: boolean;
+  someSelected?: boolean;
+  onToggleAll: () => void;
+  ariaLabel?: (row: T) => string;
+}
+
+/**
+ * Shared list-table primitive: a real `<table>` at `md:` and up, and a
+ * stack of label/value cards below `md`. Owns its own border/background
+ * chrome for both layouts — callers drop their own `<Card className="p-0">`
+ * wrapper and render this directly in its place.
+ *
+ * Deliberately flat-row only (no group headers, no expandable sub-rows) —
+ * Jobs.tsx's grouped/expandable batch rows and settings/Users.tsx's
+ * role-by-area permission matrix don't fit this shape and intentionally
+ * keep their own hand-rolled tables instead of being forced in here.
+ */
+export function ResponsiveTable<T>({
+  columns,
+  rows,
+  rowKey,
+  onRowClick,
+  emptyMessage = "No results.",
+  selection,
+  footer,
+}: {
+  columns: ResponsiveTableColumn<T>[];
+  rows: T[];
+  rowKey: (row: T) => string;
+  onRowClick?: (row: T) => void;
+  emptyMessage?: ReactNode;
+  selection?: ResponsiveTableSelection<T>;
+  /** Rendered under the rows in both layouts — e.g. a "Load more" button. */
+  footer?: ReactNode;
+}) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-200 bg-white p-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+        {emptyMessage}
+      </div>
+    );
+  }
+
+  const primaryCol = columns.find((c) => c.primary) ?? columns[0]!;
+  const secondaryCols = columns.filter((c) => c !== primaryCol && !c.hideOnMobile);
+
+  return (
+    <>
+      {/* Desktop / tablet: real table */}
+      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm md:block dark:border-slate-800 dark:bg-slate-900">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
+              {selection && (
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={selection.allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !selection.allSelected && !!selection.someSelected;
+                    }}
+                    onChange={selection.onToggleAll}
+                    className="rounded border-slate-300"
+                  />
+                </th>
+              )}
+              {columns.map((c) => (
+                <th
+                  key={c.key}
+                  className={`px-4 py-3 font-medium ${c.align === "right" ? "text-right" : ""}`}
+                >
+                  {c.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={rowKey(row)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={`border-b border-slate-100 last:border-0 dark:border-slate-800 ${
+                  onRowClick ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" : ""
+                }`}
+              >
+                {selection && (
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      aria-label={selection.ariaLabel?.(row) ?? "Select row"}
+                      checked={selection.isSelected(row)}
+                      onChange={() => selection.onToggle(row)}
+                      className="rounded border-slate-300"
+                    />
+                  </td>
+                )}
+                {columns.map((c) => (
+                  <td
+                    key={c.key}
+                    className={`px-4 py-3 align-top text-slate-600 dark:text-slate-300 ${
+                      c.align === "right" ? "text-right" : ""
+                    }`}
+                  >
+                    {c.cell(row)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {footer && (
+          <div className="border-t border-slate-100 px-4 py-3 dark:border-slate-800">{footer}</div>
+        )}
+      </div>
+
+      {/* Mobile: stacked cards */}
+      <div className="space-y-3 md:hidden">
+        {rows.map((row) => (
+          <div
+            key={rowKey(row)}
+            onClick={onRowClick ? () => onRowClick(row) : undefined}
+            className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${
+              onRowClick ? "cursor-pointer active:bg-slate-50 dark:active:bg-slate-800/50" : ""
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              {selection && (
+                <input
+                  type="checkbox"
+                  aria-label={selection.ariaLabel?.(row) ?? "Select row"}
+                  checked={selection.isSelected(row)}
+                  onChange={() => selection.onToggle(row)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-0.5 rounded border-slate-300"
+                />
+              )}
+              <div className="min-w-0 flex-1 text-sm font-medium text-slate-800 dark:text-slate-100">
+                {primaryCol.cell(row)}
+              </div>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {secondaryCols.map((c) =>
+                c.fullWidthOnMobile ? (
+                  <div key={c.key} className="pt-1">
+                    {c.cell(row)}
+                  </div>
+                ) : (
+                  <div key={c.key} className="flex items-start justify-between gap-3 text-sm">
+                    <span className="shrink-0 text-slate-500 dark:text-slate-400">
+                      {c.mobileLabel ?? c.header}
+                    </span>
+                    <span className="min-w-0 text-right text-slate-700 dark:text-slate-200">
+                      {c.cell(row)}
+                    </span>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        ))}
+        {footer && <div>{footer}</div>}
+      </div>
+    </>
+  );
+}

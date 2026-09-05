@@ -15,7 +15,16 @@ import {
 } from "../lib/api";
 import { useTenant } from "../lib/tenant";
 import { SummarizeButton } from "../components/ai/SummarizeButton";
-import { Card, DetailRow, KpiCard, PageHeader, SeverityChip, SlideOver } from "../components/ui";
+import {
+  Card,
+  DetailRow,
+  KpiCard,
+  PageHeader,
+  ResponsiveTable,
+  SeverityChip,
+  SlideOver,
+  type ResponsiveTableColumn,
+} from "../components/ui";
 import { SortIcon, formatDate, type SortDir } from "../components/cve";
 import { toDevice } from "./dashboard/links";
 
@@ -80,34 +89,33 @@ function sortValue(row: SortableRow, key: SortKey): string | number {
   }
 }
 
-function SortableTh({
+/** A clickable column-header label that sorts by `sortKey` — used as a
+ *  `ResponsiveTableColumn.header`, so it renders just the label/button
+ *  (`ResponsiveTable` supplies the surrounding `<th>`). */
+function SortableLabel({
   label,
   sortKey,
   activeKey,
   dir,
   onSort,
-  className,
 }: {
   label: ReactNode;
   sortKey: SortKey;
   activeKey: SortKey;
   dir: SortDir;
   onSort: (key: SortKey) => void;
-  className?: string;
 }) {
   const active = sortKey === activeKey;
   return (
-    <th className={`px-4 py-3 font-medium ${className ?? ""}`}>
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-        className="group inline-flex items-center gap-1 whitespace-nowrap uppercase tracking-wide transition-colors hover:text-slate-700"
-      >
-        {label}
-        <SortIcon active={active} dir={dir} />
-      </button>
-    </th>
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      className="group inline-flex items-center gap-1 whitespace-nowrap uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+    >
+      {label}
+      <SortIcon active={active} dir={dir} />
+    </button>
   );
 }
 
@@ -397,7 +405,138 @@ export function RemediationHistory() {
       ? Math.round(((stats.byAttribution.job + stats.byAttribution.manual) / stats.matchedRows) * 100)
       : null;
 
-  const columnCount = (isAllTenants ? 10 : 9) + 1;
+  const historyColumns: ResponsiveTableColumn<SortableRow>[] = [
+    {
+      key: "remediatedAt",
+      header: (
+        <SortableLabel
+          label={
+            <>
+              Cleared <span className="font-normal normal-case text-slate-400">(newest first)</span>
+            </>
+          }
+          sortKey="remediatedAt"
+          activeKey={sortKey}
+          dir={sortDir}
+          onSort={onSort}
+        />
+      ),
+      mobileLabel: "Cleared",
+      cell: (record) => (
+        <div className="whitespace-nowrap">
+          <div>{fmt(record.remediatedAt)}</div>
+          {record.closure === "reclassified" && (
+            <div className="mt-1">
+              <ClosureTag closure={record.closure} />
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "finding",
+      primary: true,
+      header: <SortableLabel label="Finding" sortKey="finding" activeKey={sortKey} dir={sortDir} onSort={onSort} />,
+      cell: (record) => (
+        <span className="font-medium text-slate-800 dark:text-slate-100">
+          {record.kind === "vulnerability" ? record.cveId ?? "—" : record.recommendationId ?? "—"}
+          <div className="text-xs font-normal capitalize text-slate-400">{record.kind}</div>
+        </span>
+      ),
+    },
+    {
+      key: "software",
+      header: <SortableLabel label="Software" sortKey="software" activeKey={sortKey} dir={sortDir} onSort={onSort} />,
+      mobileLabel: "Software",
+      cell: (record) => record.software ?? "—",
+    },
+    {
+      key: "severity",
+      header: <SortableLabel label="Severity" sortKey="severity" activeKey={sortKey} dir={sortDir} onSort={onSort} />,
+      mobileLabel: "Severity",
+      cell: (record) => <SeverityChip severity={record.severity} />,
+    },
+    {
+      key: "device",
+      header: <SortableLabel label="Device" sortKey="device" activeKey={sortKey} dir={sortDir} onSort={onSort} />,
+      mobileLabel: "Device",
+      cell: (record) =>
+        record.attribution === "unattributed" ? (
+          <AttributionTag attribution={record.attribution} />
+        ) : (
+          record.deviceHostname ?? "—"
+        ),
+    },
+    {
+      key: "technician",
+      header: (
+        <SortableLabel label="Technician" sortKey="technician" activeKey={sortKey} dir={sortDir} onSort={onSort} />
+      ),
+      mobileLabel: "Technician",
+      cell: (record) => (
+        <>
+          {record.attribution === "unattributed" ? (
+            <span className="text-slate-400">—</span>
+          ) : record.engineer ? (
+            <span className="flex items-center gap-2">
+              {isSystemActor(record.engineer) && (
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                  System
+                </span>
+              )}
+              {systemActorLabel(record.engineer)}
+            </span>
+          ) : (
+            "—"
+          )}
+          {record.attribution === "manual" && (
+            <div className="mt-1">
+              <AttributionTag attribution={record.attribution} />
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "detectedAt",
+      header: (
+        <SortableLabel
+          label="First detected"
+          sortKey="detectedAt"
+          activeKey={sortKey}
+          dir={sortDir}
+          onSort={onSort}
+        />
+      ),
+      mobileLabel: "First detected",
+      cell: (record) => <span className="whitespace-nowrap">{formatDate(record.detectedAt)}</span>,
+    },
+    {
+      key: "exposure",
+      header: (
+        <SortableLabel label="Exposure" sortKey="exposure" activeKey={sortKey} dir={sortDir} onSort={onSort} />
+      ),
+      mobileLabel: "Exposure",
+      cell: (record) => formatDuration(record.exposureHours),
+    },
+    {
+      key: "fixTime",
+      header: (
+        <SortableLabel label="Fix time" sortKey="fixTime" activeKey={sortKey} dir={sortDir} onSort={onSort} />
+      ),
+      mobileLabel: "Fix time",
+      cell: (record) => (record.fixHours === null ? "—" : formatDuration(record.fixHours)),
+    },
+    ...(isAllTenants
+      ? [
+          {
+            key: "tenant",
+            header: "Tenant",
+            cell: (record: SortableRow) => tenantNames.get(record.tenantId) ?? record.tenantId,
+          } satisfies ResponsiveTableColumn<SortableRow>,
+        ]
+      : []),
+  ];
 
   return (
     <div>
@@ -614,150 +753,32 @@ export function RemediationHistory() {
             </div>
           )}
 
-          <Card className="overflow-x-auto p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-4 py-3 font-medium">
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSelected}
-                      onChange={toggleSelectAll}
-                      className="rounded border-slate-300"
-                      aria-label="Select all findings"
-                    />
-                  </th>
-                  <SortableTh
-                    label={
-                      <>
-                        Cleared <span className="font-normal normal-case text-slate-400">(newest first)</span>
-                      </>
-                    }
-                    sortKey="remediatedAt"
-                    activeKey={sortKey}
-                    dir={sortDir}
-                    onSort={onSort}
-                    className="whitespace-nowrap"
-                  />
-                  <SortableTh label="Finding" sortKey="finding" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                  <SortableTh label="Software" sortKey="software" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                  <SortableTh label="Severity" sortKey="severity" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                  <SortableTh label="Device" sortKey="device" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                  <SortableTh
-                    label="Technician"
-                    sortKey="technician"
-                    activeKey={sortKey}
-                    dir={sortDir}
-                    onSort={onSort}
-                  />
-                  <SortableTh
-                    label="First detected"
-                    sortKey="detectedAt"
-                    activeKey={sortKey}
-                    dir={sortDir}
-                    onSort={onSort}
-                    className="whitespace-nowrap"
-                  />
-                  <SortableTh label="Exposure" sortKey="exposure" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                  <SortableTh label="Fix time" sortKey="fixTime" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                  {isAllTenants && <th className="px-4 py-3 font-medium">Tenant</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((record) => {
-                  const exposureHours = record.exposureHours;
-                  const fixHours = record.fixHours;
-                  return (
-                    <tr
-                      key={record.id}
-                      onClick={() => setDetail(record)}
-                      className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                    >
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selected.has(record.id)}
-                          onChange={() => toggleSelect(record.id)}
-                          className="rounded border-slate-300"
-                          aria-label={`Select ${record.kind === "vulnerability" ? record.cveId ?? "finding" : record.recommendationId ?? "finding"}`}
-                        />
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-500">
-                        <div>{fmt(record.remediatedAt)}</div>
-                        {record.closure === "reclassified" && (
-                          <div className="mt-1">
-                            <ClosureTag closure={record.closure} />
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-medium text-slate-800">
-                        {record.kind === "vulnerability" ? record.cveId ?? "—" : record.recommendationId ?? "—"}
-                        <div className="text-xs font-normal capitalize text-slate-400">{record.kind}</div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{record.software ?? "—"}</td>
-                      <td className="px-4 py-3">
-                        <SeverityChip severity={record.severity} />
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {record.attribution === "unattributed" ? (
-                          <AttributionTag attribution={record.attribution} />
-                        ) : (
-                          record.deviceHostname ?? "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {record.attribution === "unattributed" ? (
-                          <span className="text-slate-400">—</span>
-                        ) : record.engineer ? (
-                          <span className="flex items-center gap-2">
-                            {isSystemActor(record.engineer) && (
-                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
-                                System
-                              </span>
-                            )}
-                            {systemActorLabel(record.engineer)}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                        {record.attribution === "manual" && (
-                          <div className="mt-1">
-                            <AttributionTag attribution={record.attribution} />
-                          </div>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatDate(record.detectedAt)}</td>
-                      <td className="px-4 py-3 text-slate-600">{formatDuration(exposureHours)}</td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {fixHours === null ? "—" : formatDuration(fixHours)}
-                      </td>
-                      {isAllTenants && (
-                        <td className="px-4 py-3 text-slate-500">
-                          {tenantNames.get(record.tenantId) ?? record.tenantId}
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-              {hasNextPage && (
-                <tfoot>
-                  <tr>
-                    <td colSpan={columnCount} className="border-t border-slate-100 px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => fetchNextPage()}
-                        disabled={isFetchingNextPage}
-                        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                      >
-                        {isFetchingNextPage ? "Loading…" : "Load more"}
-                      </button>
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </Card>
+          <ResponsiveTable
+            columns={historyColumns}
+            rows={sorted}
+            rowKey={(record) => record.id}
+            onRowClick={setDetail}
+            selection={{
+              isSelected: (record) => selected.has(record.id),
+              onToggle: (record) => toggleSelect(record.id),
+              allSelected: allVisibleSelected,
+              onToggleAll: toggleSelectAll,
+              ariaLabel: (record) =>
+                `Select ${record.kind === "vulnerability" ? record.cveId ?? "finding" : record.recommendationId ?? "finding"}`,
+            }}
+            footer={
+              hasNextPage ? (
+                <button
+                  type="button"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  {isFetchingNextPage ? "Loading…" : "Load more"}
+                </button>
+              ) : undefined
+            }
+          />
 
           <p className="mt-3 text-xs text-slate-400">
             Showing {rows.length} finding{rows.length === 1 ? "" : "s"}

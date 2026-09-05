@@ -1,10 +1,10 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { csvRow } from "@patchpilot/shared";
 import { api, type LocalDeviceGroup, type Schedule } from "../lib/api";
 import { useCan } from "../lib/auth";
 import { useTenant } from "../lib/tenant";
-import { Card, PageHeader } from "../components/ui";
+import { Card, PageHeader, ResponsiveTable, type ResponsiveTableColumn } from "../components/ui";
 import { downloadCsv } from "../lib/csv";
 import { NewScheduleModal } from "../components/NewScheduleModal";
 import { describeCron } from "../components/RecurrencePicker";
@@ -80,6 +80,103 @@ export function Schedules() {
     downloadCsv("schedules.csv", csv);
   }
 
+  const scheduleColumns: ResponsiveTableColumn<Schedule>[] = [
+    {
+      key: "name",
+      header: "Name / Status",
+      primary: true,
+      cell: (s) => (
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-slate-800 dark:text-slate-100">{s.name}</span>
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                s.enabled
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                  : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+              }`}
+            >
+              {s.enabled ? "Enabled" : "Paused"}
+            </span>
+          </div>
+          {runNotice[s.id] && (
+            <div className="mt-1 text-xs text-slate-400">{runNotice[s.id]}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "frequency",
+      header: "Frequency & Channel",
+      cell: (s) => (
+        <div className="text-xs text-slate-500 dark:text-slate-400">
+          <span title={s.cron}>{describeCron(s.cron)}</span>
+          <div className="mt-0.5">
+            {CHANNEL_LABELS[s.channel] ?? s.channel}
+            {s.engineer ? ` · runs as ${s.engineer}` : ""}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "target",
+      header: "Target",
+      cell: (s) => (
+        <span
+          title={summarizeTarget(s.target, groups)}
+          className="line-clamp-2 max-w-xs text-xs text-slate-400"
+        >
+          {summarizeTarget(s.target, groups)}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      fullWidthOnMobile: true,
+      cell: (s) => (
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            onClick={() => runNow.mutate(s.id)}
+            disabled={!canWrite || !s.enabled || (runNow.isPending && runNow.variables === s.id)}
+            title={
+              !canWrite
+                ? "Your role doesn't include remediation write access."
+                : s.enabled
+                  ? "Fire this schedule now instead of waiting for its next cron tick"
+                  : "Enable the schedule to run it on demand"
+            }
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            {runNow.isPending && runNow.variables === s.id ? "Running…" : "Run now"}
+          </button>
+          <button
+            onClick={() => setEditingSchedule(s)}
+            disabled={!canWrite}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => toggle.mutate(s)}
+            disabled={!canWrite || toggle.isPending}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            {s.enabled ? "Pause" : "Enable"}
+          </button>
+          <button
+            onClick={() => remove.mutate(s.id)}
+            disabled={!canWrite || remove.isPending}
+            className="rounded-md border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+          >
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -117,102 +214,7 @@ export function Schedules() {
           </p>
         </Card>
       ) : (
-        <Card className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-5 py-3 font-medium">Name / Status</th>
-                <th className="px-5 py-3 font-medium">Frequency & Channel</th>
-                <th className="px-5 py-3 font-medium">Target</th>
-                <th className="px-5 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schedules.map((s) => {
-                return (
-                  <Fragment key={s.id}>
-                    <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                      <td className="px-5 py-3 align-top">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-slate-800">{s.name}</span>
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                              s.enabled
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-slate-100 text-slate-500"
-                            }`}
-                          >
-                            {s.enabled ? "Enabled" : "Paused"}
-                          </span>
-                        </div>
-                        {runNotice[s.id] && (
-                          <div className="mt-1 text-xs text-slate-400">{runNotice[s.id]}</div>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 align-top text-xs text-slate-500">
-                        <span title={s.cron}>{describeCron(s.cron)}</span>
-                        <div className="mt-0.5">
-                          {CHANNEL_LABELS[s.channel] ?? s.channel}
-                          {s.engineer ? ` · runs as ${s.engineer}` : ""}
-                        </div>
-                      </td>
-                      <td className="max-w-xs px-5 py-3 align-top text-xs text-slate-400">
-                        <span title={summarizeTarget(s.target, groups)} className="line-clamp-2">
-                          {summarizeTarget(s.target, groups)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 align-top">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => runNow.mutate(s.id)}
-                            disabled={
-                              !canWrite ||
-                              !s.enabled ||
-                              (runNow.isPending && runNow.variables === s.id)
-                            }
-                            title={
-                              !canWrite
-                                ? "Your role doesn't include remediation write access."
-                                : s.enabled
-                                  ? "Fire this schedule now instead of waiting for its next cron tick"
-                                  : "Enable the schedule to run it on demand"
-                            }
-                            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
-                          >
-                            {runNow.isPending && runNow.variables === s.id
-                              ? "Running…"
-                              : "Run now"}
-                          </button>
-                          <button
-                            onClick={() => setEditingSchedule(s)}
-                            disabled={!canWrite}
-                            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => toggle.mutate(s)}
-                            disabled={!canWrite || toggle.isPending}
-                            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
-                          >
-                            {s.enabled ? "Pause" : "Enable"}
-                          </button>
-                          <button
-                            onClick={() => remove.mutate(s.id)}
-                            disabled={!canWrite || remove.isPending}
-                            className="rounded-md border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </Card>
+        <ResponsiveTable columns={scheduleColumns} rows={schedules} rowKey={(s) => s.id} />
       )}
 
       <NewScheduleModal
