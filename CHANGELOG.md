@@ -3,8 +3,9 @@
 All notable changes to PatchPilot are recorded here. Phase 0-5 entries below
 are grouped by development phase, ordered oldest-first, from before this
 project had tagged releases. From here on, changes land under "Unreleased"
-and get cut into a dated "## [X.Y.Z]" section by `scripts/bump-version.mjs`
-and `.github/workflows/release.yml` when a version is tagged (see
+and get cut into a dated "## [X.Y.Z]" section by `pnpm release <version>`
+(`scripts/release.mjs`) when a version is released; `.github/workflows/release.yml`
+then publishes that section as the GitHub Release body (see
 Settings > Updates for how a running instance picks up a new release).
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
