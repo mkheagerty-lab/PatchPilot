@@ -12,6 +12,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fix the self-update sidecar bind-mounting the repo checkout at a path
+  (`/repo`) that didn't match its real location on the host (`/opt/patchpilot`)
+  — this broke `caddy`/`backup`'s own bind mounts on the next self-update,
+  taking the whole site down. The sidecar's checkout now mounts at the same
+  path on both sides.
+
 ## [0.4.0] - 2026-09-05
 
 - Branding — default PatchPilot365 shield logo and favicon, a locked product
