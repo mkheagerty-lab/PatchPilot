@@ -129,9 +129,9 @@ export function ChatWidget() {
   );
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end print:hidden">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end print:hidden sm:bottom-6 sm:right-6">
       {open && (
-        <div className="mb-3 flex h-[32rem] w-96 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+        <div className="mb-3 flex h-[70vh] max-h-[32rem] w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl sm:h-[32rem] sm:w-96">
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
             <div className="min-w-0">
               <div className="text-sm font-semibold text-slate-900">PatchPilot Assistant</div>

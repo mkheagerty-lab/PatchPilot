@@ -255,7 +255,7 @@ export function SoftwareInventory() {
         <>
           <Card className="mb-4">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="relative min-w-[220px] flex-1">
+              <div className="relative min-w-[160px] flex-1">
                 <svg
                   viewBox="0 0 20 20"
                   fill="currentColor"
