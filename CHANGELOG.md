@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.6.0] - 2026-09-05
+
 - Make the sidebar collapsible (persisted across reloads) with a slide-in
   drawer for narrow screens, and alphabetize/regroup its nav items — the
   former Operations category now splits actionable pages from a new
