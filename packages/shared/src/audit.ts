@@ -214,6 +214,11 @@ export const AUDIT_ACTIONS = [
   // Self-serve free-tier trial activation (Settings > License) — distinct
   // from entitlement:update since no token is involved, just a timestamp.
   "entitlement:trial-start",
+  // Bulk re-split of the device pool across every write-enabled tenant
+  // (Settings > License's "Auto-assign" button) — distinct from each
+  // individual "tenant:set-live-response-device-limit" it produces, since
+  // this one action can rewrite every tenant's allocation at once.
+  "entitlement:auto-assign-devices",
   "exception:create",
   "exception:cancel",
   "device:exclude",
@@ -412,6 +417,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "setting:update": "Setting updated",
   "entitlement:update": "License key updated",
   "entitlement:trial-start": "Free trial started",
+  "entitlement:auto-assign-devices": "Live Response devices auto-assigned",
   "exception:create": "Exception created",
   "exception:cancel": "Exception cancelled",
   "device:exclude": "Device excluded",
@@ -563,7 +569,14 @@ export const AUDIT_ACTION_GROUPS: ReadonlyArray<{
   },
   {
     label: "Settings",
-    actions: ["setting:update", "entitlement:update", "entitlement:trial-start", "exception:create", "exception:cancel"],
+    actions: [
+      "setting:update",
+      "entitlement:update",
+      "entitlement:trial-start",
+      "entitlement:auto-assign-devices",
+      "exception:create",
+      "exception:cancel",
+    ],
   },
   {
     label: "Devices",
