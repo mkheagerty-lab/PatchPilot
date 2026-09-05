@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.2.0] - 2026-09-05
+
 - Settings > Updates — GitHub Releases polling, an in-app update-available
   banner, and a self-update sidecar to run/schedule applying a new release.
 
