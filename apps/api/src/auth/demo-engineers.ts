@@ -27,6 +27,7 @@ export interface DemoEngineer {
   createdAt: string;
   updatedAt: string;
   receiveJobAlerts: boolean;
+  theme: "light" | "dark";
 }
 
 const seededAt = new Date().toISOString();
@@ -49,6 +50,7 @@ export const demoEngineers: DemoEngineer[] = [
     createdAt: seededAt,
     updatedAt: seededAt,
     receiveJobAlerts: true,
+    theme: "light",
   },
 ];
 

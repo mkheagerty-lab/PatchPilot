@@ -22,7 +22,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}
+      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${className}`}
     >
       {children}
     </div>
@@ -121,21 +121,21 @@ export function SlideOver({
         onClick={onClose}
         aria-hidden
       />
-      <aside className="relative z-10 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+      <aside className="relative z-10 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
           <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold text-slate-900">
+            <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">
               {title}
             </h2>
             {subtitle && (
-              <p className="mt-0.5 truncate text-sm text-slate-500">{subtitle}</p>
+              <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <svg
               viewBox="0 0 20 20"
@@ -162,9 +162,9 @@ export function DetailRow({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-2.5 last:border-0">
-      <dt className="text-sm text-slate-500">{label}</dt>
-      <dd className="min-w-0 text-right text-sm font-medium text-slate-800">
+    <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-2.5 last:border-0 dark:border-slate-800">
+      <dt className="text-sm text-slate-500 dark:text-slate-400">{label}</dt>
+      <dd className="min-w-0 text-right text-sm font-medium text-slate-800 dark:text-slate-200">
         {children}
       </dd>
     </div>
@@ -403,8 +403,8 @@ export function PageHeader({
   return (
     <div className="mb-6 flex items-start justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
@@ -413,8 +413,8 @@ export function PageHeader({
 
 export function Placeholder({ note }: { note: string }) {
   return (
-    <Card className="border-dashed">
-      <p className="text-sm text-slate-500">{note}</p>
+    <Card className="border-dashed dark:border-slate-700">
+      <p className="text-sm text-slate-500 dark:text-slate-400">{note}</p>
     </Card>
   );
 }

@@ -16,6 +16,8 @@ export interface Engineer {
   homeTenantId: string;
   role: Role;
   permissions: Permission[];
+  /** Personal light/dark UI preference — see lib/theme.tsx. */
+  theme: "light" | "dark";
 }
 
 interface MeResponse {
@@ -56,8 +58,8 @@ export function logout(): void {
 
 function FullScreen({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen items-center justify-center bg-slate-50">
-      <div className="text-sm text-slate-500">{children}</div>
+    <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="text-sm text-slate-500 dark:text-slate-400">{children}</div>
     </div>
   );
 }

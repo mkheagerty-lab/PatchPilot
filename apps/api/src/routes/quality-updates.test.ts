@@ -111,7 +111,7 @@ async function buildApp() {
   app.decorateRequest("currentUser", null as unknown as never);
   app.addHook("onRequest", async (req) => {
     req.session = { engineer: ENGINEER } as FastifyRequest["session"];
-    req.currentUser = { id: "engineer-1", upn: ENGINEER.upn, displayName: ENGINEER.displayName, role: "admin" };
+    req.currentUser = { id: "engineer-1", upn: ENGINEER.upn, displayName: ENGINEER.displayName, role: "admin", theme: "light" };
   });
   await app.register(qualityUpdatesRoutes);
   await app.ready();

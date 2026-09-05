@@ -5,6 +5,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TenantSwitcher } from "./components/TenantSwitcher";
 import { TenantProvider } from "./lib/tenant";
 import { AuthGate, useEngineer, useCan, logout } from "./lib/auth";
+import { ThemeProvider, ThemeToggle } from "./lib/theme";
 import { PageHeader, Placeholder } from "./components/ui";
 import { Dashboard } from "./pages/dashboard/Dashboard";
 import { Vulnerabilities } from "./pages/Vulnerabilities";
@@ -40,14 +41,15 @@ function EngineerMenu() {
   const engineer = useEngineer();
   return (
     <div className="flex items-center gap-3 text-sm">
+      <ThemeToggle />
       <div className="text-right">
-        <div className="font-medium text-slate-700">{engineer.displayName}</div>
+        <div className="font-medium text-slate-700 dark:text-slate-200">{engineer.displayName}</div>
         <div className="text-xs text-slate-400">{engineer.upn}</div>
       </div>
       <button
         type="button"
         onClick={logout}
-        className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+        className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
       >
         Sign out
       </button>
@@ -80,20 +82,22 @@ function RequirePermission({
 function Layout() {
   const canUseAi = useCan("ai:use");
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex h-screen flex-1 flex-col overflow-hidden print:h-auto print:overflow-visible">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-8 print:hidden">
-          <TenantSwitcher />
-          <EngineerMenu />
-        </header>
-        <UpdateAvailableBanner />
-        <main className="flex-1 overflow-y-auto bg-slate-50 px-8 py-7 print:h-auto print:overflow-visible">
-          <Outlet />
-        </main>
+    <ThemeProvider>
+      <div className="flex">
+        <Sidebar />
+        <div className="flex h-screen flex-1 flex-col overflow-hidden print:h-auto print:overflow-visible">
+          <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-8 print:hidden dark:border-slate-800 dark:bg-slate-900">
+            <TenantSwitcher />
+            <EngineerMenu />
+          </header>
+          <UpdateAvailableBanner />
+          <main className="flex-1 overflow-y-auto bg-slate-50 px-8 py-7 print:h-auto print:overflow-visible dark:bg-slate-950">
+            <Outlet />
+          </main>
+        </div>
+        {canUseAi && <ChatWidget />}
       </div>
-      {canUseAi && <ChatWidget />}
-    </div>
+    </ThemeProvider>
   );
 }
 

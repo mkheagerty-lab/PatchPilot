@@ -57,6 +57,9 @@ export const userRoleEnum = pgEnum("user_role", ["admin", "technician", "reader"
 // "pending" is reserved for the future email-invite flow and deliberately not a
 // member yet — see the note in packages/shared/src/rbac.ts.
 export const userStatusEnum = pgEnum("user_status", ["active", "disabled"]);
+// A personal display preference, not a tenant-wide setting (contrast Branding,
+// which is shared) — each engineer has their own, defaulting to light.
+export const themeEnum = pgEnum("theme", ["light", "dark"]);
 export const exceptionScopeEnum = pgEnum("exception_scope", ["global", "device-group"]);
 export const exceptionJustificationEnum = pgEnum("exception_justification", [
   "third-party-control",
@@ -182,6 +185,9 @@ export const engineers = pgTable("engineers", {
   // and auth/bootstrap.ts) set this explicitly true instead. Not touched when
   // an existing row is later promoted to admin, so a prior opt-out sticks.
   receiveJobAlerts: boolean("receive_job_alerts").notNull().default(false),
+  // Personal UI preference — self-service (see /auth/me/theme), never set by
+  // an admin editing another engineer's row.
+  theme: themeEnum("theme").notNull().default("light"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

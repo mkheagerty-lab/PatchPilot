@@ -22,6 +22,8 @@ export interface CurrentUser {
   upn: string;
   displayName: string;
   role: Role;
+  /** Personal UI preference — see /auth/me/theme. Not tied to `role`/RBAC. */
+  theme: "light" | "dark";
 }
 
 declare module "fastify" {

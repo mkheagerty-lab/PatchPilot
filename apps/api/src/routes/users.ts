@@ -231,6 +231,7 @@ export async function usersRoutes(app: FastifyInstance): Promise<void> {
           createdAt: now,
           updatedAt: now,
           receiveJobAlerts,
+          theme: "light",
         };
         demoEngineers.push(row);
         await audit({
