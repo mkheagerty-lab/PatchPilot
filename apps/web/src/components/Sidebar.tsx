@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import type { Permission } from "@patchpilot/shared";
 import { useEngineer } from "../lib/auth";
+import { useBranding, PRODUCT_NAME, DEFAULT_LOGO_URL } from "../lib/branding";
 
 interface NavItem {
   label: string;
@@ -69,13 +70,16 @@ const GROUPS: NavGroup[] = [
 export function Sidebar() {
   const { permissions } = useEngineer();
   const can = (permission: Permission) => permissions.includes(permission);
+  const { data: branding } = useBranding();
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col bg-[#0b1020] text-slate-300 print:hidden">
       <div className="flex items-center gap-2 px-5 py-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
-          PP
-        </div>
-        <span className="text-base font-semibold text-white">PatchPilot</span>
+        <img
+          src={branding?.logoUrl || DEFAULT_LOGO_URL}
+          alt={PRODUCT_NAME}
+          className="h-8 w-8 shrink-0 rounded-lg object-contain"
+        />
+        <span className="text-base font-semibold text-white">{PRODUCT_NAME}</span>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-6">
