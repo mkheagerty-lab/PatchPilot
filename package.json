@@ -20,7 +20,8 @@
     "db:generate": "pnpm --filter @patchpilot/db generate",
     "db:migrate": "pnpm --filter @patchpilot/db migrate",
     "db:seed": "pnpm --filter @patchpilot/db seed",
-    "version:bump": "node scripts/bump-version.mjs"
+    "version:bump": "node scripts/bump-version.mjs",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
