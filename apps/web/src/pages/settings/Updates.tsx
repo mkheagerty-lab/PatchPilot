@@ -264,10 +264,26 @@ export function Updates() {
                   </button>
                 )}
                 {data.pendingRun.status === "running" && (
-                  <p className="mt-3 text-xs text-slate-500">
-                    The api/web/worker containers restart during this step — brief connection
-                    errors here are expected.
-                  </p>
+                  <>
+                    <p className="mt-3 text-xs text-slate-500">
+                      The api/web/worker containers restart during this step — brief connection
+                      errors here are expected.
+                    </p>
+                    {/* The updater sidecar (infra/updater/run.sh) flushes partial output back
+                     *  to this row every few seconds while it runs, so this fills in live as
+                     *  the 5s poll above picks up each flush — not just once at the end. */}
+                    <div className="mt-3">
+                      <div className="mb-1 text-xs font-medium text-slate-500">Live output</div>
+                      <pre
+                        ref={(el) => {
+                          if (el) el.scrollTop = el.scrollHeight;
+                        }}
+                        className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-slate-50 p-2 text-[11px] text-slate-600"
+                      >
+                        {data.pendingRun.output || "Waiting for the updater to start…"}
+                      </pre>
+                    </div>
+                  </>
                 )}
               </Card>
             ) : (
@@ -348,7 +364,7 @@ export function Updates() {
                     <div className="mt-0.5 text-xs text-slate-500">
                       {formatDate(run.finishedAt)} · triggered by {run.triggeredBy}
                     </div>
-                    {run.status === "failed" && run.output && (
+                    {run.output && (
                       <details className="mt-1">
                         <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-700">
                           View output
