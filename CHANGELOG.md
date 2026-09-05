@@ -12,6 +12,19 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Make the sidebar collapsible (persisted across reloads) with a slide-in
+  drawer for narrow screens, and alphabetize/regroup its nav items — the
+  former Operations category now splits actionable pages from a new
+  "Reports & Records" group (Reports, Remediation History, Audit Log,
+  Inventories).
+- Fix the app header, floating chat widget, and page search bars clipping
+  or overflowing on phone-width screens.
+- Add a shared `ResponsiveTable` component (a real table at tablet width and
+  up, stacked cards below it) and migrate every list page — Schedules,
+  Audit Log, Software Inventory, Remediation History, Devices,
+  Vulnerabilities, Recommendations, and Users — onto it, making those pages
+  usable on mobile.
+
 ## [0.5.0] - 2026-09-05
 
 - Add a branded login splash page (PatchPilot365 logo, a single "Sign in
