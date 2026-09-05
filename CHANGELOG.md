@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.5.0] - 2026-09-05
+
 - Add a branded login splash page (PatchPilot365 logo, a single "Sign in
   with Microsoft 365" button using the official 4-color Microsoft squares
   mark) shown whenever an already-paired instance has no active session,
