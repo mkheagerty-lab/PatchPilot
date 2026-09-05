@@ -4,7 +4,7 @@ import type { Permission } from "@patchpilot/shared";
 import { Sidebar } from "./components/Sidebar";
 import { TenantSwitcher } from "./components/TenantSwitcher";
 import { TenantProvider } from "./lib/tenant";
-import { AuthGate, useEngineer, useCan, logout } from "./lib/auth";
+import { AuthGate, useEngineer, useCan, useLogout } from "./lib/auth";
 import { ThemeProvider, ThemeToggle } from "./lib/theme";
 import { PageHeader, Placeholder } from "./components/ui";
 import { Dashboard } from "./pages/dashboard/Dashboard";
@@ -39,6 +39,7 @@ import { UpdateAvailableBanner } from "./components/UpdateAvailableBanner";
 
 function EngineerMenu() {
   const engineer = useEngineer();
+  const logout = useLogout();
   return (
     <div className="flex items-center gap-3 text-sm">
       <ThemeToggle />
