@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.4.1] - 2026-09-05
+
 - Fix the self-update sidecar bind-mounting the repo checkout at a path
   (`/repo`) that didn't match its real location on the host (`/opt/patchpilot`)
   — this broke `caddy`/`backup`'s own bind mounts on the next self-update,
