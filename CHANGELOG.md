@@ -12,6 +12,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Branding — default PatchPilot365 shield logo and favicon, a locked product
+  name (enforced server-side too), drag-and-drop/browse logo upload, and a
+  "Match colours to logo" button that derives a theme palette from an
+  uploaded logo's pixels.
+
 ## [0.2.0] - 2026-09-05
 
 - Settings > Updates — GitHub Releases polling, an in-app update-available
