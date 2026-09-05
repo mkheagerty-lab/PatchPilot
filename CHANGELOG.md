@@ -12,6 +12,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fix the self-update sidecar leaving a run permanently stuck at "running"
+  when its captured build output happened to get byte-truncated mid
+  UTF-8-character — the update itself could succeed while the DB write-back
+  recording that success failed. Output is now sanitized to ASCII before
+  being written back, with a status-only retry as a second line of defense.
+
 ## [0.4.1] - 2026-09-05
 
 - Fix the self-update sidecar bind-mounting the repo checkout at a path
