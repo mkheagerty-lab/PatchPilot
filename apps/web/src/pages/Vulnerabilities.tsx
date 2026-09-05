@@ -32,12 +32,14 @@ import {
   ManualRemediationTag,
   MsStoreChip,
   PageHeader,
+  ResponsiveTable,
   ScopeChip,
   SeverityChip,
   SlaChip,
   slaTone,
   SlideOver,
   UNSUPPORTED_REMEDIATION_REASON,
+  type ResponsiveTableColumn,
 } from "../components/ui";
 import {
   CveDetailBody,
@@ -814,6 +816,371 @@ export function Vulnerabilities() {
     downloadCsv(`vulnerabilities-${filenameSuffix}.csv`, csv);
   }
 
+  // ---- "By software" / "By Components" table (shared shape) ----
+  const recColumns: ResponsiveTableColumn<RecWithBreakdown>[] = [
+    {
+      key: "recommendation",
+      primary: true,
+      header: (
+        <RecSortableLabel label="Software" sortKey="recommendation" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
+      ),
+      cell: (r) => (
+        <>
+          <div className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-100">
+            {r.productName}
+            {r.publicExploit && <ExploitChip />}
+          </div>
+          {r.vendor && <div className="text-xs text-slate-400">{r.vendor}</div>}
+        </>
+      ),
+    },
+    {
+      key: "context",
+      header: "Context",
+      cell: (r) =>
+        isOsFinding(r.productName) ? (
+          <span className="text-slate-400">—</span>
+        ) : (
+          <div className="flex items-center gap-1">
+            <ScopeChip scope={r.installScope} />
+            <MsStoreChip isStoreInstall={detectMicrosoftStoreInstall(r.diskPaths, r.registryPaths)} />
+          </div>
+        ),
+    },
+    {
+      key: "cves",
+      header: <RecSortableLabel label="CVEs" sortKey="cves" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />,
+      mobileLabel: "CVEs",
+      cell: (r) => (
+        <div className="flex flex-col items-start gap-1.5">
+          <WeaknessPill count={r.weaknessCount} />
+          <SeverityCounts counts={r.sevCounts} />
+        </div>
+      ),
+    },
+    {
+      key: "exposed",
+      header: <RecSortableLabel label="Exposed" sortKey="exposed" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />,
+      mobileLabel: "Exposed",
+      cell: (r) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setExposedFor(r);
+          }}
+          className="rounded text-slate-700 underline-offset-2 hover:text-indigo-600 hover:underline dark:text-slate-300 dark:hover:text-indigo-400"
+          title="View exposed devices"
+        >
+          {r.exposedMachinesCount}
+          <span className="text-slate-400">
+            {" / "}
+            {r.totalMachineCount}
+          </span>
+        </button>
+      ),
+    },
+    {
+      key: "version",
+      header: <RecSortableLabel label="Recommended" sortKey="version" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />,
+      mobileLabel: "Recommended",
+      cell: (r) => r.recommendedVersion ?? "—",
+    },
+    {
+      key: "detected",
+      header: <RecSortableLabel label="Detected" sortKey="detected" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />,
+      mobileLabel: "Detected",
+      cell: (r) => (
+        <>
+          <div>{formatDate(r.detectedAt)}</div>
+          <div className="text-xs text-slate-400">{daysAgo(r.detectedAt)}d ago</div>
+        </>
+      ),
+    },
+    ...(isAllTenants
+      ? [
+          {
+            key: "tenant",
+            header: (
+              <RecSortableLabel label="Customer Tenant" sortKey="tenant" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
+            ),
+            mobileLabel: "Customer Tenant",
+            cell: (r) => tenantNames.get(r.tenantId) ?? r.tenantId,
+          } satisfies ResponsiveTableColumn<RecWithBreakdown>,
+        ]
+      : []),
+    {
+      key: "sla",
+      header: <RecSortableLabel label="SLA" sortKey="sla" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />,
+      mobileLabel: "SLA",
+      cell: (r) => <SlaChip sla={r.sla} />,
+    },
+    {
+      key: "status",
+      header: <RecSortableLabel label="Status" sortKey="status" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />,
+      mobileLabel: "Status",
+      cell: (r) => <span className="capitalize">{r.status}</span>,
+    },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      fullWidthOnMobile: true,
+      cell: (r) => {
+        // Components (OpenSSL/MySQL/Log4j) and the OS itself have no package
+        // winget can update — the "By Components" view is made entirely of
+        // such rows.
+        const blockedReason = isOsFinding(r.productName)
+          ? "Ships via Windows Update — use the Missing KBs tab"
+          : requiresManualRemediation(r.productName)
+            ? "Bundled library — the owning application has to ship the updated version"
+            : !isRemediableType(r.remediationType)
+              ? UNSUPPORTED_REMEDIATION_REASON
+              : null;
+        const target = blockedReason ? null : runTargetForRec(r, vulns);
+        return (
+          <button
+            type="button"
+            disabled={!target}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (target) setRunTarget(target);
+            }}
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            title={blockedReason ?? (target ? "Run remediation" : "No associated CVEs to remediate")}
+          >
+            Fix now
+          </button>
+        );
+      },
+    },
+  ];
+
+  // ---- "Missing KBs" table ----
+  const kbColumns: ResponsiveTableColumn<MissingKbGroup>[] = [
+    {
+      key: "update",
+      primary: true,
+      header: "Update",
+      cell: (k) => (
+        <>
+          <div className="font-medium text-slate-800 dark:text-slate-100">KB{k.kbId}</div>
+          <div className="text-xs text-slate-400">{k.title}</div>
+        </>
+      ),
+    },
+    {
+      key: "products",
+      header: "Products",
+      cell: (k) => (k.products.length > 0 ? k.products.join(", ") : "—"),
+    },
+    {
+      key: "cves",
+      header: "CVEs",
+      cell: (k) => <CveIdChips cveIds={k.cveIds} count={k.cveCount} onSelect={showCveInAllCves} />,
+    },
+    {
+      key: "exposed",
+      header: "Exposed",
+      cell: (k) => k.deviceCount,
+    },
+    ...(isAllTenants
+      ? [
+          {
+            key: "tenant",
+            header: "Customer Tenant",
+            cell: (k) => tenantNames.get(k.tenantId) ?? k.tenantId,
+          } satisfies ResponsiveTableColumn<MissingKbGroup>,
+        ]
+      : []),
+    {
+      key: "lastSynced",
+      header: "Last synced",
+      cell: (k) => (
+        <>
+          <div>{formatDate(k.latestSyncedAt)}</div>
+          <div className="text-xs text-slate-400">{daysAgo(k.latestSyncedAt)}d ago</div>
+        </>
+      ),
+    },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      fullWidthOnMobile: true,
+      cell: (k) => (
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const onlyDevice = k.deviceCount === 1 ? k.devices[0] : null;
+              if (onlyDevice) {
+                setKbFixTarget({
+                  tenantId: k.tenantId,
+                  missingKbId: onlyDevice.missingKbId,
+                  kbId: k.kbId,
+                  title: k.title,
+                  hostname: onlyDevice.hostname,
+                });
+              } else {
+                setSelectedKb(k);
+              }
+            }}
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700"
+          >
+            Fix now
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setKbFixAllTarget(k);
+            }}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Fix all
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  // ---- "All CVEs" table ----
+  const cveColumns: ResponsiveTableColumn<Vulnerability>[] = [
+    {
+      key: "cve",
+      primary: true,
+      header: <SortableLabel label="CVE" sortKey="cve" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />,
+      cell: (v) => v.cveId ?? "—",
+    },
+    {
+      key: "severity",
+      header: <SortableLabel label="Severity" sortKey="severity" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />,
+      mobileLabel: "Severity",
+      cell: (v) => <SeverityChip severity={v.severity} />,
+    },
+    {
+      key: "cvss",
+      header: <SortableLabel label="CVSS" sortKey="cvss" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />,
+      mobileLabel: "CVSS",
+      cell: (v) => (v.cvss != null ? v.cvss.toFixed(1) : "—"),
+    },
+    {
+      key: "software",
+      header: <SortableLabel label="Software" sortKey="software" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />,
+      mobileLabel: "Software",
+      cell: (v) => (
+        <>
+          <div className="font-medium text-slate-800 dark:text-slate-100">{v.displayName ?? v.software}</div>
+          {v.publisher && <div className="text-xs text-slate-400">{v.publisher}</div>}
+          <ManualRemediationTag software={v.software} className="mt-1" />
+        </>
+      ),
+    },
+    {
+      key: "devices",
+      header: <SortableLabel label="Devices" sortKey="devices" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />,
+      mobileLabel: "Devices",
+      cell: (v) => v.affectedDeviceCount,
+    },
+    {
+      key: "detected",
+      header: <SortableLabel label="Detected" sortKey="detected" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />,
+      mobileLabel: "Detected",
+      cell: (v) => (
+        <>
+          <div>{formatDate(v.detectedAt)}</div>
+          <div className="text-xs text-slate-400">{daysAgo(v.detectedAt)}d ago</div>
+        </>
+      ),
+    },
+    ...(isAllTenants
+      ? [
+          {
+            key: "tenant",
+            header: (
+              <SortableLabel label="Customer Tenant" sortKey="tenant" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+            ),
+            mobileLabel: "Customer Tenant",
+            cell: (v) => tenantNames.get(v.tenantId) ?? v.tenantId,
+          } satisfies ResponsiveTableColumn<Vulnerability>,
+        ]
+      : []),
+    {
+      key: "remediation",
+      header: (
+        <SortableLabel label="Remediation" sortKey="remediation" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+      ),
+      mobileLabel: "Remediation",
+      cell: (v) => <RemediationBadge software={v.software} wingetRemediable={v.wingetRemediable} />,
+    },
+    {
+      key: "sla",
+      header: <SortableLabel label="SLA" sortKey="sla" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />,
+      mobileLabel: "SLA",
+      cell: (v) => <SlaChip sla={v.sla} />,
+    },
+    {
+      key: "status",
+      header: <SortableLabel label="Status" sortKey="status" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />,
+      mobileLabel: "Status",
+      cell: (v) => <span className="capitalize">{v.status}</span>,
+    },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      fullWidthOnMobile: true,
+      cell: (v) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            const pType = isOsFinding(v.software) ? "os" : "app";
+            setRunTarget({
+              vulnId: v.id,
+              software: v.software,
+              displayName: v.displayName ?? undefined,
+              patchType: pType,
+              tenantId: v.tenantId,
+              // Alternate repos only for apps winget can't drive. Prefer the
+              // server-resolved value; fall back to the curated client-side
+              // map if the API didn't supply one.
+              altSources:
+                pType === "app" && !v.wingetRemediable
+                  ? (v.altSources ?? [...altSourcesFor(v.software)])
+                  : [],
+            });
+          }}
+          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700"
+          title="Run remediation"
+        >
+          Fix now
+        </button>
+      ),
+    },
+  ];
+
+  const cveEmptyMessage = (
+    <>
+      No vulnerabilities match this filter.
+      {CVE_ID_SHAPE.test(query) && (
+        <>
+          {" "}
+          It may have already been remediated —{" "}
+          <Link
+            to={toRemediationHistoryCve(query.toUpperCase())}
+            className="font-medium text-indigo-600 hover:text-indigo-700"
+          >
+            check Remediation History
+          </Link>
+          .
+        </>
+      )}
+    </>
+  );
+
   return (
     <div>
       <PageHeader
@@ -1006,371 +1373,56 @@ export function Vulnerabilities() {
         </div>
       </Card>
 
-      <Card className="p-0">
-        {isLoading ? (
-          <div className="p-5 text-sm text-slate-500">Loading…</div>
-        ) : view === "grouped" || view === "components" ? (
-          sortedRecs.length === 0 ? (
-            <div className="p-5 text-sm text-slate-500">
-              {view === "components"
-                ? "No unsupported-component findings match this filter."
-                : "No software recommendations match this filter."}
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <RecSortableTh label="Software" sortKey="recommendation" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  <th className="px-5 py-3 font-medium">Context</th>
-                  <RecSortableTh label="CVEs" sortKey="cves" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  <RecSortableTh label="Exposed" sortKey="exposed" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  <RecSortableTh label="Recommended" sortKey="version" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  <RecSortableTh label="Detected" sortKey="detected" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  {isAllTenants && (
-                    <RecSortableTh label="Customer Tenant" sortKey="tenant" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  )}
-                  <RecSortableTh label="SLA" sortKey="sla" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  <RecSortableTh label="Status" sortKey="status" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} />
-                  <th className="px-5 py-3 text-right font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRecs.map((r) => (
-                  <tr
-                    key={r.id}
-                    onClick={() => setSelectedRec(r)}
-                    className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                  >
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2 font-medium text-slate-800">
-                        {r.productName}
-                        {r.publicExploit && <ExploitChip />}
-                      </div>
-                      {r.vendor && (
-                        <div className="text-xs text-slate-400">{r.vendor}</div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
-                      {isOsFinding(r.productName) ? (
-                        <span className="text-slate-400">—</span>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <ScopeChip scope={r.installScope} />
-                          <MsStoreChip
-                            isStoreInstall={detectMicrosoftStoreInstall(
-                              r.diskPaths,
-                              r.registryPaths,
-                            )}
-                          />
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-col items-start gap-1.5">
-                        <WeaknessPill count={r.weaknessCount} />
-                        <SeverityCounts counts={r.sevCounts} />
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExposedFor(r);
-                        }}
-                        className="rounded text-slate-700 underline-offset-2 hover:text-indigo-600 hover:underline"
-                        title="View exposed devices"
-                      >
-                        {r.exposedMachinesCount}
-                        <span className="text-slate-400">
-                          {" / "}
-                          {r.totalMachineCount}
-                        </span>
-                      </button>
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">
-                      {r.recommendedVersion ?? "—"}
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">
-                      <div>{formatDate(r.detectedAt)}</div>
-                      <div className="text-xs text-slate-400">
-                        {daysAgo(r.detectedAt)}d ago
-                      </div>
-                    </td>
-                    {isAllTenants && (
-                      <td className="px-5 py-3 text-slate-600">
-                        {tenantNames.get(r.tenantId) ?? r.tenantId}
-                      </td>
-                    )}
-                    <td className="px-5 py-3">
-                      <SlaChip sla={r.sla} />
-                    </td>
-                    <td className="px-5 py-3 capitalize text-slate-600">
-                      {r.status}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      {(() => {
-                        // Components (OpenSSL/MySQL/Log4j) and the OS itself have
-                        // no package winget can update — the "By Components" view
-                        // is made entirely of such rows.
-                        const blockedReason = isOsFinding(r.productName)
-                          ? "Ships via Windows Update — use the Missing KBs tab"
-                          : requiresManualRemediation(r.productName)
-                            ? "Bundled library — the owning application has to ship the updated version"
-                            : !isRemediableType(r.remediationType)
-                              ? UNSUPPORTED_REMEDIATION_REASON
-                              : null;
-                        const target = blockedReason ? null : runTargetForRec(r, vulns);
-                        return (
-                          <button
-                            type="button"
-                            disabled={!target}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (target) setRunTarget(target);
-                            }}
-                            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                            title={
-                              blockedReason ??
-                              (target
-                                ? "Run remediation"
-                                : "No associated CVEs to remediate")
-                            }
-                          >
-                            Fix now
-                          </button>
-                        );
-                      })()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )
-        ) : view === "os" ? (
-          sortedKbs.length === 0 ? (
-            <div className="p-5 text-sm text-slate-500">
-              No missing Windows Updates match this filter.
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-3 font-medium">Update</th>
-                  <th className="px-5 py-3 font-medium">Products</th>
-                  <th className="px-5 py-3 font-medium">CVEs</th>
-                  <th className="px-5 py-3 font-medium">Exposed</th>
-                  {isAllTenants && <th className="px-5 py-3 font-medium">Customer Tenant</th>}
-                  <th className="px-5 py-3 font-medium">Last synced</th>
-                  <th className="px-5 py-3 text-right font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedKbs.map((k) => (
-                  <tr
-                    key={`${k.tenantId}:${k.kbId}`}
-                    onClick={() => setSelectedKb(k)}
-                    className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                  >
-                    <td className="px-5 py-3">
-                      <div className="font-medium text-slate-800">KB{k.kbId}</div>
-                      <div className="text-xs text-slate-400">{k.title}</div>
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">
-                      {k.products.length > 0 ? k.products.join(", ") : "—"}
-                    </td>
-                    <td className="px-5 py-3">
-                      <CveIdChips cveIds={k.cveIds} count={k.cveCount} onSelect={showCveInAllCves} />
-                    </td>
-                    <td className="px-5 py-3 text-slate-700">{k.deviceCount}</td>
-                    {isAllTenants && (
-                      <td className="px-5 py-3 text-slate-600">
-                        {tenantNames.get(k.tenantId) ?? k.tenantId}
-                      </td>
-                    )}
-                    <td className="px-5 py-3 text-slate-600">
-                      <div>{formatDate(k.latestSyncedAt)}</div>
-                      <div className="text-xs text-slate-400">{daysAgo(k.latestSyncedAt)}d ago</div>
-                    </td>
-                    <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const onlyDevice = k.deviceCount === 1 ? k.devices[0] : null;
-                            if (onlyDevice) {
-                              setKbFixTarget({
-                                tenantId: k.tenantId,
-                                missingKbId: onlyDevice.missingKbId,
-                                kbId: k.kbId,
-                                title: k.title,
-                                hostname: onlyDevice.hostname,
-                              });
-                            } else {
-                              setSelectedKb(k);
-                            }
-                          }}
-                          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700"
-                        >
-                          Fix now
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setKbFixAllTarget(k)}
-                          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                        >
-                          Fix all
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )
-        ) : sortedAll.length === 0 ? (
-          <div className="p-5 text-sm text-slate-500">
-            No vulnerabilities match this filter.
-            {CVE_ID_SHAPE.test(query) && (
-              <>
-                {" "}
-                It may have already been remediated —{" "}
-                <Link
-                  to={toRemediationHistoryCve(query.toUpperCase())}
-                  className="font-medium text-indigo-600 hover:text-indigo-700"
+      {isLoading ? (
+        <Card className="border-dashed">
+          <p className="text-sm text-slate-500">Loading…</p>
+        </Card>
+      ) : view === "grouped" || view === "components" ? (
+        <ResponsiveTable
+          columns={recColumns}
+          rows={sortedRecs}
+          rowKey={(r) => r.id}
+          onRowClick={setSelectedRec}
+          emptyMessage={
+            view === "components"
+              ? "No unsupported-component findings match this filter."
+              : "No software recommendations match this filter."
+          }
+        />
+      ) : view === "os" ? (
+        <ResponsiveTable
+          columns={kbColumns}
+          rows={sortedKbs}
+          rowKey={(k) => `${k.tenantId}:${k.kbId}`}
+          onRowClick={setSelectedKb}
+          emptyMessage="No missing Windows Updates match this filter."
+        />
+      ) : (
+        <ResponsiveTable
+          columns={cveColumns}
+          rows={sorted}
+          rowKey={(v) => v.id}
+          onRowClick={setSelected}
+          emptyMessage={cveEmptyMessage}
+          footer={
+            hiddenCves > 0 ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCveLimit((n) => n + CVE_PAGE_SIZE)}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
-                  check Remediation History
-                </Link>
-                .
-              </>
-            )}
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                <SortableTh label="CVE" sortKey="cve" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Severity" sortKey="severity" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortableTh label="CVSS" sortKey="cvss" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Software" sortKey="software" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Devices" sortKey="devices" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Detected" sortKey="detected" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                {isAllTenants && (
-                  <SortableTh label="Customer Tenant" sortKey="tenant" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                )}
-                <SortableTh label="Remediation" sortKey="remediation" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortableTh label="SLA" sortKey="sla" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Status" sortKey="status" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
-                <th className="px-5 py-3 text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((v) => (
-                <tr
-                  key={v.id}
-                  onClick={() => setSelected(v)}
-                  className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                >
-                  <td className="px-5 py-3 font-medium text-slate-800">
-                    {v.cveId ?? "—"}
-                  </td>
-                  <td className="px-5 py-3">
-                    <SeverityChip severity={v.severity} />
-                  </td>
-                  <td className="px-5 py-3 text-slate-600">
-                    {v.cvss != null ? v.cvss.toFixed(1) : "—"}
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="font-medium text-slate-800">
-                      {v.displayName ?? v.software}
-                    </div>
-                    {v.publisher && (
-                      <div className="text-xs text-slate-400">
-                        {v.publisher}
-                      </div>
-                    )}
-                    <ManualRemediationTag software={v.software} className="mt-1" />
-                  </td>
-                  <td className="px-5 py-3 text-slate-700">
-                    {v.affectedDeviceCount}
-                  </td>
-                  <td className="px-5 py-3 text-slate-600">
-                    <div>{formatDate(v.detectedAt)}</div>
-                    <div className="text-xs text-slate-400">
-                      {daysAgo(v.detectedAt)}d ago
-                    </div>
-                  </td>
-                  {isAllTenants && (
-                    <td className="px-5 py-3 text-slate-600">
-                      {tenantNames.get(v.tenantId) ?? v.tenantId}
-                    </td>
-                  )}
-                  <td className="px-5 py-3">
-                    <RemediationBadge software={v.software} wingetRemediable={v.wingetRemediable} />
-                  </td>
-                  <td className="px-5 py-3">
-                    <SlaChip sla={v.sla} />
-                  </td>
-                  <td className="px-5 py-3 capitalize text-slate-600">
-                    {v.status}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const pType = isOsFinding(v.software) ? "os" : "app";
-                        setRunTarget({
-                          vulnId: v.id,
-                          software: v.software,
-                          displayName: v.displayName ?? undefined,
-                          patchType: pType,
-                          tenantId: v.tenantId,
-                          // Alternate repos only for apps winget can't drive.
-                          // Prefer the server-resolved value; fall back to the
-                          // curated client-side map if the API didn't supply one.
-                          altSources:
-                            pType === "app" && !v.wingetRemediable
-                              ? (v.altSources ?? [...altSourcesFor(v.software)])
-                              : [],
-                        });
-                      }}
-                      className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700"
-                      title="Run remediation"
-                    >
-                      Fix now
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            {hiddenCves > 0 && (
-              <tfoot>
-                <tr>
-                  <td
-                    colSpan={isAllTenants ? 11 : 10}
-                    className="border-t border-slate-100 px-5 py-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setCveLimit((n) => n + CVE_PAGE_SIZE)}
-                        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                      >
-                        Show {Math.min(hiddenCves, CVE_PAGE_SIZE)} more
-                      </button>
-                      <span className="text-xs text-slate-500">
-                        Showing {sorted.length} of {sortedAll.length} matching findings.
-                        Sorting and filters apply to all {sortedAll.length}.
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        )}
-      </Card>
+                  Show {Math.min(hiddenCves, CVE_PAGE_SIZE)} more
+                </button>
+                <span className="text-xs text-slate-500">
+                  Showing {sorted.length} of {sortedAll.length} matching findings. Sorting and
+                  filters apply to all {sortedAll.length}.
+                </span>
+              </div>
+            ) : undefined
+          }
+        />
+      )}
 
       {/* ---- Per-CVE detail panel ---- */}
       <SlideOver
@@ -1858,8 +1910,8 @@ export function Vulnerabilities() {
   );
 }
 
-/** A clickable CVE-view column header that sorts the table by `sortKey`. */
-function SortableTh({
+/** A clickable CVE-view column header label that sorts the table by `sortKey`. */
+function SortableLabel({
   label,
   sortKey,
   activeKey,
@@ -1874,22 +1926,20 @@ function SortableTh({
 }) {
   const active = sortKey === activeKey;
   return (
-    <th className="px-5 py-3 font-medium">
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700"
-      >
-        {label}
-        <SortIcon active={active} dir={dir} />
-      </button>
-    </th>
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+    >
+      {label}
+      <SortIcon active={active} dir={dir} />
+    </button>
   );
 }
 
-/** A clickable Components-view column header that sorts by `sortKey`. */
-function RecSortableTh({
+/** A clickable Components-view column header label that sorts by `sortKey`. */
+function RecSortableLabel({
   label,
   sortKey,
   activeKey,
@@ -1904,17 +1954,15 @@ function RecSortableTh({
 }) {
   const active = sortKey === activeKey;
   return (
-    <th className="px-5 py-3 font-medium">
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700"
-      >
-        {label}
-        <SortIcon active={active} dir={dir} />
-      </button>
-    </th>
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+    >
+      {label}
+      <SortIcon active={active} dir={dir} />
+    </button>
   );
 }
 

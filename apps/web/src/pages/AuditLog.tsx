@@ -17,7 +17,14 @@ import {
   type AuditRecord,
 } from "../lib/api";
 import { useTenant } from "../lib/tenant";
-import { Card, DetailRow, PageHeader, SlideOver } from "../components/ui";
+import {
+  Card,
+  DetailRow,
+  PageHeader,
+  ResponsiveTable,
+  SlideOver,
+  type ResponsiveTableColumn,
+} from "../components/ui";
 
 const OUTCOME_STYLES: Record<AuditOutcome, string> = {
   success: "bg-emerald-100 text-emerald-700",
@@ -170,7 +177,68 @@ export function AuditLog() {
   const set = <K extends keyof AuditQuery>(key: K, value: AuditQuery[K]) =>
     setFilters((f) => ({ ...f, [key]: value }));
 
-  const columnCount = isAllTenants ? 7 : 6;
+  const auditColumns: ResponsiveTableColumn<AuditRecord>[] = [
+    {
+      key: "when",
+      header: "When (newest first)",
+      cell: (record) => <span className="whitespace-nowrap text-slate-500">{fmt(record.at)}</span>,
+    },
+    {
+      key: "actor",
+      header: "Actor",
+      cell: (record) =>
+        isSystemActor(record.engineer) ? (
+          <span className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+              System
+            </span>
+            {systemActorLabel(record.engineer)}
+          </span>
+        ) : (
+          record.engineer
+        ),
+    },
+    {
+      key: "action",
+      header: "Action",
+      primary: true,
+      cell: (record) => (
+        <span className="font-medium text-slate-800 dark:text-slate-100">{actionLabel(record)}</span>
+      ),
+    },
+    {
+      key: "resource",
+      header: "Resource",
+      cell: (record) => (
+        <div>
+          {record.resourceLabel ?? record.resourceId ?? "—"}
+          {record.resourceType && (
+            <div className="text-xs text-slate-400">{record.resourceType}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "summary",
+      header: "Summary",
+      cell: (record) => record.summary ?? "—",
+    },
+    {
+      key: "outcome",
+      header: "Outcome",
+      cell: (record) => <OutcomeChip outcome={record.outcome} />,
+    },
+    ...(isAllTenants
+      ? [
+          {
+            key: "tenant",
+            header: "Tenant",
+            cell: (record: AuditRecord) =>
+              record.tenantId ? tenantNames.get(record.tenantId) ?? record.tenantId : "—",
+          } satisfies ResponsiveTableColumn<AuditRecord>,
+        ]
+      : []),
+  ];
 
   return (
     <div>
@@ -363,86 +431,24 @@ export function AuditLog() {
         </Card>
       ) : (
         <>
-          <Card className="p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  {/* No sortable headers: with a server cursor window, a column
-                      sort would reorder only the rows already loaded. */}
-                  <th className="px-5 py-3 font-medium">
-                    When <span className="font-normal normal-case text-slate-400">(newest first)</span>
-                  </th>
-                  <th className="px-5 py-3 font-medium">Actor</th>
-                  <th className="px-5 py-3 font-medium">Action</th>
-                  <th className="px-5 py-3 font-medium">Resource</th>
-                  <th className="px-5 py-3 font-medium">Summary</th>
-                  <th className="px-5 py-3 font-medium">Outcome</th>
-                  {isAllTenants && <th className="px-5 py-3 font-medium">Tenant</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((record) => (
-                  <tr
-                    key={record.id}
-                    onClick={() => setDetail(record)}
-                    className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                  >
-                    <td className="whitespace-nowrap px-5 py-3 text-slate-500">
-                      {fmt(record.at)}
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">
-                      {isSystemActor(record.engineer) ? (
-                        <span className="flex items-center gap-2">
-                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
-                            System
-                          </span>
-                          {systemActorLabel(record.engineer)}
-                        </span>
-                      ) : (
-                        record.engineer
-                      )}
-                    </td>
-                    <td className="px-5 py-3 font-medium text-slate-800">
-                      {actionLabel(record)}
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">
-                      {record.resourceLabel ?? record.resourceId ?? "—"}
-                      {record.resourceType && (
-                        <div className="text-xs text-slate-400">{record.resourceType}</div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">{record.summary ?? "—"}</td>
-                    <td className="px-5 py-3">
-                      <OutcomeChip outcome={record.outcome} />
-                    </td>
-                    {isAllTenants && (
-                      <td className="px-5 py-3 text-slate-500">
-                        {record.tenantId
-                          ? tenantNames.get(record.tenantId) ?? record.tenantId
-                          : "—"}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-              {hasNextPage && (
-                <tfoot>
-                  <tr>
-                    <td colSpan={columnCount} className="border-t border-slate-100 px-5 py-3">
-                      <button
-                        type="button"
-                        onClick={() => fetchNextPage()}
-                        disabled={isFetchingNextPage}
-                        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                      >
-                        {isFetchingNextPage ? "Loading…" : "Load more"}
-                      </button>
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </Card>
+          <ResponsiveTable
+            columns={auditColumns}
+            rows={rows}
+            rowKey={(record) => record.id}
+            onRowClick={setDetail}
+            footer={
+              hasNextPage ? (
+                <button
+                  type="button"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  {isFetchingNextPage ? "Loading…" : "Load more"}
+                </button>
+              ) : undefined
+            }
+          />
 
           <p className="mt-3 text-xs text-slate-400">
             Showing {rows.length} event{rows.length === 1 ? "" : "s"}

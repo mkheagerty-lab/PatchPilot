@@ -14,7 +14,7 @@ import {
 } from "@patchpilot/shared";
 import { api, ApiError, type User } from "../../lib/api";
 import { useEngineer } from "../../lib/auth";
-import { Card, PageHeader } from "../../components/ui";
+import { Card, PageHeader, ResponsiveTable, type ResponsiveTableColumn } from "../../components/ui";
 import { SortIcon, type SortDir } from "../../components/cve";
 
 const INPUT_CLASS =
@@ -69,34 +69,30 @@ function formatDate(iso: string | null): string {
   });
 }
 
-function SortableTh({
+function SortableLabel({
   label,
   sortKey,
   activeKey,
   dir,
   onSort,
-  align = "left",
 }: {
   label: string;
   sortKey: SortKey;
   activeKey: SortKey;
   dir: SortDir;
   onSort: (key: SortKey) => void;
-  align?: "left" | "right";
 }) {
   const active = sortKey === activeKey;
   return (
-    <th className={`px-4 py-2.5 font-medium ${align === "right" ? "text-right" : ""}`}>
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700"
-      >
-        {label}
-        <SortIcon active={active} dir={dir} />
-      </button>
-    </th>
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+    >
+      {label}
+      <SortIcon active={active} dir={dir} />
+    </button>
   );
 }
 
@@ -263,6 +259,213 @@ export function Users() {
   }, [users, search, sortKey, sortDir]);
 
   const canSubmit = !!upn.trim() && !!displayName.trim() && !create.isPending;
+
+  const userColumns: ResponsiveTableColumn<User>[] = [
+    {
+      key: "name",
+      primary: true,
+      header: (
+        <SortableLabel label="Name" sortKey="name" activeKey={sortKey} dir={sortDir} onSort={onSort} />
+      ),
+      cell: (u) => (
+        <>
+          {u.displayName}
+          {u.upn.toLowerCase() === selfUpn && (
+            <span className="ml-2 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+              You
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "upn",
+      header: <SortableLabel label="UPN" sortKey="upn" activeKey={sortKey} dir={sortDir} onSort={onSort} />,
+      mobileLabel: "UPN",
+      cell: (u) => <span className="font-mono text-xs">{u.upn}</span>,
+    },
+    {
+      key: "role",
+      header: <SortableLabel label="Role" sortKey="role" activeKey={sortKey} dir={sortDir} onSort={onSort} />,
+      mobileLabel: "Role",
+      cell: (u) => {
+        const isSelf = u.upn.toLowerCase() === selfUpn;
+        const isLastActiveAdmin = u.role === "admin" && u.status === "active" && activeAdminCount <= 1;
+        const locked = isSelf || isLastActiveAdmin;
+        const lockedTitle = isSelf
+          ? "You can't change your own role or status."
+          : isLastActiveAdmin
+            ? "This is the last active admin — promote another admin first."
+            : undefined;
+        const busy = savingId === u.id;
+        return (
+          <select
+            value={u.role}
+            disabled={locked || busy}
+            title={lockedTitle}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => patch.mutate({ id: u.id, body: { role: e.target.value as Role } })}
+            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          >
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABELS[r]}
+              </option>
+            ))}
+          </select>
+        );
+      },
+    },
+    {
+      key: "status",
+      header: (
+        <SortableLabel label="Status" sortKey="status" activeKey={sortKey} dir={sortDir} onSort={onSort} />
+      ),
+      mobileLabel: "Status",
+      cell: (u) => {
+        const isSelf = u.upn.toLowerCase() === selfUpn;
+        const isLastActiveAdmin = u.role === "admin" && u.status === "active" && activeAdminCount <= 1;
+        const locked = isSelf || isLastActiveAdmin;
+        const lockedTitle = isSelf
+          ? "You can't change your own role or status."
+          : isLastActiveAdmin
+            ? "This is the last active admin — promote another admin first."
+            : undefined;
+        const busy = savingId === u.id;
+        return (
+          <button
+            type="button"
+            disabled={locked || busy}
+            title={
+              lockedTitle ??
+              (u.status === "active"
+                ? "Disable this account — blocks sign-in immediately."
+                : "Re-enable this account.")
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              patch.mutate({ id: u.id, body: { status: u.status === "active" ? "disabled" : "active" } });
+            }}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${STATUS_STYLE[u.status]}`}
+          >
+            {busy ? "Saving…" : USER_STATUS_LABELS[u.status]}
+          </button>
+        );
+      },
+    },
+    {
+      key: "lastLogin",
+      header: (
+        <SortableLabel
+          label="Last sign-in"
+          sortKey="lastLogin"
+          activeKey={sortKey}
+          dir={sortDir}
+          onSort={onSort}
+        />
+      ),
+      mobileLabel: "Last sign-in",
+      cell: (u) => <span className="text-xs">{formatDate(u.lastLoginAt)}</span>,
+    },
+    {
+      key: "invitedBy",
+      header: (
+        <SortableLabel
+          label="Added by"
+          sortKey="invitedBy"
+          activeKey={sortKey}
+          dir={sortDir}
+          onSort={onSort}
+        />
+      ),
+      cell: (u) => <span className="text-xs">{u.invitedBy ?? "—"}</span>,
+      hideOnMobile: true,
+    },
+    {
+      key: "added",
+      header: <SortableLabel label="Added" sortKey="added" activeKey={sortKey} dir={sortDir} onSort={onSort} />,
+      mobileLabel: "Added",
+      cell: (u) => <span className="text-xs">{formatDate(u.createdAt)}</span>,
+    },
+    {
+      key: "alerts",
+      header: "Alerts",
+      cell: (u) => {
+        const busy = savingId === u.id;
+        return (
+          <button
+            type="button"
+            disabled={busy}
+            title={
+              u.receiveJobAlerts
+                ? "Receiving job/sync failure alert emails. Click to opt out."
+                : "Not receiving alert emails. Click to opt in."
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              patch.mutate({ id: u.id, body: { receiveJobAlerts: !u.receiveJobAlerts } });
+            }}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              u.receiveJobAlerts
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+                : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+            }`}
+          >
+            {busy ? "Saving…" : u.receiveJobAlerts ? "On" : "Off"}
+          </button>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      fullWidthOnMobile: true,
+      cell: (u) => {
+        const isSelf = u.upn.toLowerCase() === selfUpn;
+        const isLastActiveAdmin = u.role === "admin" && u.status === "active" && activeAdminCount <= 1;
+        const locked = isSelf || isLastActiveAdmin;
+        const lockedTitle = isSelf
+          ? "You can't change your own role or status."
+          : isLastActiveAdmin
+            ? "This is the last active admin — promote another admin first."
+            : undefined;
+        const busy = savingId === u.id;
+        return (
+          <div className="inline-flex items-center gap-2">
+            <button
+              type="button"
+              disabled={isSelf || busy}
+              title={
+                isSelf
+                  ? "You can't revoke your own background access."
+                  : "Revoke this person's cached background-access session — used by hourly auto-sync and their schedules. Does not disable their account."
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                revoke.mutate(u.id);
+              }}
+              className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Revoke access
+            </button>
+            <button
+              type="button"
+              disabled={locked || busy}
+              title={lockedTitle}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPendingDelete(u);
+              }}
+              className="rounded-md border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-500/30 dark:text-rose-400 dark:hover:bg-rose-500/10"
+            >
+              Remove
+            </button>
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <div>
@@ -464,157 +667,27 @@ export function Users() {
           </div>
         ) : (
           <>
-            <div className="border-b border-slate-100 p-3">
+            <div className="p-3">
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name or UPN…"
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 sm:w-80"
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 sm:w-80 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder:text-slate-500"
               />
             </div>
             {visible.length === 0 ? (
               <div className="p-5 text-sm text-slate-500">No users match "{search}".</div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                    <SortableTh label="Name" sortKey="name" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                    <SortableTh label="UPN" sortKey="upn" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                    <SortableTh label="Role" sortKey="role" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                    <SortableTh label="Status" sortKey="status" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                    <SortableTh label="Last sign-in" sortKey="lastLogin" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                    <SortableTh label="Added by" sortKey="invitedBy" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                    <SortableTh label="Added" sortKey="added" activeKey={sortKey} dir={sortDir} onSort={onSort} />
-                    <th className="px-4 py-2.5 font-medium">Alerts</th>
-                    <th className="px-4 py-2.5 font-medium text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visible.map((u) => {
-                    const isSelf = u.upn.toLowerCase() === selfUpn;
-                    const isLastActiveAdmin =
-                      u.role === "admin" && u.status === "active" && activeAdminCount <= 1;
-                    // Own row and the last standing admin both stay locked — the
-                    // server enforces this either way, but a control that's
-                    // disabled up front reads better than one that 409s on click.
-                    const locked = isSelf || isLastActiveAdmin;
-                    const lockedTitle = isSelf
-                      ? "You can't change your own role or status."
-                      : isLastActiveAdmin
-                        ? "This is the last active admin — promote another admin first."
-                        : undefined;
-                    const busy = savingId === u.id;
-                    return (
-                      <tr key={u.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                        <td className="px-4 py-2.5 font-medium text-slate-800">
-                          {u.displayName}
-                          {isSelf && (
-                            <span className="ml-2 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-indigo-700">
-                              You
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 font-mono text-xs text-slate-500">{u.upn}</td>
-                        <td className="px-4 py-2.5">
-                          <select
-                            value={u.role}
-                            disabled={locked || busy}
-                            title={lockedTitle}
-                            onChange={(e) =>
-                              patch.mutate({ id: u.id, body: { role: e.target.value as Role } })
-                            }
-                            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {ROLES.map((r) => (
-                              <option key={r} value={r}>
-                                {ROLE_LABELS[r]}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <button
-                            type="button"
-                            disabled={locked || busy}
-                            title={
-                              lockedTitle ??
-                              (u.status === "active"
-                                ? "Disable this account — blocks sign-in immediately."
-                                : "Re-enable this account.")
-                            }
-                            onClick={() =>
-                              patch.mutate({
-                                id: u.id,
-                                body: { status: u.status === "active" ? "disabled" : "active" },
-                              })
-                            }
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${STATUS_STYLE[u.status]}`}
-                          >
-                            {busy ? "Saving…" : USER_STATUS_LABELS[u.status]}
-                          </button>
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-slate-500">
-                          {formatDate(u.lastLoginAt)}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-slate-500">{u.invitedBy ?? "—"}</td>
-                        <td className="px-4 py-2.5 text-xs text-slate-500">{formatDate(u.createdAt)}</td>
-                        <td className="px-4 py-2.5">
-                          <button
-                            type="button"
-                            disabled={busy}
-                            title={
-                              u.receiveJobAlerts
-                                ? "Receiving job/sync failure alert emails. Click to opt out."
-                                : "Not receiving alert emails. Click to opt in."
-                            }
-                            onClick={() =>
-                              patch.mutate({ id: u.id, body: { receiveJobAlerts: !u.receiveJobAlerts } })
-                            }
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                              u.receiveJobAlerts
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-slate-100 text-slate-500"
-                            }`}
-                          >
-                            {busy ? "Saving…" : u.receiveJobAlerts ? "On" : "Off"}
-                          </button>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              type="button"
-                              disabled={isSelf || busy}
-                              title={
-                                isSelf
-                                  ? "You can't revoke your own background access."
-                                  : "Revoke this person's cached background-access session — used by hourly auto-sync and their schedules. Does not disable their account."
-                              }
-                              onClick={() => revoke.mutate(u.id)}
-                              className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Revoke access
-                            </button>
-                            <button
-                              type="button"
-                              disabled={locked || busy}
-                              title={lockedTitle}
-                              onClick={() => setPendingDelete(u)}
-                              className="rounded-md border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+            ) : null}
           </>
         )}
       </Card>
+
+      {!isLoading && users.length > 0 && visible.length > 0 && (
+        <div className="mt-3">
+          <ResponsiveTable columns={userColumns} rows={visible} rowKey={(u) => u.id} />
+        </div>
+      )}
 
       {pendingDelete && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4">

@@ -52,11 +52,13 @@ import {
   MsStoreChip,
   PageHeader,
   prettyRemediationType,
+  ResponsiveTable,
   ScopeChip,
   SeverityChip,
   SlaChip,
   SlideOver,
   UNSUPPORTED_REMEDIATION_REASON,
+  type ResponsiveTableColumn,
 } from "../components/ui";
 import {
   CveDetailBody,
@@ -1267,6 +1269,105 @@ export function Devices() {
     downloadCsv("devices.csv", csv);
   }
 
+  const deviceColumns: ResponsiveTableColumn<Device>[] = [
+    {
+      key: "hostname",
+      primary: true,
+      header: "Hostname",
+      cell: (d) => (
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-slate-800 dark:text-slate-100">{d.hostname}</span>
+            {d.excluded && <ExcludedChip reason={d.exclusionReason} />}
+          </div>
+          {d.owner && <div className="text-xs text-slate-400">{d.owner}</div>}
+        </div>
+      ),
+    },
+    ...(isAllTenants
+      ? [
+          {
+            key: "tenant",
+            header: "Customer Tenant",
+            cell: (d: Device) => tenantNames.get(d.tenantId) ?? d.tenantId,
+          } satisfies ResponsiveTableColumn<Device>,
+        ]
+      : []),
+    {
+      key: "os",
+      header: "OS",
+      cell: (d) => (
+        <div className="flex items-center gap-1.5">
+          <span>{d.os}</span>
+          {isDeviceBehindFeatureUpdate(
+            d.osBuild,
+            d.os,
+            featureUpdateTargetBuildByTenant.get(d.tenantId) ?? resolveTargetBuild(null),
+          ) && (
+            <span
+              className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
+              title="Behind the feature-update target"
+            >
+              Behind
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "sla",
+      header: "SLA Compliance",
+      cell: (d) => <ComplianceChip compliance={d.compliance} />,
+    },
+    {
+      key: "vulns",
+      header: "Vulns",
+      cell: (d) => d.vulnerabilityCount,
+    },
+    {
+      key: "lastSeen",
+      header: "Last seen",
+      cell: (d) => (d.lastSeen ? new Date(d.lastSeen).toLocaleString() : "—"),
+    },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      fullWidthOnMobile: true,
+      cell: (d) => {
+        const exclusion = activeExclusionByManagedId.get(d.managedDeviceId);
+        return (
+          <div className="flex justify-end">
+            {d.excluded ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (exclusion) stopExclusion.mutate(exclusion.id);
+                }}
+                disabled={!exclusion || stopExclusion.isPending}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Stop exclusion
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExclusionTarget([d]);
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Exclude
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -1454,139 +1555,36 @@ export function Devices() {
         </Card>
       )}
 
-      <Card className="p-0">
-        {isLoading ? (
-          <div className="p-5 text-sm text-slate-500">Loading…</div>
-        ) : sorted.length === 0 ? (
-          <div className="p-5 text-sm text-slate-500">
+      {isLoading ? (
+        <Card className="border-dashed">
+          <p className="text-sm text-slate-500">Loading…</p>
+        </Card>
+      ) : sorted.length === 0 ? (
+        <Card className="border-dashed">
+          <p className="text-sm text-slate-500">
             {devices.length === 0
               ? isAllTenants
                 ? "No devices across any tenant yet."
                 : "No devices for this tenant."
               : "No devices match this filter."}
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="w-10 px-5 py-3 font-medium">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all devices"
-                    checked={allVisibleChecked}
-                    onChange={() =>
-                      setCheckedIds(
-                        allVisibleChecked
-                          ? new Set()
-                          : new Set(sorted.map((d) => d.id)),
-                      )
-                    }
-                    className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
-                  />
-                </th>
-                <th className="px-5 py-3 font-medium">Hostname</th>
-                {isAllTenants && (
-                  <th className="px-5 py-3 font-medium">Customer Tenant</th>
-                )}
-                <th className="px-5 py-3 font-medium">OS</th>
-                <th
-                  className="px-5 py-3 font-medium"
-                  title="Compliance against remediation SLAs, not Intune device compliance."
-                >
-                  SLA Compliance
-                </th>
-                <th className="px-5 py-3 font-medium">Vulns</th>
-                <th className="px-5 py-3 font-medium">Last seen</th>
-                <th className="px-5 py-3 text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((d) => {
-                const exclusion = activeExclusionByManagedId.get(d.managedDeviceId);
-                return (
-                <tr
-                  key={d.id}
-                  onClick={() => setSelected(d)}
-                  className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                >
-                  <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${d.hostname}`}
-                      checked={checkedIds.has(d.id)}
-                      onChange={() => toggleChecked(d.id)}
-                      className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
-                    />
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-800">
-                        {d.hostname}
-                      </span>
-                      {d.excluded && <ExcludedChip reason={d.exclusionReason} />}
-                    </div>
-                    {d.owner && (
-                      <div className="text-xs text-slate-400">{d.owner}</div>
-                    )}
-                  </td>
-                  {isAllTenants && (
-                    <td className="px-5 py-3 text-slate-600">
-                      {tenantNames.get(d.tenantId) ?? d.tenantId}
-                    </td>
-                  )}
-                  <td className="px-5 py-3 text-slate-600">
-                    <div className="flex items-center gap-1.5">
-                      <span>{d.os}</span>
-                      {isDeviceBehindFeatureUpdate(
-                        d.osBuild,
-                        d.os,
-                        featureUpdateTargetBuildByTenant.get(d.tenantId) ?? resolveTargetBuild(null),
-                      ) && (
-                        <span
-                          className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
-                          title="Behind the feature-update target"
-                        >
-                          Behind
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <ComplianceChip compliance={d.compliance} />
-                  </td>
-                  <td className="px-5 py-3 text-slate-700">
-                    {d.vulnerabilityCount}
-                  </td>
-                  <td className="px-5 py-3 text-slate-500">
-                    {d.lastSeen ? new Date(d.lastSeen).toLocaleString() : "—"}
-                  </td>
-                  <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                    {d.excluded ? (
-                      <button
-                        type="button"
-                        onClick={() => exclusion && stopExclusion.mutate(exclusion.id)}
-                        disabled={!exclusion || stopExclusion.isPending}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
-                      >
-                        Stop exclusion
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setExclusionTarget([d])}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                      >
-                        Exclude
-                      </button>
-                    )}
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </Card>
+          </p>
+        </Card>
+      ) : (
+        <ResponsiveTable
+          columns={deviceColumns}
+          rows={sorted}
+          rowKey={(d) => d.id}
+          onRowClick={setSelected}
+          selection={{
+            isSelected: (d) => checkedIds.has(d.id),
+            onToggle: (d) => toggleChecked(d.id),
+            allSelected: allVisibleChecked,
+            onToggleAll: () =>
+              setCheckedIds(allVisibleChecked ? new Set() : new Set(sorted.map((d) => d.id))),
+            ariaLabel: (d) => `Select ${d.hostname}`,
+          }}
+        />
+      )}
 
       <WizardShell
         open={selected !== null}
