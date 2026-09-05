@@ -139,6 +139,22 @@ services:
   # queued-and-due row and, when it finds one, does the actual
   # git-pull + rebuild + restart. See infra/updater/run.sh for the loop and
   # why it can never rebuild/kill itself.
+  #
+  # REPO_DIR/the bind-mount target below MUST equal /opt/patchpilot — the
+  # real host-side checkout path (see infra/azure/cloud-init.yaml and
+  # infra/azure/README.md, which both hardcode it). This container reaches
+  # the HOST's Docker daemon through the mounted socket, but `docker compose`
+  # still runs its own process inside this container and resolves the
+  # compose file's relative bind-mount sources (./Caddyfile, ./backup.sh)
+  # against ITS OWN cwd. Those resolved absolute paths are then sent to the
+  # host daemon as bind-mount sources, which the host resolves against the
+  # REAL host filesystem — not this container's view. Mounting the checkout
+  # at any path other than its true host path (this used to be `/repo`)
+  # makes that resolved path not exist on the host; Docker then silently
+  # auto-creates it as an empty directory and the bind mount fails with
+  # "not a directory" for any service with a file bind-mount (caddy,
+  # backup) — which took down the whole VM on 2026-09-05. Keeping this
+  # path identical on both sides of the mount is the actual fix.
   updater:
     build:
       context: ..
@@ -146,11 +162,11 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://patchpilot:${POSTGRES_PASSWORD}@postgres:5432/patchpilot
-      REPO_DIR: /repo
+      REPO_DIR: /opt/patchpilot
       POLL_INTERVAL_SECONDS: "15"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ..:/repo
+      - ..:/opt/patchpilot
     depends_on:
       postgres:
         condition: service_healthy
