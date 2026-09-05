@@ -12,6 +12,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fix Settings > Branding's "Match colours to logo" actually applying the
+  saved primary/secondary/accent/sidebar colours app-wide, not just saving
+  them; add the default PatchPilot logo to the device pairing page.
+- Setup Health > Connections now reuses App Registration's permission pill
+  styling and failed-scope error banners for a consistent look between the
+  two pages.
+- Add an "Auto-assign" button to Settings > License that evenly splits the
+  Live Response device pool across every write-enabled tenant (zeroing
+  read-only ones), instead of setting each tenant's allocation by hand.
+
 ## [0.6.0] - 2026-09-05
 
 - Make the sidebar collapsible (persisted across reloads) with a slide-in
