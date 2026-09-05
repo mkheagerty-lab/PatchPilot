@@ -36,6 +36,22 @@ sql_escape() {
   printf '%s' "$1" | sed "s/'/''/g"
 }
 
+# Strips anything outside printable ASCII (+ tab/LF/CR) from captured
+# build/git output before it ever reaches sql_escape/psql. Needed because
+# `tail -c` below cuts on a raw byte count, not a character boundary — if
+# that cut lands inside a multi-byte UTF-8 sequence (very plausible across a
+# whole rebuild's worth of Docker/BuildKit/npm output), it leaves an
+# orphaned continuation byte that Postgres rejects with "invalid byte
+# sequence for encoding UTF8". That happened for real on 2026-09-05: the
+# update itself succeeded but this write-back failed, stranding the row at
+# status='running' forever — the exact "stuck on in-progress" symptom this
+# sidecar exists to avoid. The `output` column is a diagnostic log, not
+# meant to render, so losing the odd non-ASCII character is a fine trade for
+# guaranteeing every write-back is valid UTF-8.
+sanitize_output() {
+  tr -cd '\11\12\15\40-\176'
+}
+
 while true; do
   # -q suppresses the "UPDATE n" command-completion tag. Without it, when
   # this UPDATE...RETURNING matches zero rows (the normal case: nothing
@@ -90,7 +106,7 @@ while true; do
 
     while kill -0 "$BUILD_PID" 2>/dev/null; do
       sleep 3
-      PARTIAL=$(tail -c 20000 "$LOGFILE" 2>/dev/null || true)
+      PARTIAL=$(tail -c 20000 "$LOGFILE" 2>/dev/null | sanitize_output || true)
       # Best-effort: a flush failing mid-run (e.g. postgres briefly restarting
       # as part of $SERVICES) just means one skipped log update, not a
       # crash — the final write below is the one that must succeed.
@@ -101,12 +117,18 @@ while true; do
     wait "$BUILD_PID" && STATUS=succeeded || STATUS=failed
     # Bound what gets written back — a runaway build log shouldn't blow out
     # the `output` column.
-    OUT=$(tail -c 20000 "$LOGFILE" 2>/dev/null || true)
+    OUT=$(tail -c 20000 "$LOGFILE" 2>/dev/null | sanitize_output || true)
     rm -f "$LOGFILE"
 
     echo "[updater] run $RUN_ID finished: $STATUS"
-    psql "$DATABASE_URL" -q -c "UPDATE update_runs SET status='$(sql_escape "$STATUS")', finished_at=now(), output='$(sql_escape "$OUT")' WHERE id='$(sql_escape "$RUN_ID")';" \
-      || echo "[updater] WARNING: failed to write back status for run $RUN_ID — it will stay stuck at 'running' until fixed manually." >&2
+    if ! psql "$DATABASE_URL" -q -c "UPDATE update_runs SET status='$(sql_escape "$STATUS")', finished_at=now(), output='$(sql_escape "$OUT")' WHERE id='$(sql_escape "$RUN_ID")';"; then
+      echo "[updater] WARNING: write-back with output failed for run $RUN_ID — retrying status-only so it doesn't get stranded at 'running'." >&2
+      # Belt-and-braces on top of sanitize_output: whatever broke the write
+      # above (output content or otherwise), recording status/finished_at
+      # alone matters far more than the diagnostic log for that one run.
+      psql "$DATABASE_URL" -q -c "UPDATE update_runs SET status='$(sql_escape "$STATUS")', finished_at=now() WHERE id='$(sql_escape "$RUN_ID")';" \
+        || echo "[updater] WARNING: status-only write-back also failed for run $RUN_ID — it will stay stuck at 'running' until fixed manually." >&2
+    fi
   fi
 
   sleep "$INTERVAL"
