@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.8.0] - 2026-09-06
+
 - Add home-tenant access groups so a PatchPilot user's real Microsoft write
   privilege in the MSP's own tenant is granted and revoked from Settings >
   Users, instead of depending on whatever Entra role they happen to already
