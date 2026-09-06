@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm release:*)",
+      "Bash(gh pr merge:*)"
+    ]
+  }
+}
