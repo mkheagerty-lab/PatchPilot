@@ -12,6 +12,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Add home-tenant access groups so a PatchPilot user's real Microsoft write
+  privilege in the MSP's own tenant is granted and revoked from Settings >
+  Users, instead of depending on whatever Entra role they happen to already
+  hold; every new user gets read-only access automatically, and write access
+  is an explicit, Global-Administrator-confirmed toggle. Architecture page
+  now documents both tenants' prerequisites and the Entra role -> API
+  permission mapping behind them.
+
 ## [0.7.0] - 2026-09-05
 
 - Fix Settings > Branding's "Match colours to logo" actually applying the
