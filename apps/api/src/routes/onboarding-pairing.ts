@@ -58,6 +58,15 @@ const pairBodySchema = z.object({
   // through verbatim as JSON null, and z.string().min(1).optional() rejects
   // null (it only accepts undefined) — 400ing pairing entirely.
   adminUpn: z.string().min(1).nullish(),
+  // Object IDs of the two home-tenant role-assignable security groups
+  // Deploy-PatchPilot.ps1 provisions (see packages/graph/src/access-groups.ts).
+  // .nullish() for the same reason as adminUpn above: the script sends these
+  // as best-effort (it degrades gracefully — prints the required groups/roles
+  // and continues — when the signed-in admin lacked Global Administrator/
+  // Privileged Role Administrator), and a caller that can't determine them
+  // must never be the reason the whole pairing request 400s.
+  readOnlyGroupId: z.string().min(1).nullish(),
+  writeGroupId: z.string().min(1).nullish(),
 });
 
 export async function onboardingPairingRoutes(app: FastifyInstance): Promise<void> {
@@ -135,6 +144,33 @@ export async function onboardingPairingRoutes(app: FastifyInstance): Promise<voi
             value: { upn: body.adminUpn, source: "onboarding-pairing", pairedAt: new Date().toISOString() },
           })
           .onConflictDoNothing({ target: tables.settings.key });
+      }
+
+      // Best-effort, additive only (same reasoning as the bootstrap-admin
+      // block above): only ever write a group ID the script actually
+      // determined, and only when at least one is present. Merged onto
+      // whatever this row already holds (rather than overwritten wholesale)
+      // so a re-pairing (e.g. a client secret rotation) run without group
+      // provisioning — the script failed that step gracefully and sent only
+      // one ID, or neither — never clobbers a group ID a previous pairing
+      // already established.
+      if (body.readOnlyGroupId || body.writeGroupId) {
+        const [existingGroupsRow] = await db
+          .select()
+          .from(tables.settings)
+          .where(eq(tables.settings.key, "patchpilot-access-groups"));
+        const groupIds = {
+          ...(existingGroupsRow?.value as Record<string, string> | undefined),
+          ...(body.readOnlyGroupId ? { readOnlyGroupId: body.readOnlyGroupId } : {}),
+          ...(body.writeGroupId ? { writeGroupId: body.writeGroupId } : {}),
+        };
+        await db
+          .insert(tables.settings)
+          .values({ key: "patchpilot-access-groups", value: groupIds })
+          .onConflictDoUpdate({
+            target: tables.settings.key,
+            set: { value: groupIds, updatedAt: new Date() },
+          });
       }
 
       // Stamps the drift baseline routes/onboarding.ts compares against for

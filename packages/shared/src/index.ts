@@ -18,5 +18,6 @@ export * from "./manual-remediation.js";
 export * from "./text.js";
 export * from "./audit.js";
 export * from "./rbac.js";
+export * from "./access-groups.js";
 export * from "./palette.js";
 export * from "./reports.js";

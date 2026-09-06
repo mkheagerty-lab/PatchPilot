@@ -1627,6 +1627,12 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   receiveJobAlerts: boolean;
+  /** Home-tenant access groups — see @patchpilot/shared's access-groups.ts.
+   *  null means "not a confirmed member yet" (never attempted, or attempted
+   *  and failed) — the Users page shows a retry action either way. */
+  readOnlyGroupSyncedAt: string | null;
+  writeAccessEnabled: boolean;
+  writeGroupSyncedAt: string | null;
 }
 
 /** Settings > Notifications — mirrors the public shape from

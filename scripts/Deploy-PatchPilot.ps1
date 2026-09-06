@@ -231,8 +231,49 @@ function New-Base64Key {
     return [Convert]::ToBase64String($bytes)
 }
 
+function Set-EnvFileValue {
+    <#
+        Upserts one KEY=VALUE line into an existing .env-style file in place:
+        replaces the line if KEY= already appears, otherwise appends a new
+        line. Every other line - including the client secret - is left
+        untouched. Used by step [14/15] to persist the two
+        PATCHPILOT_*_GROUP_ID values from step [10/15] even on a run that
+        never rewrites the full .env template (e.g. the existing client
+        secret was still valid, so the "generate a fresh .env" branch never
+        runs) - without this, group creation in step [10/15] would silently
+        never make it into .env at all.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Path,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Key,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Value
+    )
+
+    $lines = @(Get-Content -Path $Path -ErrorAction Stop)
+    $pattern = "^$([regex]::Escape($Key))="
+    $replaced = $false
+    $updated = @($lines | ForEach-Object {
+        if ($_ -match $pattern) {
+            $replaced = $true
+            "$Key=$Value"
+        }
+        else {
+            $_
+        }
+    })
+    if (-not $replaced) {
+        $updated += "$Key=$Value"
+    }
+    Set-Content -Path $Path -Value $updated
+}
+
 function Ensure-MicrosoftGraphModules {
-    Write-Step "[1/14] Checking Microsoft Graph PowerShell modules..."
+    Write-Step "[1/15] Checking Microsoft Graph PowerShell modules..."
 
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -244,8 +285,30 @@ function Ensure-MicrosoftGraphModules {
     $requiredModules = @(
         "Microsoft.Graph.Authentication",
         "Microsoft.Graph.Applications",
-        "Microsoft.Graph.Identity.DirectoryManagement",
-        "Microsoft.Graph.Identity.Partner"
+        "Microsoft.Graph.Identity.DirectoryManagement"
+        # Microsoft.Graph.Identity.Partner was only ever imported for
+        # Get-MgTenantRelationshipDelegatedAdminRelationship (step [11/15]),
+        # which is now a raw Invoke-MgGraphRequest call against
+        # tenantRelationships/delegatedAdminRelationships instead (see that
+        # step below) - the SDK cmdlet's own -Filter turned out to be no more
+        # trustworthy here than the ones already replaced below, so there was
+        # no remaining reason to import a whole extra cmdlet-heavy module for
+        # a single, now-unused cmdlet.
+        #
+        # Home-tenant access groups (PatchPilot Read-Only Access / PatchPilot
+        # Write Access - see docs/onboarding-design.md and
+        # Get-OrCreate-AccessGroup/Grant-GroupDirectoryRole below) deliberately
+        # do NOT add Microsoft.Graph.Groups or Microsoft.Graph.Identity.Governance
+        # here. Both were tried first and Microsoft.Graph.Identity.Governance's
+        # Import-Module threw System.OutOfMemoryException on a live run against
+        # this tenant - that submodule dynamically compiles an unusually large
+        # number of proxy cmdlets (entitlement management, access reviews, PIM,
+        # roleManagement, ...) and is a known-heavy import even when it succeeds.
+        # Group creation and role assignment instead go through
+        # Invoke-MgGraphRequest, which ships in Microsoft.Graph.Authentication
+        # (already required above) - same raw-REST-over-the-typed-SDK approach
+        # already used server-side for one-shot Graph calls (see
+        # packages/graph/src/app-registration-sync.ts's graphFetch).
     )
 
     if (-not (Get-Module -ListAvailable -Name "Microsoft.Graph")) {
@@ -409,6 +472,232 @@ function Set-DelegatedAdminConsent {
     }
 }
 
+function Get-GraphAllPages {
+    <#
+        GETs $Uri and follows @odata.nextLink until exhausted, returning the
+        concatenated "value" arrays as a flat PowerShell array.
+
+        Replaces an earlier server-side $filter=... approach
+        (Invoke-GraphFilterLookup): a live run against this tenant showed
+        "groups?$filter=displayName eq '...'" - even with Microsoft's
+        documented ConsistencyLevel: eventual + $count=true workaround for
+        directory-object $filter reliability - silently return every group
+        in the tenant (35 of them) instead of the one requested, with the
+        Graph SDK's own response.value[0] coming back $null on top of that.
+        Rather than keep chasing that (undiagnosed, possibly
+        SDK-version-specific) $filter behaviour, this script now lists
+        everything once and filters client-side in PowerShell. These are
+        one-time admin-run lookups (groups, role definitions, role
+        assignments for one group) against a single tenant, not a hot path,
+        so the extra round trips are irrelevant and this sidesteps the
+        entire class of $filter bugs outright.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Uri
+    )
+
+    $allItems = @()
+    $nextUri = $Uri
+    while ($nextUri) {
+        try {
+            $response = Invoke-MgGraphRequest -Method GET -Uri $nextUri -ErrorAction Stop
+        }
+        catch {
+            # Surface Graph's actual JSON error body (code + message), not
+            # just the generic "BadRequest" HTTP status text - that's all
+            # $_.Exception.Message gives you, and it hides which query
+            # parameter Graph actually objected to.
+            $graphErrorDetail = $_.Exception.Message
+            try {
+                $parsed = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop
+                if ($parsed.error) {
+                    $graphErrorDetail = "$($parsed.error.code): $($parsed.error.message)"
+                }
+            }
+            catch {
+                # Response body wasn't JSON (or wasn't captured) - fall back
+                # to the exception's own message set above.
+            }
+            Write-WarningMessage "Graph list request on $nextUri failed: $graphErrorDetail"
+            return @($allItems | Where-Object { $_ })
+        }
+
+        if ($response.value) {
+            $allItems += @($response.value)
+        }
+        $nextUri = $response.'@odata.nextLink'
+    }
+    return @($allItems | Where-Object { $_ })
+}
+
+function Get-OrCreate-AccessGroup {
+    <#
+        Idempotent lookup-or-create for one home-tenant role-assignable
+        security group (see docs/onboarding-design.md's "Home-tenant access
+        groups" section and packages/shared/src/access-groups.ts, which is the
+        source of truth for $DisplayName - it must stay byte-identical there
+        and here, since this function's own idempotent re-run depends on an
+        exact displayName match). Creating a role-assignable group requires
+        Global Administrator or Privileged Role Administrator; on a 403 this
+        returns $null rather than throwing, so the caller can degrade
+        gracefully (print what's needed, continue the rest of the script).
+
+        Uses Invoke-MgGraphRequest (raw REST, via Microsoft.Graph.Authentication)
+        rather than Get-MgGroup/New-MgGroup - see $requiredModules's own
+        comment for why Microsoft.Graph.Groups isn't a dependency here.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $DisplayName
+    )
+
+    # List every group in the tenant once and match displayName client-side
+    # (see Get-GraphAllPages's comment for why $filter isn't used here).
+    $allGroups = Get-GraphAllPages -Uri "https://graph.microsoft.com/v1.0/groups?`$select=id,displayName&`$top=999"
+    $match = $allGroups | Where-Object { $_.displayName -eq $DisplayName } | Select-Object -First 1
+    if ($match) {
+        if ($match.id) {
+            Write-Success "$DisplayName already exists: $($match.id)"
+            return $match
+        }
+
+        # A match came back with no usable "id" - something about the
+        # response shape wasn't what was expected. Don't fall through to
+        # creation (that would risk a duplicate group with the same
+        # displayName sitting alongside a real one).
+        $candidateType = $match.GetType().FullName
+        $candidateKeys =
+            if ($match -is [System.Collections.IDictionary]) { ($match.Keys -join ', ') }
+            else { (($match | Get-Member -MemberType NoteProperty, Property).Name -join ', ') }
+        Write-WarningMessage "Found a match for '$DisplayName' but couldn't read its id. tenant group count=$($allGroups.Count); item type=$candidateType; item keys=$candidateKeys"
+        return $null
+    }
+
+    try {
+        $group = Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/groups" -Body @{
+            displayName        = $DisplayName
+            mailEnabled        = $false
+            mailNickname       = ($DisplayName -replace '[^a-zA-Z0-9]', '')
+            securityEnabled    = $true
+            isAssignableToRole = $true
+            description        = "Created by Deploy-PatchPilot.ps1 - see docs/onboarding-design.md."
+        } -ErrorAction Stop
+        Write-Success "Created $DisplayName`: $($group.id)"
+        return $group
+    }
+    catch {
+        Write-WarningMessage "Could not create '$DisplayName': $($_.Exception.Message)"
+        return $null
+    }
+}
+
+function Grant-GroupDirectoryRole {
+    <#
+        Idempotently assigns one built-in Entra directory role to a
+        role-assignable group's membership (tenant-wide - directoryScopeId
+        "/"), so every current and future member of the group holds that
+        role. Requires Global Administrator or Privileged Role Administrator,
+        same as group creation above; returns $false (not a throw) on
+        insufficient privilege or a missing role definition so the caller can
+        keep going and report a single combined warning.
+
+        Uses Invoke-MgGraphRequest (raw REST) rather than the typed
+        Get/New-MgRoleManagementDirectory* cmdlets - see $requiredModules's
+        own comment for why Microsoft.Graph.Identity.Governance isn't a
+        dependency here (its Import-Module threw an OutOfMemoryException on a
+        live run against this tenant).
+
+        Retries on a transient BadRequest with exponential backoff: Microsoft
+        documents that a role-assignable group can take a short while to
+        finish replicating after creation, and a role assignment attempted
+        against a group ID from the same run routinely 400s until that
+        settles - confirmed live against this tenant (both new groups'
+        assignments failed instantly on first attempt, seconds after
+        Get-OrCreate-AccessGroup reported them created). A permission
+        problem (Authorization_RequestDenied, e.g. the connected account
+        isn't Global Administrator/Privileged Role Administrator) is
+        recognized from the Graph error code and fails fast instead of
+        wasting the retry budget.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $GroupId,
+
+        [Parameter(Mandatory = $true)]
+        [string] $RoleName,
+
+        [int] $MaxAttempts = 5,
+
+        [int] $InitialDelaySeconds = 6
+    )
+
+    # List + client-side filter, same as Get-OrCreate-AccessGroup - see
+    # Get-GraphAllPages's comment for why $filter isn't trusted here.
+    # No $top here - unlike /groups, this endpoint 400s on $top=999 (exact
+    # limit undocumented/untested further); the default page size plus
+    # Get-GraphAllPages's own @odata.nextLink following covers it either way.
+    $allRoleDefs = Get-GraphAllPages -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions?`$select=id,displayName"
+    $roleDef = $allRoleDefs | Where-Object { $_.displayName -eq $RoleName } | Select-Object -First 1
+    if (-not $roleDef -or -not $roleDef.id) {
+        Write-WarningMessage "Role definition '$RoleName' not found - skipping assignment."
+        return $false
+    }
+    $roleDefId = $roleDef.id
+
+    # No $top here either - see the roleDefinitions call above.
+    $allAssignments = Get-GraphAllPages -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$select=id,principalId,roleDefinitionId"
+    $existing = $allAssignments | Where-Object { $_.principalId -eq $GroupId -and $_.roleDefinitionId -eq $roleDefId }
+    if (@($existing).Count -gt 0) {
+        Write-Success "'$RoleName' already assigned to group $GroupId."
+        return $true
+    }
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments" -Body @{
+                principalId      = $GroupId
+                roleDefinitionId = $roleDefId
+                directoryScopeId = "/"
+            } -ErrorAction Stop | Out-Null
+            Write-Success "Assigned '$RoleName' to group $GroupId."
+            return $true
+        }
+        catch {
+            $graphErrorCode = $null
+            $graphErrorMessage = $_.Exception.Message
+            try {
+                $parsed = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop
+                if ($parsed.error) {
+                    $graphErrorCode = $parsed.error.code
+                    $graphErrorMessage = $parsed.error.message
+                }
+            }
+            catch {
+                # Response body wasn't JSON (or wasn't captured) - fall back
+                # to the exception's own message set above.
+            }
+
+            if ($graphErrorCode -eq "Authorization_RequestDenied") {
+                Write-WarningMessage "Could not assign '$RoleName' to group $GroupId`: insufficient privilege ($graphErrorMessage). The connected account needs Global Administrator or Privileged Role Administrator."
+                return $false
+            }
+
+            if ($attempt -lt $MaxAttempts) {
+                $delaySeconds = $InitialDelaySeconds * [Math]::Pow(2, $attempt - 1)
+                Write-Info "Attempt $attempt/$MaxAttempts to assign '$RoleName' failed (likely still replicating after group creation): $graphErrorMessage - retrying in ${delaySeconds}s..."
+                Start-Sleep -Seconds $delaySeconds
+            }
+            else {
+                Write-WarningMessage "Could not assign '$RoleName' to group $GroupId after $MaxAttempts attempts`: $graphErrorMessage"
+                return $false
+            }
+        }
+    }
+
+    return $false
+}
+
 function Test-RedirectUriExists {
     param(
         [Parameter(Mandatory = $false)]
@@ -500,7 +789,7 @@ try {
     # Connect to Microsoft Graph
     # ------------------------------------------------------------
 
-    Write-Step "[2/14] Connecting to Microsoft Graph..."
+    Write-Step "[2/15] Connecting to Microsoft Graph..."
 
     # Connect-MgGraph's default interactive sign-in tries to open a local
     # system browser and listen for its redirect - there is no such browser
@@ -525,7 +814,7 @@ try {
             # Application.ReadWrite.All creates/updates the app registration and its
             # service principal; DelegatedAdminRelationship.Read.All enumerates GDAP
             # customers for the consent-URL list; DelegatedPermissionGrant.ReadWrite.All
-            # lets step [9/13] grant the home-tenant admin consent programmatically
+            # lets step [9/15] grant the home-tenant admin consent programmatically
             # (create/refresh the AllPrincipals oauth2PermissionGrants) so a re-run
             # after adding a scope re-consents automatically instead of relying on a
             # human clicking a URL. All three are consented interactively by the admin
@@ -536,9 +825,32 @@ try {
             # ("app + user") access.
             "Application.ReadWrite.All",
             "DelegatedAdminRelationship.Read.All",
-            "DelegatedPermissionGrant.ReadWrite.All"
+            "DelegatedPermissionGrant.ReadWrite.All",
+            # Group.ReadWrite.All + RoleManagement.ReadWrite.Directory create/reuse
+            # the two home-tenant "PatchPilot Read-Only Access"/"PatchPilot Write
+            # Access" role-assignable groups and assign Entra directory roles to
+            # them (see docs/onboarding-design.md's "Home-tenant access groups"
+            # section). This is NOT the removed app-only/GDAP-security-group path
+            # above - it grants roles to human engineers' own Entra accounts via
+            # ordinary Entra RBAC, scoped to this home tenant only, and never
+            # touches the app's own service principal or any customer tenant.
+            # Same as the other three: consented interactively here, not a
+            # standing app permission.
+            "Group.ReadWrite.All",
+            "RoleManagement.ReadWrite.Directory"
         )
-        NoWelcome = $true
+        NoWelcome    = $true
+        # Microsoft.Graph.Authentication's default ContextScope ("CurrentUser")
+        # persists the signed-in account's token to disk and silently reuses it
+        # on a LATER run from a different terminal/process - so a re-run can
+        # skip the device-code prompt entirely and continue as whichever
+        # account last signed in here, with no indication that happened.
+        # "Process" keeps the context in memory for this run only, so every
+        # invocation of this script (a new PowerShell process) always prompts
+        # a fresh device code - important since which Microsoft account runs
+        # this script matters: group/role provisioning and GDAP enumeration
+        # both depend on that account's own Entra role assignments.
+        ContextScope = "Process"
     }
 
     if ($isHeadlessSession) {
@@ -552,23 +864,58 @@ try {
 
     Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
 
-    if ($isHeadlessSession) {
-        # The device-code prompt ("go to https://microsoft.com/devicelogin
-        # and enter this code ...") is written by Connect-MgGraph to the
-        # normal success/output stream, not to the host and not to the
-        # Information stream - an earlier fix here wrongly assumed the
-        # latter and added -InformationAction Continue, which did nothing.
-        # Confirmed against https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/2798,
-        # a known SDK issue where the message "fails to display ... since
-        # the output is captured" whenever it's piped or redirected - which
-        # `| Out-Null` (used in the non-headless branch below) does exactly
-        # that. Piping it away here left the script sitting indistinguishable
-        # from actually being hung: it was really waiting on a code the
-        # admin was never shown. Let this branch's output print normally.
-        Connect-MgGraph @connectMgGraphParams
+    # Pause transcription around the sign-in call itself. Connect-MgGraph's
+    # device-code branch below deliberately writes straight to the output
+    # stream (see its own comment) rather than piping through Out-Null - and
+    # that direct write, raced against PowerShell's transcript listener
+    # while it's actively recording, has been observed to throw
+    # "System.Management.Automation.EventSourceException: An error occurred
+    # when writing to a listener" and abort the whole run before sign-in
+    # even completes. Stopping the transcript for just this one call sheds
+    # that race; it resumes (-Append, same file) immediately after, so the
+    # only gap in the log is the sign-in prompt/code itself, which is never
+    # sensitive and is echoed to the console anyway.
+    $transcriptPausedForSignIn = $false
+    if ($transcriptStarted) {
+        try {
+            Stop-Transcript | Out-Null
+            $transcriptPausedForSignIn = $true
+        }
+        catch {
+            Write-Warning "Could not pause transcript for sign-in. Continuing with it active. Error: $($_.Exception.Message)"
+        }
     }
-    else {
-        Connect-MgGraph @connectMgGraphParams | Out-Null
+
+    try {
+        if ($isHeadlessSession) {
+            # The device-code prompt ("go to https://microsoft.com/devicelogin
+            # and enter this code ...") is written by Connect-MgGraph to the
+            # normal success/output stream, not to the host and not to the
+            # Information stream - an earlier fix here wrongly assumed the
+            # latter and added -InformationAction Continue, which did nothing.
+            # Confirmed against https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/2798,
+            # a known SDK issue where the message "fails to display ... since
+            # the output is captured" whenever it's piped or redirected - which
+            # `| Out-Null` (used in the non-headless branch below) does exactly
+            # that. Piping it away here left the script sitting indistinguishable
+            # from actually being hung: it was really waiting on a code the
+            # admin was never shown. Let this branch's output print normally.
+            Connect-MgGraph @connectMgGraphParams
+        }
+        else {
+            Connect-MgGraph @connectMgGraphParams | Out-Null
+        }
+    }
+    finally {
+        if ($transcriptPausedForSignIn) {
+            try {
+                Start-Transcript -Path $transcriptPath -Append | Out-Null
+            }
+            catch {
+                Write-Warning "Could not resume transcript after sign-in. Continuing without transcript. Error: $($_.Exception.Message)"
+                $transcriptStarted = $false
+            }
+        }
     }
 
     $context = Get-MgContext
@@ -620,7 +967,7 @@ try {
     # 1. Create or reuse app registration
     # ------------------------------------------------------------
 
-    Write-Step "[3/14] Creating or reusing Entra ID app registration..."
+    Write-Step "[3/15] Creating or reusing Entra ID app registration..."
 
     $existingApps = @(Get-MgApplication -Filter "displayName eq '$AppDisplayName'" -ErrorAction SilentlyContinue)
 
@@ -665,7 +1012,7 @@ try {
     # 2. Configure API permissions
     # ------------------------------------------------------------
 
-    Write-Step "[4/14] Configuring API permissions..."
+    Write-Step "[4/15] Configuring API permissions..."
 
     # Delegated scopes back BOTH tenant paths. Login and the home-tenant OBO read are
     # delegated; customer tenants use the delegated Secure Application Model (the
@@ -675,7 +1022,11 @@ try {
     #
     # READ-ONLY BY DEFAULT (invariant #11): the arrays below request only read scopes,
     # which are all sync needs. The Phase 5 remediation WRITE scopes are appended only
-    # when -EnableRemediationWriteScopes is passed (see $remediation*WriteScopes).
+    # when -EnableRemediationWriteScopes is passed (see $remediation*WriteScopes). The
+    # one deliberate exception is $accessGroupScopes, appended unconditionally a few
+    # lines down - it's a different class of write (home-tenant RBAC group membership,
+    # not customer-facing remediation) that PatchPilot's own read-only/write-off toggle
+    # gates at the group-membership level, so it isn't behind this flag.
     # NOTE: no Graph-side "Vulnerability.Read.All" here. Nothing in PatchPilot
     # calls a Microsoft Graph vulnerability endpoint - every CVE/vulnerability
     # read goes through Defender's own API ($defenderScopes's "Vulnerability.Read"
@@ -691,6 +1042,32 @@ try {
         "Organization.Read.All",
         "User.Read"
     )
+
+    # Home-tenant access groups (see docs/onboarding-design.md and
+    # packages/graph/src/msal.ts's ACCESS_GROUP_SCOPES, which this must stay in sync
+    # with): lets a signed-in engineer's own one-time step-up consent resolve a
+    # target UPN to its Entra object id (User.Read.All) and add/remove that user
+    # from the two role-assignable groups this script creates below
+    # (GroupMember.ReadWrite.All). RoleManagement.ReadWrite.Directory is also
+    # required here even though this step-up flow never calls roleManagement/*
+    # itself - Graph requires it alongside GroupMember.ReadWrite.All for ANY
+    # add/remove against a role-assignable group's membership, treating that as
+    # equivalent to a role grant/revoke. Live-verified: without it, the group-add
+    # 403s even for a genuine Global Administrator, indistinguishable from the
+    # real "acting engineer lacks Global Administrator/Privileged Role
+    # Administrator" case this flow is also meant to handle gracefully.
+    # Tenant-wide admin consent here only satisfies "is the app allowed to ask" -
+    # Microsoft separately still requires the acting engineer's own Entra role be
+    # Global Administrator/Privileged Role Administrator (or already a member of
+    # the target group) to actually modify a role-assignable group's membership;
+    # that per-call check can't be granted away and is handled as a graceful
+    # in-app failure, not an error, if it's missing.
+    $accessGroupScopes = @(
+        "User.Read.All",
+        "GroupMember.ReadWrite.All",
+        "RoleManagement.ReadWrite.Directory"
+    )
+    $graphScopes += $accessGroupScopes
 
     # Defender for Endpoint names its Application and Delegated permissions
     # DIFFERENTLY for the same read (e.g. get-machines: Machine.Read.All is
@@ -810,7 +1187,7 @@ try {
     # 3. Expose PatchPilot API - idempotent and fixed
     # ------------------------------------------------------------
 
-    Write-Step "[5/14] Exposing PatchPilot API..."
+    Write-Step "[5/15] Exposing PatchPilot API..."
 
     $appIdUri = "api://$($app.AppId)"
 
@@ -952,7 +1329,7 @@ try {
     # 4. Redirect URIs
     # ------------------------------------------------------------
 
-    Write-Step "[6/14] Setting redirect URIs..."
+    Write-Step "[6/15] Setting redirect URIs..."
 
     $current = Get-MgApplication -ApplicationId $app.Id
 
@@ -1003,7 +1380,7 @@ try {
     # 5. Client secret
     # ------------------------------------------------------------
 
-    Write-Step "[7/14] Checking client secret..."
+    Write-Step "[7/15] Checking client secret..."
 
     $current = Get-MgApplication -ApplicationId $app.Id
 
@@ -1048,7 +1425,7 @@ try {
     # 6. Create or reuse local service principal
     # ------------------------------------------------------------
 
-    Write-Step "[8/14] Creating or reusing local service principal..."
+    Write-Step "[8/15] Creating or reusing local service principal..."
 
     $localSps = @(Get-MgServicePrincipal -Filter "appId eq '$($app.AppId)'" -ErrorAction SilentlyContinue)
 
@@ -1071,12 +1448,12 @@ try {
     # 9. Admin consent for delegated permissions (one-time, interactive)
     # ------------------------------------------------------------
 
-    Write-Step "[9/14] Admin consent for delegated permissions..."
+    Write-Step "[9/15] Admin consent for delegated permissions..."
 
     # PatchPilot is delegated-only: every Graph/Defender call carries the signed-in
     # engineer's identity (home tenant via OBO, customers via the Secure Application
     # Model). There are NO application (app-only) roles to assign here. The delegated
-    # scopes declared in step [4/13] only take effect once they are admin-consented in
+    # scopes declared in step [4/15] only take effect once they are admin-consented in
     # THIS partner tenant - otherwise the home-tenant OBO token silently lacks them and
     # licensing (Organization.Read.All) 403s with an empty Licenses column.
     #
@@ -1107,17 +1484,101 @@ try {
     }
 
     # ------------------------------------------------------------
-    # 10. GDAP enumeration
+    # 10. Home-tenant access groups (read-only vs write for engineers)
+    # ------------------------------------------------------------
+    # See docs/onboarding-design.md's "Home-tenant access groups" section. Two
+    # role-assignable security groups grant Entra directory roles to PatchPilot
+    # engineers directly (NOT the app's own service principal, and nothing to do
+    # with GDAP/customer tenants) - PatchPilot manages membership in them via
+    # Settings > Users. Creating/updating a role-assignable group and assigning
+    # directory roles both require Global Administrator or Privileged Role
+    # Administrator; if the connected admin lacks that, this step degrades to a
+    # printed warning naming the groups/roles rather than failing the script.
+
+    Write-Step "[10/15] Provisioning home-tenant access groups..."
+
+    # Keep these byte-identical with packages/shared/src/access-groups.ts, the
+    # source of truth both this script and the API/frontend read from.
+    $readOnlyGroupName = "PatchPilot Read-Only Access"
+    $readOnlyGroupRoles = @("Global Reader", "Security Reader")
+    $writeGroupName = "PatchPilot Write Access"
+    $writeGroupRoles = @("Security Administrator", "Intune Administrator", "Windows Update Deployment Administrator")
+
+    $readOnlyGroupId = $null
+    $writeGroupId = $null
+
+    if ($PSCmdlet.ShouldProcess($MspTenantId, "Create or reuse home-tenant access groups")) {
+        $readOnlyGroup = Get-OrCreate-AccessGroup -DisplayName $readOnlyGroupName
+        $writeGroup = Get-OrCreate-AccessGroup -DisplayName $writeGroupName
+
+        if (-not $readOnlyGroup -or -not $writeGroup) {
+            Write-WarningMessage "Could not create one or both access groups - likely missing Global Administrator/Privileged Role Administrator on the connected account."
+            Write-WarningMessage "Ask a Global Administrator to create these two role-assignable security groups manually and assign the listed roles:"
+            Write-WarningMessage "  - '$readOnlyGroupName': $($readOnlyGroupRoles -join ', ')"
+            Write-WarningMessage "  - '$writeGroupName': $($writeGroupRoles -join ', ')"
+        }
+        else {
+            $readOnlyGroupId = $readOnlyGroup.Id
+            $writeGroupId = $writeGroup.Id
+
+            $allRolesAssigned = $true
+            foreach ($roleName in $readOnlyGroupRoles) {
+                if (-not (Grant-GroupDirectoryRole -GroupId $readOnlyGroupId -RoleName $roleName)) { $allRolesAssigned = $false }
+            }
+            foreach ($roleName in $writeGroupRoles) {
+                if (-not (Grant-GroupDirectoryRole -GroupId $writeGroupId -RoleName $roleName)) { $allRolesAssigned = $false }
+            }
+
+            if ($allRolesAssigned) {
+                Write-Success "Home-tenant access groups ready: '$readOnlyGroupName' ($readOnlyGroupId), '$writeGroupName' ($writeGroupId)."
+            }
+            else {
+                Write-WarningMessage "One or more role assignments failed - see warnings above. PatchPilot will still write group IDs to .env; retry this script once the missing roles are assigned manually."
+            }
+        }
+
+        # Tenant-wide consent for $accessGroupScopes (so the in-app toggle can
+        # attempt a silent prompt=none step-up first) was already granted back
+        # in step [9/15] - $accessGroupScopes is merged into $graphScopes there,
+        # so it rides along with the existing Microsoft Graph consent call. This
+        # only satisfies "is the app allowed to ask" - see $accessGroupScopes's
+        # own comment above for the separate per-call role requirement it does
+        # NOT bypass.
+    }
+
+    # ------------------------------------------------------------
+    # 11. GDAP enumeration
     # ------------------------------------------------------------
 
-    Write-Step "[10/14] Enumerating GDAP tenants..."
+    Write-Step "[11/15] Enumerating GDAP tenants..."
 
     $relationships = @()
 
     try {
-        Write-Info "Querying active GDAP relationships."
+        Write-Info "Querying GDAP relationships."
 
-        $relationships = @(Get-MgTenantRelationshipDelegatedAdminRelationship -Filter "status eq 'active'" -All)
+        # List everything and filter by status client-side rather than
+        # Get-MgTenantRelationshipDelegatedAdminRelationship's own -Filter -
+        # the raw-REST group/role lookups above hit a live case where Graph's
+        # server-side $filter on a directory resource in this tenant quietly
+        # didn't restrict the result set at all, so it's no longer trusted
+        # for a "did we get everything relevant" count like this one either.
+        # Listing all statuses (not just 'active') also means a genuine
+        # "0 active but N in some other status" case prints a breakdown
+        # below instead of looking identical to "really zero relationships".
+        # $select must include `customer` - step [13/15] below reads
+        # $r.Customer.TenantId/.DisplayName to build each consent URL, and
+        # without it in $select every relationship comes back with no
+        # customer property at all (not just unpopulated fields on it),
+        # so every row looked like "CustomerTenantId was empty" even
+        # though the relationships themselves were found correctly.
+        $allRelationships = Get-GraphAllPages -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$select=id,displayName,status,customer"
+        $relationships = @($allRelationships | Where-Object { $_.status -eq 'active' })
+
+        if ($allRelationships.Count -gt 0 -and $relationships.Count -eq 0) {
+            $statusBreakdown = ($allRelationships | Group-Object status | ForEach-Object { "$($_.Name)=$($_.Count)" }) -join ', '
+            Write-WarningMessage "Found $($allRelationships.Count) GDAP relationship(s) total, but none are 'active' - status breakdown: $statusBreakdown"
+        }
 
         Write-Success "Found $($relationships.Count) active GDAP relationship(s)."
     }
@@ -1127,10 +1588,10 @@ try {
     }
 
     # ------------------------------------------------------------
-    # 11. Customer access (delegated GDAP - no provisioning needed)
+    # 12. Customer access (delegated GDAP - no provisioning needed)
     # ------------------------------------------------------------
 
-    Write-Step "[11/14] Confirming customer-access model (delegated GDAP)..."
+    Write-Step "[12/15] Confirming customer-access model (delegated GDAP)..."
 
     # Customer access is delegated, via the Secure Application Model: each
     # customer-tenant token is minted from the signed-in engineer's refresh token and
@@ -1147,10 +1608,10 @@ try {
     }
 
     # ------------------------------------------------------------
-    # 12. Consent URLs
+    # 13. Consent URLs
     # ------------------------------------------------------------
 
-    Write-Step "[12/14] Generating customer consent URLs..."
+    Write-Step "[13/15] Generating customer consent URLs..."
 
     $rows = foreach ($r in $relationships) {
         $customerName = $null
@@ -1189,14 +1650,53 @@ try {
     }
 
     # ------------------------------------------------------------
-    # 13. Write .env
+    # 14. Write .env
     # ------------------------------------------------------------
 
-    Write-Step "[13/14] Writing .env file..."
+    Write-Step "[14/15] Writing .env file..."
 
     if (-not $secret) {
         Write-WarningMessage "Skipped .env secret update because no new client secret was generated."
         Write-WarningMessage "If you need a fresh .env with a new secret, re-run with -RotateClientSecret."
+
+        if ($readOnlyGroupId -or $writeGroupId) {
+            if ($PSScriptRoot) {
+                $repoRoot = Split-Path $PSScriptRoot -Parent
+            }
+            else {
+                $repoRoot = Get-Location
+            }
+
+            $existingEnvPath = Join-Path $repoRoot ".env"
+            $existingGeneratedPath = Join-Path $repoRoot ".env.generated"
+            $targetEnvPath = $null
+            if (Test-Path $existingEnvPath) {
+                $targetEnvPath = $existingEnvPath
+            }
+            elseif (Test-Path $existingGeneratedPath) {
+                $targetEnvPath = $existingGeneratedPath
+            }
+
+            if ($targetEnvPath) {
+                try {
+                    if ($readOnlyGroupId) {
+                        Set-EnvFileValue -Path $targetEnvPath -Key "PATCHPILOT_READONLY_GROUP_ID" -Value $readOnlyGroupId
+                    }
+                    if ($writeGroupId) {
+                        Set-EnvFileValue -Path $targetEnvPath -Key "PATCHPILOT_WRITE_GROUP_ID" -Value $writeGroupId
+                    }
+                    Write-Success "Wrote home-tenant access group ID(s) into $targetEnvPath."
+                }
+                catch {
+                    Write-WarningMessage "Could not update $targetEnvPath with the new group ID(s): $($_.Exception.Message)"
+                    Write-WarningMessage "Add these manually: PATCHPILOT_READONLY_GROUP_ID=$readOnlyGroupId / PATCHPILOT_WRITE_GROUP_ID=$writeGroupId"
+                }
+            }
+            else {
+                Write-WarningMessage "No existing .env or .env.generated found to update with the new group ID(s)."
+                Write-WarningMessage "Add these manually: PATCHPILOT_READONLY_GROUP_ID=$readOnlyGroupId / PATCHPILOT_WRITE_GROUP_ID=$writeGroupId"
+            }
+        }
     }
     else {
         if ($PSScriptRoot) {
@@ -1233,6 +1733,8 @@ AUTH_REDIRECT_URI=$RedirectUri
 ENTRA_TENANT_ID=$MspTenantId
 ENTRA_CLIENT_ID=$($app.AppId)
 ENTRA_CLIENT_SECRET=$($secret.SecretText)
+$(if ($readOnlyGroupId) { "PATCHPILOT_READONLY_GROUP_ID=$readOnlyGroupId" })
+$(if ($writeGroupId) { "PATCHPILOT_WRITE_GROUP_ID=$writeGroupId" })
 
 SESSION_SECRET=$sessionSecret
 TOKEN_ENCRYPTION_KEY=$tokenKey
@@ -1270,10 +1772,10 @@ LOG_LEVEL=info
     }
 
     # ------------------------------------------------------------
-    # 14. Phone home (hosted SaaS pairing only)
+    # 15. Phone home (hosted SaaS pairing only)
     # ------------------------------------------------------------
 
-    Write-Step "[14/14] Pairing with hosted instance..."
+    Write-Step "[15/15] Pairing with hosted instance..."
 
     # An un-substituted template placeholder (the checked-in default - see the
     # param block above) means this is a plain, unmodified copy of the script,
@@ -1363,6 +1865,16 @@ LOG_LEVEL=info
         if (-not [string]::IsNullOrWhiteSpace($adminUpn)) {
             $pairingBody.adminUpn = $adminUpn
         }
+        # Same "only send when actually known" reasoning as adminUpn above -
+        # these are $null when step [10/15] couldn't create/find the groups
+        # (e.g. the connected admin lacked Global Administrator/Privileged
+        # Role Administrator).
+        if ($readOnlyGroupId) {
+            $pairingBody.readOnlyGroupId = $readOnlyGroupId
+        }
+        if ($writeGroupId) {
+            $pairingBody.writeGroupId = $writeGroupId
+        }
         $pairingBody = $pairingBody | ConvertTo-Json
 
         if ($PSCmdlet.ShouldProcess("$InstanceUrl/api/onboarding/pair", "Send Entra app registration credentials")) {
@@ -1412,7 +1924,7 @@ LOG_LEVEL=info
 
     # Partner-tenant admin consent. PatchPilot is delegated-only, so its delegated
     # scopes must be admin-consented in the MSP's OWN tenant, or the first Discover
-    # returns 403 with an empty Licenses column. Step [9/13] already grants this
+    # returns 403 with an empty Licenses column. Step [9/15] already grants this
     # programmatically (and re-grants on every run, so adding a scope later self-heals).
     # The URL below is the manual fallback for when the deploying admin lacked rights to
     # write the grant - same /adminconsent flow the web console surfaces (Setup -> App

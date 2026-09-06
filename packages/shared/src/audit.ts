@@ -311,6 +311,12 @@ export const AUDIT_ACTIONS = [
   "background-access:unavailable",
   "background-access:restored",
   "user:revoke-background-access",
+  // home-tenant access groups (see packages/graph/src/access-groups.ts) —
+  // Entra role-assignable security-group membership PatchPilot manages on an
+  // engineer's own Entra account, distinct from PatchPilot's own RBAC role.
+  "access-group:add-readonly",
+  "access-group:grant-write",
+  "access-group:revoke-write",
   // ai
   // One row per user turn, not per model round-trip — a turn that calls three
   // tools before answering is still one accountability entry, with the tool
@@ -471,6 +477,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "background-access:unavailable": "Background access unavailable",
   "background-access:restored": "Background access restored",
   "user:revoke-background-access": "Background access revoked",
+
+  "access-group:add-readonly": "Added to home-tenant read-only access group",
+  "access-group:grant-write": "Granted home-tenant write access",
+  "access-group:revoke-write": "Revoked home-tenant write access",
 
   "ai:chat-message": "AI chat message sent",
   "ai:tool-call-denied": "AI tool call denied",
@@ -648,6 +658,9 @@ export const AUDIT_ACTION_GROUPS: ReadonlyArray<{
       "user:disable",
       "user:enable",
       "user:delete",
+      "access-group:add-readonly",
+      "access-group:grant-write",
+      "access-group:revoke-write",
     ],
   },
   {

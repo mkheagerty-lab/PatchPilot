@@ -124,6 +124,16 @@ const EnvSchema = z.object({
     .trim()
     .toLowerCase()
     .optional(),
+  // Object ids of the two home-tenant role-assignable security groups
+  // Deploy-PatchPilot.ps1 provisions (see packages/graph/src/access-groups.ts).
+  // Optional, same as ENTRA_*: a fresh/unpaired instance, or one deployed by
+  // an admin who lacked Global Administrator/Privileged Role Administrator
+  // when the script ran, has neither — the Users page degrades to "ask a
+  // Global Administrator to run Deploy-PatchPilot.ps1 again" rather than a
+  // hard failure. Populated either from .env (self-hosted) or a paired
+  // settings row (see load-env.ts, mirroring ENTRA_*).
+  PATCHPILOT_READONLY_GROUP_ID: z.string().optional(),
+  PATCHPILOT_WRITE_GROUP_ID: z.string().optional(),
 });
 
 export interface Config {
@@ -162,6 +172,8 @@ export interface Config {
   DEMO_MODE: boolean;
   LOG_LEVEL: string;
   BOOTSTRAP_ADMIN_UPN?: string;
+  PATCHPILOT_READONLY_GROUP_ID?: string;
+  PATCHPILOT_WRITE_GROUP_ID?: string;
   AI_FEATURES_ENABLED: boolean;
   OLLAMA_BASE_URL: string;
   OLLAMA_MODEL: string;

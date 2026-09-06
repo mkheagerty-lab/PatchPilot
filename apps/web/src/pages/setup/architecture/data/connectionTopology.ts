@@ -10,7 +10,7 @@ const customerDetail = {
     {
       label: "Roles inherited",
       value:
-        "Security Administrator, Intune Administrator, Windows Update Deployment Administrator, Helpdesk Administrator, Global Reader",
+        "Security Administrator, Intune Administrator, Windows Update Deployment Administrator, Global Reader",
     },
   ],
 };

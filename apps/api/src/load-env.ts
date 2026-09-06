@@ -17,6 +17,8 @@ import { createDecipheriv, createHash } from "node:crypto";
  * filesystem access to the customer's box receive its Entra credentials over
  * the "phone home" pairing flow instead of a local `.env` write. Precedence:
  * paired DB row > ENTRA_* env/`.env` values > config.ts's demo placeholders.
+ * Same phone-home path also carries the two home-tenant access-group object
+ * IDs Deploy-PatchPilot.ps1 provisions — see loadPairedAccessGroupIds below.
  */
 function loadRootEnv(): void {
   let dir = process.cwd();
@@ -75,6 +77,39 @@ async function loadPairedEntraCredentials(): Promise<void> {
     // validation below still runs, and will reject the boot if no usable
     // ENTRA_* credentials are available from any source.
     console.error("[load-env] failed to load paired Entra credentials:", err);
+  }
+}
+
+/**
+ * Injects the two home-tenant access-group object IDs a paired instance
+ * received during onboarding (see routes/onboarding-pairing.ts's optional
+ * readOnlyGroupId/writeGroupId body fields, sent by Deploy-PatchPilot.ps1
+ * from its own group-provisioning step) — same "DB augments env/.env"
+ * precedence as loadPairedEntraCredentials above. A self-hosted instance
+ * that ran the script directly already has these in its own `.env` and
+ * never reaches the DB read below (env vars set here would just be
+ * overwritten with the same values Node already loaded).
+ */
+async function loadPairedAccessGroupIds(): Promise<void> {
+  if ((process.env.DEMO_MODE ?? "true") !== "false") return;
+
+  try {
+    const { db, tables, eq } = await import("@patchpilot/db");
+    const [row] = await db
+      .select()
+      .from(tables.settings)
+      .where(eq(tables.settings.key, "patchpilot-access-groups"));
+    if (!row) return;
+
+    const value = row.value as { readOnlyGroupId?: string; writeGroupId?: string };
+    if (value.readOnlyGroupId && !process.env.PATCHPILOT_READONLY_GROUP_ID) {
+      process.env.PATCHPILOT_READONLY_GROUP_ID = value.readOnlyGroupId;
+    }
+    if (value.writeGroupId && !process.env.PATCHPILOT_WRITE_GROUP_ID) {
+      process.env.PATCHPILOT_WRITE_GROUP_ID = value.writeGroupId;
+    }
+  } catch (err) {
+    console.error("[load-env] failed to load paired access-group ids:", err);
   }
 }
 
@@ -139,6 +174,7 @@ async function loadBootstrapAdminUpn(): Promise<void> {
 }
 
 await loadPairedEntraCredentials();
+await loadPairedAccessGroupIds();
 await loadCustomDomains();
 await loadBootstrapAdminUpn();
 

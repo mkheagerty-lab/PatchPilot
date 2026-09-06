@@ -188,6 +188,26 @@ export const engineers = pgTable("engineers", {
   // Personal UI preference — self-service (see /auth/me/theme), never set by
   // an admin editing another engineer's row.
   theme: themeEnum("theme").notNull().default("light"),
+  // ---- home-tenant access groups (see packages/graph/src/access-groups.ts) ----
+  // The engineer's Entra object id in the home tenant, resolved lazily on the
+  // first group-membership action (never at row-creation time — creating a
+  // PatchPilot user should never block on a Graph round trip it doesn't need
+  // for anything else). Nullable until then.
+  entraObjectId: text("entra_object_id"),
+  // Set on a successful add to "PatchPilot Read-Only Access". Null covers both
+  // "never attempted" and "attempted and failed" — the Users page shows a
+  // retry action either way, since there's nothing useful to distinguish them
+  // by from PatchPilot's side.
+  readOnlyGroupSyncedAt: timestamp("read_only_group_synced_at", { withTimezone: true }),
+  // Whether an admin has deliberately toggled this engineer into
+  // "PatchPilot Write Access" (Security Administrator, Intune Administrator,
+  // Windows Update Deployment Administrator in the home tenant). Defaults
+  // false — the same fail-closed posture as tenants.readOnly.
+  writeAccessEnabled: boolean("write_access_enabled").notNull().default(false),
+  // Set on the last successful add/remove from "PatchPilot Write Access" — a
+  // timestamp rather than a boolean since writeAccessEnabled already carries
+  // the desired state; this is "when did Entra last actually agree".
+  writeGroupSyncedAt: timestamp("write_group_synced_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

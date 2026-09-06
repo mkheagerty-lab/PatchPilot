@@ -21,6 +21,7 @@ export {
   getLoginScopes,
   APP_REGISTRATION_SYNC_SCOPES,
   APP_REGISTRATION_TEST_SCOPES,
+  ACCESS_GROUP_SCOPES,
   ccaForEngineer,
   clearMsalCache,
   redeemLoginCode,
@@ -167,6 +168,12 @@ export {
   checkLiveResponseDeviceQuota,
   reserveLiveResponseDeviceSlot,
 } from "./live-response-quota.js";
+export {
+  resolveEngineerObjectId,
+  addToGroup,
+  removeFromGroup,
+  AccessGroupPermissionError,
+} from "./access-groups.js";
 export {
   createAndAssignCampaignFeatureUpdateProfile,
   type CreateAndAssignCampaignFeatureUpdateProfileInput,

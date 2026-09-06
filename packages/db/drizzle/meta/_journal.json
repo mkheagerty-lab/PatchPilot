@@ -400,6 +400,13 @@
       "when": 1788584267680,
       "tag": "0056_silent_richard_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1788680112507,
+      "tag": "0057_sour_reaper",
+      "breakpoints": true
     }
   ]
 }
