@@ -121,7 +121,6 @@ export const REQUIRED_GDAP_ROLES = [
   "Security Administrator",
   "Intune Administrator",
   "Windows Update Deployment Administrator",
-  "Helpdesk Administrator",
   "Global Reader",
 ] as const;
 

@@ -28,6 +28,13 @@ export interface DemoEngineer {
   updatedAt: string;
   receiveJobAlerts: boolean;
   theme: "light" | "dark";
+  // Home-tenant access groups are hard-disabled in DEMO_MODE (see
+  // routes/access-groups.ts's not_available_in_demo_mode gate) — these stay
+  // permanently at their "never synced" defaults, matching UserRecord's
+  // shape so demoRowToRecord's `{ ...row }` spread stays valid.
+  readOnlyGroupSyncedAt: string | null;
+  writeAccessEnabled: boolean;
+  writeGroupSyncedAt: string | null;
 }
 
 const seededAt = new Date().toISOString();
@@ -51,6 +58,9 @@ export const demoEngineers: DemoEngineer[] = [
     updatedAt: seededAt,
     receiveJobAlerts: true,
     theme: "light",
+    readOnlyGroupSyncedAt: null,
+    writeAccessEnabled: false,
+    writeGroupSyncedAt: null,
   },
 ];
 

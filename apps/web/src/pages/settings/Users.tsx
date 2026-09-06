@@ -8,14 +8,58 @@ import {
   PERMISSION_AREAS,
   AREA_ACCESS_LABELS,
   accessFor,
+  READONLY_GROUP_NAME,
+  WRITE_GROUP_NAME,
+  WRITE_GROUP_ROLES,
   type Role,
   type UserStatus,
   type AreaAccess,
 } from "@patchpilot/shared";
-import { api, ApiError, type User } from "../../lib/api";
+import { api, ApiError, type User, type OnboardingReport } from "../../lib/api";
 import { useEngineer } from "../../lib/auth";
 import { Card, PageHeader, ResponsiveTable, type ResponsiveTableColumn } from "../../components/ui";
 import { SortIcon, type SortDir } from "../../components/cve";
+
+/**
+ * Runs a home-tenant access-group step-up silently: loads
+ * /api/users/access-group/start?...&silent=1 in a hidden iframe (prompt=none)
+ * instead of a top-level redirect. Mirrors AppRegistration.tsx's
+ * runSilentTestConnection exactly — see apps/api/src/auth/routes.ts's
+ * SILENT_ACCESS_GROUP_STATE_PREFIX branch for what runs on the other end.
+ * Used only for the automatic add-to-read-only-group call right after a new
+ * user is created; never for the write-access toggle, which is always a
+ * full, visible, interactive redirect (see runWriteAccessToggle below).
+ */
+function runSilentAddReadonly(targetUserId: string, onSettled: (ok: boolean) => void): void {
+  const iframe = document.createElement("iframe");
+  iframe.style.display = "none";
+  iframe.setAttribute("aria-hidden", "true");
+
+  let settled = false;
+  const finish = (ok: boolean) => {
+    if (settled) return;
+    settled = true;
+    window.clearTimeout(timer);
+    window.removeEventListener("message", onMessage);
+    iframe.remove();
+    onSettled(ok);
+  };
+
+  const onMessage = (event: MessageEvent) => {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data as { source?: string; ok?: boolean } | null;
+    if (!data || data.source !== "patchpilot-access-group") return;
+    finish(data.ok === true);
+  };
+
+  // Same generous-but-bounded timeout as Test Connection's silent path — a
+  // real prompt=none round trip is normally under a second.
+  const timer = window.setTimeout(() => finish(false), 8000);
+
+  window.addEventListener("message", onMessage);
+  iframe.src = `/api/users/access-group/start?action=add-readonly&targetUserId=${encodeURIComponent(targetUserId)}&silent=1`;
+  document.body.appendChild(iframe);
+}
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
@@ -111,12 +155,16 @@ const ACCESS_STYLE: Record<AreaAccess, string> = {
  *  turned into the sentence an operator actually needs to read. */
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) {
-    const code = (err.data as { error?: string } | undefined)?.error;
+    const data = err.data as { error?: string; groupName?: string } | undefined;
+    const code = data?.error;
     if (code === "last_admin") {
       return "That would leave PatchPilot with no active admin — add or promote another admin first.";
     }
     if (code === "self_modification") {
       return "You can't change your own role or disable/remove your own account.";
+    }
+    if (code === "access_group_not_provisioned") {
+      return `${data?.groupName ?? "That access group"} hasn't been provisioned in the home tenant yet — ask a Global Administrator to run Deploy-PatchPilot.ps1.`;
     }
     return err.message || fallback;
   }
@@ -157,11 +205,33 @@ export function Users() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<User | null>(null);
+  // Write-access toggle confirm dialog — set for either direction (grant or
+  // revoke; see the plan's "turning it off confirms and revokes the same
+  // way"). The dialog reads the target's *current* writeAccessEnabled to
+  // decide which way it's confirming.
+  const [pendingWriteAccess, setPendingWriteAccess] = useState<User | null>(null);
+  const [writeTogglePending, setWriteTogglePending] = useState(false);
+  // Set right after POST /api/users while the silent add-to-read-only-group
+  // iframe is in flight, purely so the row can show "Syncing…" instead of
+  // "Not yet synced" for that ~1s window instead of flashing a false negative.
+  const [syncingReadonlyId, setSyncingReadonlyId] = useState<string | null>(null);
+  const [retryingReadonlyId, setRetryingReadonlyId] = useState<string | null>(null);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: () => api.get<User[]>("/api/users"),
   });
+
+  // Home-tenant access groups (badge/toggle below) are hard-disabled in
+  // DEMO_MODE server-side (see routes/access-groups.ts) — read the same
+  // report AppRegistration.tsx and License.tsx already use rather than
+  // re-deriving it, and hide the UI entirely instead of showing controls that
+  // 400 on every click.
+  const { data: onboardingReport } = useQuery({
+    queryKey: ["onboarding"],
+    queryFn: () => api.get<OnboardingReport>("/api/onboarding"),
+  });
+  const demoMode = onboardingReport?.demoMode ?? false;
 
   function invalidate() {
     void qc.invalidateQueries({ queryKey: ["users"] });
@@ -180,7 +250,7 @@ export function Users() {
         role: newRole,
         receiveJobAlerts,
       }),
-    onSuccess: () => {
+    onSuccess: (created) => {
       setUpn("");
       setDisplayName("");
       setNewRole(DEFAULT_NEW_ROLE);
@@ -188,6 +258,18 @@ export function Users() {
       setReceiveJobAlerts(DEFAULT_NEW_ROLE === "admin");
       setAddOpen(false);
       invalidate();
+
+      // Best-effort, never blocks the user-creation flow above: a failure
+      // here just leaves readOnlyGroupSyncedAt null and the row shows a
+      // retry action (see the sync-status column below). Skipped entirely in
+      // DEMO_MODE, where the start route would just 400.
+      if (!demoMode) {
+        setSyncingReadonlyId(created.id);
+        runSilentAddReadonly(created.id, () => {
+          setSyncingReadonlyId(null);
+          invalidate();
+        });
+      }
     },
   });
 
@@ -229,6 +311,57 @@ export function Users() {
     onSuccess: () => invalidate(),
     onError: (err) => setActionError(errorMessage(err, "Could not revoke background access.")),
     onSettled: () => setSavingId(null),
+  });
+
+  /**
+   * Preflights the write-access toggle, then does a real top-level navigation
+   * to the redirect URL it gets back — the interactive Microsoft consent
+   * screen (see apps/api/src/routes/access-groups.ts's start route and the
+   * ACCESS_GROUP_STATE_PREFIX callback branch). Navigating away means this
+   * component unmounts before the result is known; the callback lands back
+   * on this same page via landingPage()'s "Return to PatchPilot" link, and
+   * the users list simply reflects whatever actually happened in Entra.
+   */
+  const writeAccessToggle = useMutation<
+    { redirectUrl: string },
+    Error,
+    { id: string; enabled: boolean }
+  >({
+    mutationFn: ({ id, enabled }) =>
+      api.post<{ redirectUrl: string }>(`/api/users/${id}/write-access`, { enabled }),
+    onMutate: ({ id }) => {
+      setActionError(null);
+      setSavingId(id);
+      setWriteTogglePending(true);
+    },
+    onSuccess: (res) => {
+      window.location.href = res.redirectUrl;
+    },
+    onError: (err) => {
+      setActionError(
+        errorMessage(err, "Could not start the write-access request."),
+      );
+      setWriteTogglePending(false);
+      setSavingId(null);
+    },
+  });
+
+  /** Same preflight-then-navigate shape as writeAccessToggle, for the
+   *  read-only group's "retry" action. Always interactive (never silent) —
+   *  see /api/users/:id/sync-readonly-group's own doc comment. */
+  const retryReadonlySync = useMutation<{ redirectUrl: string }, Error, string>({
+    mutationFn: (id) => api.post<{ redirectUrl: string }>(`/api/users/${id}/sync-readonly-group`, {}),
+    onMutate: (id) => {
+      setActionError(null);
+      setRetryingReadonlyId(id);
+    },
+    onSuccess: (res) => {
+      window.location.href = res.redirectUrl;
+    },
+    onError: (err) => {
+      setActionError(errorMessage(err, "Could not retry the read-only group sync."));
+      setRetryingReadonlyId(null);
+    },
   });
 
   function onSort(key: SortKey) {
@@ -416,6 +549,80 @@ export function Users() {
         );
       },
     },
+    ...(demoMode
+      ? []
+      : [
+          {
+            key: "readonlyGroup",
+            header: "Read-only group (home tenant)",
+            cell: (u: User) => {
+              const syncing = syncingReadonlyId === u.id;
+              const retrying = retryingReadonlyId === u.id;
+              if (syncing) {
+                return (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-500/20 dark:text-sky-300">
+                    Syncing…
+                  </span>
+                );
+              }
+              if (u.readOnlyGroupSyncedAt) {
+                return (
+                  <span
+                    title={`Confirmed member of ${READONLY_GROUP_NAME} as of ${formatDate(u.readOnlyGroupSyncedAt)}.`}
+                    className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+                  >
+                    Synced
+                  </span>
+                );
+              }
+              return (
+                <button
+                  type="button"
+                  disabled={retrying}
+                  title={`Not yet confirmed a member of ${READONLY_GROUP_NAME} — click to retry.`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    retryReadonlySync.mutate(u.id);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500/20 dark:text-amber-300"
+                >
+                  {retrying ? "Retrying…" : "Not synced — retry"}
+                </button>
+              );
+            },
+            hideOnMobile: true,
+          },
+          {
+            key: "writeAccess",
+            header: "Write access (home tenant)",
+            cell: (u: User) => {
+              const busy = savingId === u.id && writeTogglePending;
+              return (
+                <button
+                  type="button"
+                  disabled={busy}
+                  title={
+                    u.writeAccessEnabled
+                      ? `Member of ${WRITE_GROUP_NAME} in the home tenant. Click to revoke.`
+                      : `Not a member of ${WRITE_GROUP_NAME}. Click to grant.`
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPendingWriteAccess(u);
+                  }}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                    u.writeAccessEnabled
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+                      : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                  }`}
+                >
+                  {busy ? "Working…" : u.writeAccessEnabled ? "On" : "Off"}
+                </button>
+              );
+            },
+            hideOnMobile: true,
+          },
+        ]),
     {
       key: "actions",
       header: "Actions",
@@ -486,14 +693,25 @@ export function Users() {
       />
 
       <Card className="mb-5 border-dashed">
-        <p className="text-sm text-slate-500">
-          A PatchPilot role controls what a person can{" "}
-          <span className="font-medium text-slate-600">do inside PatchPilot</span> — dispatch
-          remediations, manage catalogs, change settings. Their GDAP roles in Entra separately
-          control{" "}
-          <span className="font-medium text-slate-600">which customer tenants</span> they can
-          reach at all. Both apply to every action.
-        </p>
+        <p className="text-sm text-slate-500">Three things decide what a person can do:</p>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-500">
+          <li>
+            <span className="font-medium text-slate-600">Role</span> — what they can do inside
+            PatchPilot itself: dispatch remediations, manage catalogs, change settings. Their
+            GDAP roles in Entra separately control which customer tenants they can reach at all.
+          </li>
+          <li>
+            <span className="font-medium text-slate-600">Read-only group (home tenant)</span> —
+            every new user is added automatically. It gives PatchPilot's background sync and
+            read-only pages something to run as in your own tenant.
+          </li>
+          <li>
+            <span className="font-medium text-slate-600">Write access (home tenant)</span> — an
+            explicit toggle below. It grants a person real Microsoft write privilege in the home
+            tenant itself; granting or revoking it always needs confirmation from a Global
+            Administrator or Privileged Role Administrator.
+          </li>
+        </ul>
         <p className="mt-2 text-sm text-slate-500">
           Signing out no longer revokes a person's background-access session — it's designed to
           keep hourly auto-sync and their schedules running even while they're signed out. Use{" "}
@@ -719,6 +937,81 @@ export function Users() {
                 className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-rose-500 disabled:opacity-50"
               >
                 {del.isPending ? "Removing…" : "Remove user"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingWriteAccess && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setPendingWriteAccess(null)}
+            aria-hidden
+          />
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
+            {pendingWriteAccess.writeAccessEnabled ? (
+              <>
+                <h2 className="text-base font-semibold text-slate-900">
+                  Revoke write access for {pendingWriteAccess.displayName}?
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  This removes <span className="font-medium text-slate-700">{pendingWriteAccess.upn}</span>{" "}
+                  from <strong>{WRITE_GROUP_NAME}</strong> in the home tenant, revoking:
+                </p>
+                <ul className="mt-2 list-inside list-disc text-sm text-slate-600">
+                  {WRITE_GROUP_ROLES.map((role) => (
+                    <li key={role}>
+                      <strong>{role}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <>
+                <h2 className="text-base font-semibold text-slate-900">
+                  Grant write access to {pendingWriteAccess.displayName}?
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  This adds <span className="font-medium text-slate-700">{pendingWriteAccess.upn}</span> to{" "}
+                  <strong>{WRITE_GROUP_NAME}</strong> in the home tenant, granting:
+                </p>
+                <ul className="mt-2 list-inside list-disc text-sm text-slate-600">
+                  {WRITE_GROUP_ROLES.map((role) => (
+                    <li key={role}>
+                      <strong>{role}</strong>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs text-slate-500">
+                  You'll be taken to Microsoft to confirm — this requires your account to be a
+                  Global Administrator or Privileged Role Administrator in the home tenant.
+                </p>
+              </>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingWriteAccess(null)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = pendingWriteAccess;
+                  setPendingWriteAccess(null);
+                  writeAccessToggle.mutate({ id: target.id, enabled: !target.writeAccessEnabled });
+                }}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium text-white transition-colors ${
+                  pendingWriteAccess.writeAccessEnabled
+                    ? "bg-rose-600 hover:bg-rose-500"
+                    : "bg-slate-900 hover:bg-slate-700"
+                }`}
+              >
+                {pendingWriteAccess.writeAccessEnabled ? "Revoke write access" : "Continue to Microsoft"}
               </button>
             </div>
           </div>

@@ -178,7 +178,8 @@ course-correction). The MSP admin consents to PatchPilot's **delegated** Graph/D
 permissions **once** in the partner tenant when running `Deploy-PatchPilot.ps1`. From
 then on, any engineer who holds the GDAP role for a customer gets a delegated token for
 it automatically. The app stays **read-only-first** (invariant #6) and never modifies
-directory objects at runtime.
+directory objects at runtime, with one deliberate, scoped exception for the engineer's
+own home-tenant access level — see "Home-tenant access groups" below.
 
 **3. Background/scheduled sync: engineer-credentialed, not engineer-triggered.**
 Discover + first sync stay engineer-triggered (they need a live login-token exchange),
@@ -220,6 +221,86 @@ Microsoft redirect ever fires. This was a deliberate, scoped addition, not an
 erosion of the boundary — a new class of Entra write belongs back in this document,
 not slipped in silently.
 
+### Home-tenant access groups
+
+PatchPilot's two access gates (see [rbac.ts](../packages/shared/src/rbac.ts)'s own
+doc comment) are PatchPilot's own role (`admin`/`technician`/`reader`, what a person
+may do *inside* PatchPilot) and Entra/GDAP (which *tenants* they can reach, and with
+what privilege). For **customer tenants** that second gate is correct by construction
+— a delegated token inherits whatever GDAP role the engineer holds for that customer.
+For the **home/MSP tenant** there was no equivalent: home-tenant Graph calls run
+On-Behalf-Of the signed-in engineer's own ambient Entra privilege in that tenant, and
+PatchPilot had no way to grant, see, or manage what that privilege actually was. An
+engineer with the wrong Entra role got an inexplicable home-tenant write 403; a
+"PatchPilot admin" role was no guarantee of any real Microsoft permission at all.
+
+`Deploy-PatchPilot.ps1` now creates (idempotently, every run) two role-assignable
+security groups in the home tenant:
+
+- **`PatchPilot Read-Only Access`** — Global Reader, Security Reader.
+- **`PatchPilot Write Access`** — Security Administrator, Intune Administrator,
+  Windows Update Deployment Administrator. Additive on top of read-only (a
+  write-enabled engineer stays in both groups; there's no need to remove read-only
+  when granting write since Security Administrator is a strict superset of Security
+  Reader for that surface).
+
+New PatchPilot users are added to the read-only group automatically (best-effort,
+silent step-up, never blocking user creation - see below); Settings > Users carries an
+explicit, confirmed toggle that adds/removes an engineer from the write group. Turning
+the toggle on shows a confirm dialog naming the exact roles being granted before the
+Microsoft redirect fires; turning it off confirms and revokes the same way.
+
+**This is not the removed app-only/GDAP-security-group path.** That path (rejected in
+Phase B, referenced above) tried to grant Entra roles to the **application's own
+service principal** via GDAP relationships - unsupported
+(`AADSTS7000229`), because GDAP only supports delegated ("app + user") access. This
+grants roles to **human engineers' own Entra accounts** via ordinary Entra RBAC
+(role-assignable groups), scoped entirely to the home tenant, and touches GDAP/customer
+access not at all.
+
+Group membership changes are a one-shot, step-up consent
+(`packages/graph/src/msal.ts`'s `ACCESS_GROUP_SCOPES` = `User.Read.All` +
+`GroupMember.ReadWrite.All`), the same pattern as "Sync permissions" above: never a
+standing credential, never persisted to Redis or an engineer's MSAL cache. The
+automatic read-only add on user creation tries a **silent** (`prompt=none`) redemption
+first via a hidden iframe (falling back to leaving the user "not yet synced" with a
+retry action, rather than forcing a visible redirect for something the target user
+didn't initiate); the write-access toggle always uses the full interactive consent
+screen, since it is a deliberate privilege grant an admin is actively making, not a
+routine background sync.
+
+`Deploy-PatchPilot.ps1` also grants tenant-wide (`AllPrincipals`) admin consent for
+`ACCESS_GROUP_SCOPES` via the same `Set-DelegatedAdminConsent` mechanism used for the
+Graph/Defender/Partner Center scopes - this is what makes the silent redemption above
+possible at all. That tenant-wide consent only satisfies "is the app allowed to ask";
+it does **not** bypass Microsoft's separate, per-call requirement that the *acting*
+engineer's own Entra role be Global Administrator or Privileged Role Administrator (or
+already a member of the target group) to modify a role-assignable group's membership.
+That constraint can't be engineered around - both the deploy script's group-creation
+step and the in-app toggle degrade gracefully (a named warning listing the groups/roles
+still needed, or an in-app "ask a Global Administrator" message) rather than treating
+it as an error.
+
+### GDAP relationship discovery requires AdminAgents
+
+`Deploy-PatchPilot.ps1`'s GDAP-enumeration step
+(`GET /tenantRelationships/delegatedAdminRelationships`, used to find which
+customer tenants are already reachable) has an undocumented, Partner
+Center-specific prerequisite beyond Global Administrator: the connected
+account must also be a member of the home tenant's **`AdminAgents`**
+security group. Without it, the call returns a genuine `200 OK` with an
+**empty array** — not a 403 or any other error — which is indistinguishable
+from "this MSP truly has zero GDAP relationships" until the admin is added
+to `AdminAgents`. This was confirmed live: a true Global Administrator saw
+zero relationships (reproduced independently via Graph Explorer, ruling out
+a script bug) until added to `AdminAgents`, after which the same account and
+token saw every active relationship.
+
+`AdminAgents` is a legacy Partner Center group — `Deploy-PatchPilot.ps1`
+does not and cannot create it or add anyone to it; that has to be done by an
+existing Global Administrator or Partner Center admin before onboarding.
+Surfaced to the end user on the Architecture page's "Prerequisites" section.
+
 ---
 
 ## Settled / deferred items
@@ -233,4 +314,6 @@ not slipped in silently.
   engineer's persisted, self-renewing MSAL cache rather than a separate service identity.
 - Partner Center: the reseller relationship is real, but reseller-only ≠ API access.
   Partner Center API stays relevant only for relationship metadata, not customer data —
-  such tenants degrade to an informational row, never a dead Sync button.
+  such tenants degrade to an informational row, never a dead Sync button. See "GDAP
+  relationship discovery requires AdminAgents" above for the membership prerequisite
+  this implies for onboarding.

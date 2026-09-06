@@ -4,7 +4,16 @@ import { z } from "zod";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { db, tables, type EngineerRow } from "@patchpilot/db";
 import { audit, clearMsalCache, clearTokens } from "@patchpilot/graph";
-import { ROLE_LABELS, ROLES, USER_STATUSES, type Role, type UserStatus } from "@patchpilot/shared";
+import {
+  ROLE_LABELS,
+  ROLES,
+  USER_STATUSES,
+  READONLY_GROUP_NAME,
+  WRITE_GROUP_NAME,
+  WRITE_GROUP_ROLES,
+  type Role,
+  type UserStatus,
+} from "@patchpilot/shared";
 import { config } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
 import { demoEngineers, findDemoEngineerByUpn, type DemoEngineer } from "../auth/demo-engineers.js";
@@ -35,6 +44,19 @@ export interface UserRecord {
   createdAt: string;
   updatedAt: string;
   receiveJobAlerts: boolean;
+  /**
+   * Home-tenant access groups (see packages/graph/src/access-groups.ts and
+   * docs/onboarding-design.md). `readOnlyGroupSyncedAt`/`writeGroupSyncedAt`
+   * null means "not confirmed member" — covers both "never attempted" and
+   * "attempted and failed", which is exactly the "show a retry action"
+   * condition the Users page needs; it can't and doesn't need to tell the two
+   * apart. `writeAccessEnabled` is the toggle's own source of truth
+   * independent of sync status, so a failed revoke still shows as "on" with
+   * a retry action rather than silently reporting the wrong state.
+   */
+  readOnlyGroupSyncedAt: string | null;
+  writeAccessEnabled: boolean;
+  writeGroupSyncedAt: string | null;
 }
 
 function dbRowToRecord(row: EngineerRow): UserRecord {
@@ -51,6 +73,9 @@ function dbRowToRecord(row: EngineerRow): UserRecord {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     receiveJobAlerts: row.receiveJobAlerts,
+    readOnlyGroupSyncedAt: row.readOnlyGroupSyncedAt ? row.readOnlyGroupSyncedAt.toISOString() : null,
+    writeAccessEnabled: row.writeAccessEnabled,
+    writeGroupSyncedAt: row.writeGroupSyncedAt ? row.writeGroupSyncedAt.toISOString() : null,
   };
 }
 
@@ -232,6 +257,9 @@ export async function usersRoutes(app: FastifyInstance): Promise<void> {
           updatedAt: now,
           receiveJobAlerts,
           theme: "light",
+          readOnlyGroupSyncedAt: null,
+          writeAccessEnabled: false,
+          writeGroupSyncedAt: null,
         };
         demoEngineers.push(row);
         await audit({
@@ -533,6 +561,84 @@ export async function usersRoutes(app: FastifyInstance): Promise<void> {
       await revokeEngineerBackgroundAccess(existing.upn);
       await audit(revokeAuditEntry(actor.upn, existing.id, existing.upn, "revoked by an admin"));
       return { revoked: true };
+    },
+  );
+
+  /**
+   * Write-access toggle preflight (see docs/onboarding-design.md's home-tenant
+   * access groups section). This route never touches Graph itself — it only
+   * validates that the toggle is actionable and hands back the relative URL
+   * for routes/access-groups.ts's step-up start route, which the frontend
+   * then does a real top-level navigation to (GET /api/users/access-group/start
+   * builds the actual Microsoft auth-code URL and re-validates independently;
+   * duplicating that here would just be two places that can drift). Splitting
+   * it this way lets Users.tsx show "not provisioned"/"user not found" inline
+   * in the confirm dialog instead of only after the user is bounced to
+   * Microsoft and back.
+   *
+   * Write-group membership changes are always the full interactive consent
+   * screen, never silent — see access-groups.ts's own doc comment for why.
+   */
+  app.post<{ Params: { id: string }; Body: { enabled?: boolean } }>(
+    "/api/users/:id/write-access",
+    { preHandler: requirePermission("users:manage") },
+    async (req, reply) => {
+      if (config.DEMO_MODE) {
+        return reply.code(400).send({ error: "not_available_in_demo_mode" });
+      }
+
+      const enabled = req.body?.enabled;
+      if (typeof enabled !== "boolean") {
+        return reply.code(400).send({ error: "enabled (boolean) is required" });
+      }
+
+      const targetId = req.params.id;
+      const [existing] = await db.select().from(tables.engineers).where(eq(tables.engineers.id, targetId)).limit(1);
+      if (!existing) return reply.code(404).send({ error: "user not found" });
+
+      if (!config.PATCHPILOT_WRITE_GROUP_ID) {
+        return reply.code(400).send({ error: "access_group_not_provisioned", groupName: WRITE_GROUP_NAME });
+      }
+
+      const action = enabled ? "grant-write" : "revoke-write";
+      return {
+        redirectUrl: `/api/users/access-group/start?action=${action}&targetUserId=${encodeURIComponent(targetId)}`,
+        roles: WRITE_GROUP_ROLES,
+        targetUpn: existing.upn,
+      };
+    },
+  );
+
+  /**
+   * Read-only group "retry" preflight — same shape as the write-access
+   * preflight above, for the same reason (an inline "not provisioned" error
+   * instead of only finding out after a bounce to Microsoft). Unlike the
+   * automatic post-creation attempt (which is always silent, see
+   * access-groups.ts), an explicit retry click is a real user gesture, so it
+   * goes through the full interactive redirect — a second silent attempt
+   * would just fail the same way the first one did if the reason was
+   * `interaction_required`.
+   */
+  app.post<{ Params: { id: string } }>(
+    "/api/users/:id/sync-readonly-group",
+    { preHandler: requirePermission("users:manage") },
+    async (req, reply) => {
+      if (config.DEMO_MODE) {
+        return reply.code(400).send({ error: "not_available_in_demo_mode" });
+      }
+
+      const targetId = req.params.id;
+      const [existing] = await db.select().from(tables.engineers).where(eq(tables.engineers.id, targetId)).limit(1);
+      if (!existing) return reply.code(404).send({ error: "user not found" });
+
+      if (!config.PATCHPILOT_READONLY_GROUP_ID) {
+        return reply.code(400).send({ error: "access_group_not_provisioned", groupName: READONLY_GROUP_NAME });
+      }
+
+      return {
+        redirectUrl: `/api/users/access-group/start?action=add-readonly&targetUserId=${encodeURIComponent(targetId)}`,
+        targetUpn: existing.upn,
+      };
     },
   );
 }

@@ -237,6 +237,31 @@ export const APP_REGISTRATION_SYNC_SCOPES = [
 export const APP_REGISTRATION_TEST_SCOPES = ["Application.Read.All", "Directory.Read.All"];
 
 /**
+ * Scopes requested for the home-tenant access-group step-up consent (Settings
+ * -> Users — adding an engineer to "PatchPilot Read-Only Access"/"PatchPilot
+ * Write Access", see packages/graph/src/access-groups.ts). Deploy-PatchPilot.ps1
+ * grants tenant-wide (AllPrincipals) admin consent for this exact pair, which is
+ * what lets the read-only-group add attempt a silent (prompt=none) redemption
+ * first — see the "Sync permissions"/"Test Connection" split's own reasoning
+ * for why AllPrincipals consent is a precondition for a silent step-up, not a
+ * bypass of it. GroupMember.ReadWrite.All is the delegated permission Graph
+ * actually calls "member of a role-assignable group" through — there is no
+ * narrower scope that covers only that.
+ *
+ * RoleManagement.ReadWrite.Directory is NOT optional here, even though this
+ * flow never touches roleManagement/* itself: Microsoft Graph specifically
+ * requires it on the token, alongside GroupMember.ReadWrite.All, for ANY
+ * add/remove against a role-assignable group's members/$ref — treating that
+ * membership change as equivalent to a role grant/revoke. Live-verified this
+ * is not optional in practice: without it, POST /groups/{id}/members/$ref
+ * 403s even for a genuine Global Administrator, which looks identical to the
+ * "acting engineer lacks Global Administrator/Privileged Role Administrator"
+ * case AccessGroupPermissionError is meant to catch — so this scope's absence
+ * was silently indistinguishable from a real privilege problem.
+ */
+export const ACCESS_GROUP_SCOPES = ["User.Read.All", "GroupMember.ReadWrite.All", "RoleManagement.ReadWrite.Directory"];
+
+/**
  * Redeems a one-time step-up consent authorization code for a short-lived
  * access token, used once server-side to sync PatchPilot's requested API
  * permissions onto its own app registration, or to test their live status

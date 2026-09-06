@@ -2,7 +2,13 @@ import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
-import { permissionsFor, currentScopeBaseline, type ScopeBaseline } from "@patchpilot/shared";
+import {
+  permissionsFor,
+  currentScopeBaseline,
+  READONLY_GROUP_NAME,
+  WRITE_GROUP_NAME,
+  type ScopeBaseline,
+} from "@patchpilot/shared";
 import { config, webOrigins } from "../config.js";
 import { resolveWebOrigin } from "./origin.js";
 import { findDemoEngineerByUpn } from "./demo-engineers.js";
@@ -12,6 +18,7 @@ import {
   redeemLoginCode,
   redeemStepUpConsentCode,
   APP_REGISTRATION_TEST_SCOPES,
+  ACCESS_GROUP_SCOPES,
   syncAppRegistrationScopes,
   testAppRegistrationScopes,
   updateAppRegistrationRedirectUris,
@@ -19,6 +26,10 @@ import {
   storeToken,
   clearTokens,
   auditSafe,
+  resolveEngineerObjectId,
+  addToGroup,
+  removeFromGroup,
+  AccessGroupPermissionError,
 } from "@patchpilot/graph";
 
 /**
@@ -83,6 +94,98 @@ function landingPage(opts: {
  * here rather than the bare origin (which the SPA sends to the dashboard). */
 const APP_REGISTRATION_PATH = "/setup/app-registration";
 
+/** Every home-tenant access-group step-up flow starts from Settings -> Users. */
+const USERS_PATH = "/settings/users";
+
+type AccessGroupAction = "add-readonly" | "grant-write" | "revoke-write";
+
+interface AccessGroupActionResult {
+  ok: boolean;
+  reason?: "not_found" | "not_provisioned" | "forbidden" | "error";
+  targetUpn?: string;
+  groupName: string;
+  detail?: string;
+}
+
+/**
+ * Shared by both the silent (hidden-iframe) and interactive access-group
+ * callback branches below — see routes/access-groups.ts's start route for
+ * the request side. Resolves the target engineer's Entra object id lazily
+ * (cached on first use, per the plan), performs the group-membership change,
+ * and stamps the matching sync-status column. A 403 from Graph — the acting
+ * engineer's own Entra role isn't Global Administrator/Privileged Role
+ * Administrator, which a tenant-wide app consent grant cannot bypass — comes
+ * back as reason "forbidden" so both callers can render the same actionable
+ * "ask a Global Administrator" message instead of a generic error.
+ */
+async function applyAccessGroupAction(
+  accessToken: string,
+  action: AccessGroupAction,
+  targetUserId: string,
+): Promise<AccessGroupActionResult> {
+  const groupName = action === "add-readonly" ? READONLY_GROUP_NAME : WRITE_GROUP_NAME;
+
+  const [target] = await db.select().from(tables.engineers).where(eq(tables.engineers.id, targetUserId)).limit(1);
+  if (!target) {
+    return { ok: false, reason: "not_found", groupName };
+  }
+
+  const groupId = action === "add-readonly" ? config.PATCHPILOT_READONLY_GROUP_ID : config.PATCHPILOT_WRITE_GROUP_ID;
+  if (!groupId) {
+    return { ok: false, reason: "not_provisioned", targetUpn: target.upn, groupName };
+  }
+
+  try {
+    let entraObjectId = target.entraObjectId;
+    if (!entraObjectId) {
+      entraObjectId = await resolveEngineerObjectId(accessToken, config.ENTRA_TENANT_ID, target.upn);
+      await db.update(tables.engineers).set({ entraObjectId }).where(eq(tables.engineers.id, target.id));
+    }
+
+    if (action === "revoke-write") {
+      await removeFromGroup(accessToken, groupId, entraObjectId);
+      await db
+        .update(tables.engineers)
+        .set({ writeAccessEnabled: false, writeGroupSyncedAt: new Date() })
+        .where(eq(tables.engineers.id, target.id));
+    } else {
+      await addToGroup(accessToken, groupId, entraObjectId);
+      if (action === "add-readonly") {
+        await db
+          .update(tables.engineers)
+          .set({ readOnlyGroupSyncedAt: new Date() })
+          .where(eq(tables.engineers.id, target.id));
+      } else {
+        await db
+          .update(tables.engineers)
+          .set({ writeAccessEnabled: true, writeGroupSyncedAt: new Date() })
+          .where(eq(tables.engineers.id, target.id));
+      }
+    }
+
+    return { ok: true, targetUpn: target.upn, groupName };
+  } catch (err) {
+    if (err instanceof AccessGroupPermissionError) {
+      return { ok: false, reason: "forbidden", targetUpn: target.upn, groupName, detail: err.message };
+    }
+    return {
+      ok: false,
+      reason: "error",
+      targetUpn: target.upn,
+      groupName,
+      detail: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+function accessGroupAuditAction(action: AccessGroupAction): "access-group:add-readonly" | "access-group:grant-write" | "access-group:revoke-write" {
+  return action === "add-readonly"
+    ? "access-group:add-readonly"
+    : action === "grant-write"
+      ? "access-group:grant-write"
+      : "access-group:revoke-write";
+}
+
 /**
  * Tiny same-origin postMessage bridge for a step-up flow run inside a hidden
  * `<iframe>` (see SILENT_TEST_CONN_STATE_PREFIX below) instead of a top-level
@@ -91,9 +194,14 @@ const APP_REGISTRATION_PATH = "/setup/app-registration";
  * both invisible and pointless. This just hands the outcome back to
  * `window.parent` and lets the parent page redraw in place (or fall back to
  * the normal visible redirect if `ok` is false).
+ *
+ * `source` lets the parent page's `message` listener tell flows apart — every
+ * silent iframe flow shares the same `window` event namespace, so a listener
+ * that only checked `event.origin` would react to *any* hidden-iframe flow
+ * running anywhere on the page, not just its own.
  */
-function postMessagePage(payload: { ok: boolean }, targetOrigin: string): string {
-  const json = JSON.stringify({ source: "patchpilot-test-connection", ...payload }).replace(/</g, "\\u003c");
+function postMessagePage(payload: { ok: boolean }, targetOrigin: string, source: string): string {
+  const json = JSON.stringify({ source, ...payload }).replace(/</g, "\\u003c");
   const safeOrigin = JSON.stringify(targetOrigin);
   return `<!doctype html><html><head><meta charset="utf-8" /></head><body><script>
   try { window.parent.postMessage(${json}, ${safeOrigin}); } catch (e) {}
@@ -191,7 +299,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           // timeout/fallback to the visible flow handles it, and a human
           // driving that visible retry already produces its own audit trail,
           // so this doesn't need one of its own beyond the start event above.
-          return reply.type("text/html").send(postMessagePage({ ok: false }, origin));
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin, "patchpilot-test-connection"));
         }
 
         try {
@@ -232,7 +340,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
             responseStatus: 200,
           });
 
-          return reply.type("text/html").send(postMessagePage({ ok: true }, origin));
+          return reply.type("text/html").send(postMessagePage({ ok: true }, origin, "patchpilot-test-connection"));
         } catch (err) {
           await auditSafe({
             engineer: engineer.upn,
@@ -248,7 +356,204 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
             responseStatus: 500,
           });
 
-          return reply.type("text/html").send(postMessagePage({ ok: false }, origin));
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin, "patchpilot-test-connection"));
+        }
+      }
+
+      // Silent home-tenant access-group step-up (hidden iframe, prompt=none) —
+      // see routes/access-groups.ts's ?silent=1 branch and Users.tsx's
+      // new-user auto-add. Only ever action=add-readonly (the start route
+      // rejects silent for grant-write/revoke-write). Same postMessage-not-
+      // landingPage handling as SILENT_TEST_CONN_STATE_PREFIX above, for the
+      // same reason: this loads inside a hidden iframe, not the top-level page.
+      const SILENT_ACCESS_GROUP_STATE_PREFIX = "patchpilot-accessgroup-silent:";
+      if (state?.startsWith(SILENT_ACCESS_GROUP_STATE_PREFIX)) {
+        const [sessionId, actionRaw, targetUserId] = state.slice(SILENT_ACCESS_GROUP_STATE_PREFIX.length).split(":");
+        const action = actionRaw as AccessGroupAction | undefined;
+        const engineer = req.session.engineer;
+
+        if (error || !code || !engineer || !action || !targetUserId || sessionId !== req.session.sessionId) {
+          // Same reasoning as the silent test-connection failure path above:
+          // an expected, silent outcome (no SSO session, MFA step-up) that
+          // the Users page's retry action already covers — no audit trail
+          // needed beyond what a human-driven retry produces on its own.
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin, "patchpilot-access-group"));
+        }
+
+        try {
+          const stepUp = await redeemStepUpConsentCode(code, `${origin}/auth/callback`, ACCESS_GROUP_SCOPES);
+          const result = await applyAccessGroupAction(stepUp.accessToken, action, targetUserId);
+
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: accessGroupAuditAction(action),
+            resourceType: "user",
+            resourceId: targetUserId,
+            resourceLabel: result.targetUpn ?? targetUserId,
+            summary: result.ok
+              ? `${engineer.upn} added ${result.targetUpn} to ${result.groupName}`
+              : `${engineer.upn}'s silent add of ${result.targetUpn ?? targetUserId} to ${result.groupName} failed (${result.reason})`,
+            outcome: result.ok ? "success" : "failure",
+            detail: result.detail ?? null,
+            responseStatus: result.ok ? 200 : 500,
+          });
+
+          return reply.type("text/html").send(postMessagePage({ ok: result.ok }, origin, "patchpilot-access-group"));
+        } catch (err) {
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: accessGroupAuditAction(action),
+            resourceType: "user",
+            resourceId: targetUserId,
+            summary: `${engineer.upn}'s silent access-group step-up failed`,
+            outcome: "failure",
+            detail: err instanceof Error ? err.message : String(err),
+            responseStatus: 500,
+          });
+
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin, "patchpilot-access-group"));
+        }
+      }
+
+      // Interactive home-tenant access-group step-up return (Settings ->
+      // Users, Write access toggle). Discriminated from the silent branch
+      // above by state prefix (see routes/access-groups.ts's start route).
+      // Always a full-page landingPage() response — never postMessage — since
+      // this is only ever reached via a real top-level navigation, per the
+      // plan's "write-group membership changes always get the full visible
+      // consent screen" rule.
+      const ACCESS_GROUP_STATE_PREFIX = "patchpilot-accessgroup:";
+      if (code && state?.startsWith(ACCESS_GROUP_STATE_PREFIX)) {
+        const [sessionId, actionRaw, targetUserId] = state.slice(ACCESS_GROUP_STATE_PREFIX.length).split(":");
+        const action = actionRaw as AccessGroupAction | undefined;
+        const engineer = req.session.engineer;
+
+        if (!engineer || !action || !targetUserId || sessionId !== req.session.sessionId) {
+          return reply.type("text/html").code(400).send(
+            landingPage({
+              origin,
+              returnPath: USERS_PATH,
+              tone: "error",
+              title: "PatchPilot — access groups",
+              heading: "This link is no longer valid",
+              body: "This link doesn't match your current PatchPilot session. Start the request again from Settings → Users.",
+            }),
+          );
+        }
+
+        try {
+          const stepUp = await redeemStepUpConsentCode(code, `${origin}/auth/callback`, ACCESS_GROUP_SCOPES);
+          const result = await applyAccessGroupAction(stepUp.accessToken, action, targetUserId);
+
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: accessGroupAuditAction(action),
+            resourceType: "user",
+            resourceId: targetUserId,
+            resourceLabel: result.targetUpn ?? targetUserId,
+            summary: result.ok
+              ? `${engineer.upn} ${action === "revoke-write" ? "removed" : "added"} ${result.targetUpn} ${
+                  action === "revoke-write" ? "from" : "to"
+                } ${result.groupName}`
+              : `${engineer.upn}'s ${action} for ${result.targetUpn ?? targetUserId} failed (${result.reason})`,
+            outcome: result.ok ? "success" : "failure",
+            detail: result.detail ?? null,
+            responseStatus: result.ok ? 200 : result.reason === "forbidden" ? 403 : result.reason === "not_found" ? 404 : 500,
+          });
+
+          if (result.ok) {
+            return reply.type("text/html").send(
+              landingPage({
+                origin,
+                returnPath: USERS_PATH,
+                tone: "ok",
+                title: "PatchPilot — access groups",
+                heading: action === "revoke-write" ? "Write access revoked" : "Access granted",
+                body:
+                  action === "revoke-write"
+                    ? `${result.targetUpn} was removed from <strong>${result.groupName}</strong> in the home tenant. Return to PatchPilot and confirm in Settings → Users.`
+                    : `${result.targetUpn} was added to <strong>${result.groupName}</strong> in the home tenant. Return to PatchPilot and confirm in Settings → Users.`,
+              }),
+            );
+          }
+
+          if (result.reason === "forbidden") {
+            return reply.type("text/html").code(403).send(
+              landingPage({
+                origin,
+                returnPath: USERS_PATH,
+                tone: "error",
+                title: "PatchPilot — access groups",
+                heading: "Couldn't complete — insufficient Microsoft privilege",
+                body: `Your Microsoft account needs <strong>Global Administrator</strong> or <strong>Privileged Role Administrator</strong> to manage this group. Ask an Entra admin to add ${
+                  result.targetUpn ?? "this user"
+                } to <strong>${result.groupName}</strong> manually, or run Deploy-PatchPilot.ps1 again as a Global Administrator.`,
+              }),
+            );
+          }
+
+          if (result.reason === "not_provisioned") {
+            return reply.type("text/html").code(400).send(
+              landingPage({
+                origin,
+                returnPath: USERS_PATH,
+                tone: "error",
+                title: "PatchPilot — access groups",
+                heading: "Access group not set up",
+                body: `<strong>${result.groupName}</strong> hasn't been provisioned in the home tenant yet. Ask a Global Administrator to run Deploy-PatchPilot.ps1.`,
+              }),
+            );
+          }
+
+          return reply.type("text/html").code(result.reason === "not_found" ? 404 : 500).send(
+            landingPage({
+              origin,
+              returnPath: USERS_PATH,
+              tone: "error",
+              title: "PatchPilot — access groups",
+              heading: "Something went wrong",
+              body:
+                result.reason === "not_found"
+                  ? "That user no longer exists in PatchPilot."
+                  : `Microsoft returned an error: ${result.detail ?? "unknown error"}. No changes may have been applied — try again from PatchPilot.`,
+            }),
+          );
+        } catch (err) {
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: accessGroupAuditAction(action),
+            resourceType: "user",
+            resourceId: targetUserId,
+            summary: `${engineer.upn}'s ${action} step-up failed`,
+            outcome: "failure",
+            detail: err instanceof Error ? err.message : String(err),
+            responseStatus: 500,
+          });
+
+          return reply.type("text/html").code(500).send(
+            landingPage({
+              origin,
+              returnPath: USERS_PATH,
+              tone: "error",
+              title: "PatchPilot — access groups",
+              heading: "Request failed",
+              body: `Microsoft returned an error: ${
+                err instanceof Error ? err.message : "unknown error"
+              }. No changes may have been applied — try again from PatchPilot.`,
+            }),
+          );
         }
       }
 

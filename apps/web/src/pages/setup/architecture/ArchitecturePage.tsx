@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Card, PageHeader } from "../../../components/ui";
 import { ArchitectureDiagram } from "./ArchitectureDiagram";
 import { RemediationApiTable } from "./RemediationApiTable";
+import { RoleScopeTable } from "./RoleScopeTable";
 import { connectionTopology } from "./data/connectionTopology";
 import { remediationFlow } from "./data/remediationFlow";
 import { remediationOptions } from "./data/remediationOptions";
@@ -52,6 +53,41 @@ export function ArchitecturePage() {
           request takes.
         </p>
       </div>
+
+      <Section title="Prerequisites">
+        <p className="mb-4 max-w-3xl text-sm text-slate-600">
+          Two tenants are in play here, and each has its own access
+          prerequisite before PatchPilot can do anything there at all.
+        </p>
+        <h3 className="mb-2 text-sm font-medium text-slate-700">Home tenant</h3>
+        <Card className="p-0">
+          <dl className="divide-y divide-slate-100">
+            {HOME_TENANT_PREREQUISITES.map((item) => (
+              <div key={item.title} className="px-5 py-4">
+                <dt className="text-sm font-medium text-slate-800">{item.title}</dt>
+                <dd className="mt-1 text-sm text-slate-600">{item.body}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+        <h3 className="mt-4 mb-2 text-sm font-medium text-slate-700">Customer tenant</h3>
+        <Card className="p-0">
+          <dl className="divide-y divide-slate-100">
+            {CUSTOMER_TENANT_PREREQUISITES.map((item) => (
+              <div key={item.title} className="px-5 py-4">
+                <dt className="text-sm font-medium text-slate-800">{item.title}</dt>
+                <dd className="mt-1 text-sm text-slate-600">{item.body}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+        <h3 className="mt-6 mb-2 text-sm font-medium text-slate-700">
+          Entra roles and what they unlock
+        </h3>
+        <Card className="p-0">
+          <RoleScopeTable />
+        </Card>
+      </Section>
 
       <Section title="Remediation options, channels, and catalogs">
         <p className="mb-4 max-w-3xl text-sm text-slate-600">
@@ -278,8 +314,8 @@ const KNOWN_LIMITATIONS: { title: string; body: ReactNode }[] = [
     body: "Defender has no write API for its own device-exclusion or recommendation-exception features, so excluding a device or granting a CVE exception only suppresses it inside PatchPilot. To stop Defender itself from flagging it, an engineer still has to apply the matching exclusion by hand in the Defender portal.",
   },
   {
-    title: "A device has to be in Intune to exist here",
-    body: "PatchPilot's device inventory comes from Intune's managed-device list, matched to Defender by hostname. A device that was never enrolled in Intune never appears — and a device that's in Intune but hasn't been onboarded to Defender shows up with unknown compliance, since posture can't be judged without Defender's exposure data.",
+    title: "Devices must be enrolled and onboarded to Intune and Microsoft Defender",
+    body: "PatchPilot's device inventory comes from Intune's managed-device list, matched to Defender by hostname. A device that was never enrolled in Intune never appears at all — and a device that's enrolled in Intune but hasn't also been onboarded to Defender shows up with unknown compliance, since posture can't be judged without Defender's exposure data. Both steps are required before a device is fully visible here.",
   },
   {
     title: "Windows only",
@@ -304,6 +340,36 @@ const KNOWN_LIMITATIONS: { title: string; body: ReactNode }[] = [
   {
     title: "Update rings and driver updates are read-only",
     body: "The Windows Updates hub's Update Rings and Driver Updates tabs mirror whatever's already configured in Intune — PatchPilot has no create, edit, or delete path for either. Only feature updates and quality updates are policy types PatchPilot itself writes.",
+  },
+  {
+    title: "Granting or revoking write access needs a Global Administrator",
+    body: "The Write access toggle in Settings > Users can only be confirmed by someone who is already a Global Administrator or Privileged Role Administrator in the home tenant (or already a member of PatchPilot Write Access). PatchPilot has no path around this — it's Microsoft's own requirement for modifying a role-assignable group.",
+  },
+  {
+    title: "PatchPilot can't create GDAP relationships",
+    body: "Reaching a new customer tenant always starts outside PatchPilot, in Microsoft Partner Center, where the MSP requests a GDAP relationship and the customer approves it. PatchPilot only consumes an already-active relationship; it has no API path to create one. Discovering existing relationships during onboarding also requires the connected admin to be a member of the home tenant's AdminAgents security group, not just Global Administrator.",
+  },
+];
+
+const HOME_TENANT_PREREQUISITES: { title: string; body: ReactNode }[] = [
+  {
+    title: "Global Administrator or Privileged Role Administrator, to deploy",
+    body: "Running Deploy-PatchPilot.ps1 for the first time — creating the app registration, granting admin consent, and creating the two home-tenant access groups — requires one of these two Entra roles on the connected account. PatchPilot cannot widen this; it's Microsoft's own requirement for creating role-assignable groups and directory-role assignments.",
+  },
+  {
+    title: "The same roles are required to grant or revoke write access",
+    body: "Toggling a user's Write access in Settings > Users redirects to Microsoft for confirmation, and that confirmation only succeeds if the signed-in account is a Global Administrator or Privileged Role Administrator in the home tenant (or already a member of the write group). There's no PatchPilot-side workaround.",
+  },
+];
+
+const CUSTOMER_TENANT_PREREQUISITES: { title: string; body: ReactNode }[] = [
+  {
+    title: "A GDAP relationship via Microsoft Partner Center",
+    body: "PatchPilot never provisions access to a new customer tenant itself. The MSP must first establish a Granular Delegated Admin Privileges (GDAP) relationship with that customer through Microsoft Partner Center, requesting the roles listed below, before PatchPilot can reach it at all.",
+  },
+  {
+    title: "AdminAgents membership, to discover relationships during onboarding",
+    body: "Enumerating existing GDAP relationships — what Deploy-PatchPilot.ps1 does to find customer tenants to onboard — has a Partner Center-specific legacy requirement: the connected account must be a member of the home tenant's AdminAgents security group, in addition to holding Global Administrator directly. Without it, the Graph call returns a genuine success with an empty list rather than an error, so a true Global Administrator can look like they have zero GDAP customers until added to AdminAgents.",
   },
 ];
 
