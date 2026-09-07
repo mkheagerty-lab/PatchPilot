@@ -509,7 +509,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
                 tone: "error",
                 title: "PatchPilot — access groups",
                 heading: "Access group not set up",
-                body: `<strong>${result.groupName}</strong> hasn't been provisioned in the home tenant yet. Ask a Global Administrator to run Deploy-PatchPilot.ps1.`,
+                body: `<strong>${result.groupName}</strong> hasn't been provisioned in the home tenant yet. See <a href="${origin}${APP_REGISTRATION_PATH}">App Registration</a> for the setup steps and script to run — if it warns about a missing Entra ID P1/P2 license, that's expected on a tenant without one; a Global Administrator can still manage the home tenant directly without this group.`,
               }),
             );
           }

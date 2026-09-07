@@ -40,17 +40,24 @@ export function ArchitecturePage() {
 
       <div className="max-w-3xl space-y-3 text-sm text-slate-600">
         <p>
-          PatchPilot is a single system that the MSP runs itself. It sits
-          alongside the Microsoft services a customer already pays for — it
-          doesn't replace them, and it installs nothing on their machines. Every
-          finding it shows and every fix it applies goes through Microsoft
-          Defender for Endpoint and Intune, in the customer's own tenant.
+          PatchPilot is a single system an MSP runs itself, built to bridge the
+          gap between vulnerability management and remediation across every
+          customer tenant it manages — one place to see what's exposed and
+          act on it, instead of working tenant by tenant inside separate
+          Microsoft consoles. It doesn't replace the Microsoft services a
+          customer already pays for; it orchestrates them, and it uses the
+          GDAP relationship an MSP already holds with that customer to do it
+          with the correct, already-established permissions rather than a
+          new standing credential of its own.
         </p>
         <p>
-          The part worth understanding is the permission model. PatchPilot holds
-          no password or standing key for any customer. It borrows the access of
-          the engineer using it, one tenant at a time, for as long as a single
-          request takes.
+          There's no agent on the customer's devices, and PatchPilot installs
+          nothing on them. Every finding it shows and every fix it applies
+          goes through Microsoft Defender for Endpoint and Intune, in the
+          customer's own tenant — using the access an engineer's own
+          Microsoft account already has there, home tenant or customer
+          tenant, for as long as a single request takes and no longer.
+          PatchPilot holds no password or standing key for any customer.
         </p>
       </div>
 
@@ -59,6 +66,11 @@ export function ArchitecturePage() {
           Two tenants are in play here, and each has its own access
           prerequisite before PatchPilot can do anything there at all.
         </p>
+        <ul className="mb-6 max-w-3xl list-disc space-y-1 pl-5 text-sm text-slate-600">
+          {PREREQUISITES_AT_A_GLANCE.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
         <h3 className="mb-2 text-sm font-medium text-slate-700">Home tenant</h3>
         <Card className="p-0">
           <dl className="divide-y divide-slate-100">
@@ -349,9 +361,27 @@ const KNOWN_LIMITATIONS: { title: string; body: ReactNode }[] = [
     title: "PatchPilot can't create GDAP relationships",
     body: "Reaching a new customer tenant always starts outside PatchPilot, in Microsoft Partner Center, where the MSP requests a GDAP relationship and the customer approves it. PatchPilot only consumes an already-active relationship; it has no API path to create one. Discovering existing relationships during onboarding also requires the connected admin to be a member of the home tenant's AdminAgents security group, not just Global Administrator.",
   },
+  {
+    title: "Home-tenant access groups need Entra ID P1/P2, not just Global Administrator",
+    body: "Deploy-PatchPilot.ps1 creates PatchPilot Read-Only Access and PatchPilot Write Access as role-assignable security groups, which requires the tenant to hold an Entra ID Premium P1 (or P2) license — a tenant-wide licensing gate, independent of the connected account's own role. Without it, group creation fails with a plain 403 that looks identical to a missing Global Administrator role until the script's own diagnostic spells out which it is. This doesn't block PatchPilot itself: a Global Administrator (or anyone directly assigned the roles listed above) can manage the home tenant exactly the same way without either group.",
+  },
+];
+
+/** Quick-scan summary shown above the detailed dl blocks below — same facts, short form. */
+const PREREQUISITES_AT_A_GLANCE: string[] = [
+  "Entra ID P1 or P2 — required for the two home-tenant access groups (bundled in Microsoft 365 Business Premium, EMS E3/E5, or Microsoft 365 E3/E5)",
+  "Global Administrator or Privileged Role Administrator — to run the deploy script, and to grant/revoke Write access",
+  "Microsoft Intune — for the write actions Intune Administrator and Windows Update Deployment Administrator unlock (bundled in Microsoft 365 Business Premium or Microsoft 365 E3/E5)",
+  "Microsoft Defender for Business, or Defender for Endpoint Plan 1+ — for Live Response (bundled in Microsoft 365 Business Premium or Microsoft 365 E3/E5)",
+  "A GDAP relationship via Microsoft Partner Center — before PatchPilot can reach a customer tenant at all",
+  "Membership in the home tenant's AdminAgents group — to discover existing GDAP relationships during onboarding",
 ];
 
 const HOME_TENANT_PREREQUISITES: { title: string; body: ReactNode }[] = [
+  {
+    title: "Entra ID P1 or P2, for the two access groups",
+    body: "PatchPilot Read-Only Access and PatchPilot Write Access are role-assignable security groups — a Microsoft Entra ID Premium P1 (or P2) feature, licensed at the tenant level. This is separate from being Global Administrator: a tenant with no P1/P2 license gets an identical 403 Forbidden trying to create one either way, and the two causes look the same until Deploy-PatchPilot.ps1's own warning spells out which (confirmed live — a genuine Global Administrator, on a tenant with no Entra P1, hit exactly this). Bundles that include it: Microsoft 365 Business Premium, EMS E3/E5, Microsoft 365 E3/E5.",
+  },
   {
     title: "Global Administrator or Privileged Role Administrator, to deploy",
     body: "Running Deploy-PatchPilot.ps1 for the first time — creating the app registration, granting admin consent, and creating the two home-tenant access groups — requires one of these two Entra roles on the connected account. PatchPilot cannot widen this; it's Microsoft's own requirement for creating role-assignable groups and directory-role assignments.",
@@ -359,6 +389,14 @@ const HOME_TENANT_PREREQUISITES: { title: string; body: ReactNode }[] = [
   {
     title: "The same roles are required to grant or revoke write access",
     body: "Toggling a user's Write access in Settings > Users redirects to Microsoft for confirmation, and that confirmation only succeeds if the signed-in account is a Global Administrator or Privileged Role Administrator in the home tenant (or already a member of the write group). There's no PatchPilot-side workaround.",
+  },
+  {
+    title: "Without Entra ID P1/P2, a Global Administrator can still manage directly",
+    body: "The two groups only exist to delegate home-tenant access to other engineers without making them Global Administrator outright — they're not the only way to hold these roles. PatchPilot only ever checks the signed-in engineer's effective Entra role, never whether it came from one of these groups, so a Global Administrator (or anyone directly assigned Global Reader, Security Reader, Security Administrator, Intune Administrator, and/or Windows Update Deployment Administrator) works exactly the same with no Entra ID P1/P2 license at all.",
+  },
+  {
+    title: "Intune and Defender for Business (or Defender for Endpoint), for what the roles actually unlock",
+    body: "Holding a role — however it was granted — only grants the Graph/Defender API permission that role carries; it doesn't license the underlying service. Live Response needs Microsoft Defender for Business or Defender for Endpoint Plan 1 or higher; Intune app deployment, on-demand remediation, and expedited quality/feature updates need Microsoft Intune. Both are bundled into Microsoft 365 Business Premium and Microsoft 365 E3/E5; without them the role exists but the calls it backs have nothing to act on.",
   },
 ];
 

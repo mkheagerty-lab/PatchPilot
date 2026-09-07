@@ -86,7 +86,6 @@ function Step({
  */
 function GettingStarted({ report }: { report: OnboardingReport }) {
   const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
-  const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script")))`;
   const canWrite = useCan("settings:write");
   return (
     <Card className="border-slate-900/10 bg-gradient-to-br from-slate-50 to-white">
@@ -111,44 +110,8 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
           directly with this instance (hosted) — all in this one run. Choose
           whichever matches how you're set up:
 
-          <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50/50 p-3">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-              Option 1: Azure Cloud Shell
-              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
-                Recommended
-              </span>
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              No local PowerShell needed, and your tenant ID is detected
-              automatically from the signed-in session. Paste this:
-            </p>
-            <div className="mt-1.5 flex items-start gap-2">
-              <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
-                {cloudShellCommand}
-              </code>
-              <CopyButton value={cloudShellCommand} />
-            </div>
-            <a
-              href="https://shell.azure.com/powershell"
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-[#0078d4] px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#106ebe]"
-            >
-              Open Azure Cloud Shell ↗
-            </a>
-          </div>
-
-          <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-              Option 2: PowerShell
-              <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                Manual
-              </span>
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              For local machines or instances that aren't hosted in Azure.
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className="mt-3">
+            <div className="flex flex-wrap items-center gap-2">
               <a
                 href="/api/onboarding/pairing-script"
                 download
@@ -168,8 +131,50 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
                 automatically once it runs.
               </span>
             </div>
-            <p className="mt-2.5 text-xs text-slate-400">
-              Prefer to run it unmodified and hand-edit{" "}
+            <p className="mt-1.5 text-xs text-slate-500">
+              Downloads a personalized copy with the pairing token already
+              filled in — run it on a local machine, or upload it into Cloud
+              Shell for Option 1 below.
+            </p>
+          </div>
+
+          <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              Option 1: Azure Cloud Shell
+              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+                Recommended
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Drag the downloaded file into an open Cloud Shell window (or
+              its ↑ upload icon), then run:
+            </p>
+            <a
+              href="https://shell.azure.com/powershell"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-[#0078d4] px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#106ebe]"
+            >
+              Open Azure Cloud Shell ↗
+            </a>
+            <div className="mt-2.5 flex items-center gap-2">
+              <code className="flex-1 truncate rounded bg-white px-2 py-1 font-mono text-[11px] text-slate-600">
+                ./Deploy-PatchPilot.ps1
+              </code>
+              <CopyButton value="./Deploy-PatchPilot.ps1" />
+            </div>
+          </div>
+
+          <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              Option 2: PowerShell
+              <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                Manual
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Run the downloaded script on a local machine. Prefer to run it
+              unmodified and hand-edit{" "}
               <code className="font-mono text-xs">.env</code> yourself? Copy
               this into an elevated PowerShell from the repo root instead:
             </p>
@@ -1019,9 +1024,7 @@ function RotateClientSecretSection({ demoMode }: { demoMode: boolean }) {
   if (demoMode) return null;
 
   const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
-  const cloudShellCommand = `& ([scriptblock]::Create((irm "${window.location.origin}/api/onboarding/pairing-script")))`;
   const rotateSecretCmd = `${deployCmd} -RotateClientSecret`;
-  const rotateSecretCloudShellCommand = `${cloudShellCommand} -RotateClientSecret`;
 
   return (
     <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -1035,20 +1038,29 @@ function RotateClientSecretSection({ demoMode }: { demoMode: boolean }) {
         a first-time install:
       </p>
 
-      <p className="mt-2.5 text-xs font-semibold text-slate-600">PowerShell (manual)</p>
+      <p className="mt-2.5 text-xs font-semibold text-slate-600">
+        Option 1: Azure Cloud Shell
+      </p>
+      <p className="mt-1 text-xs text-slate-500">
+        Use <span className="font-medium text-slate-600">Download PowerShell Script</span> in
+        Get Started &gt; Step 1 above, drag the file into an open Cloud Shell
+        window (or its ↑ upload icon), then run:
+      </p>
+      <div className="mt-1.5 flex items-center gap-2">
+        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+          ./Deploy-PatchPilot.ps1 -RotateClientSecret
+        </code>
+        <CopyButton value="./Deploy-PatchPilot.ps1 -RotateClientSecret" />
+      </div>
+
+      <p className="mt-3 text-xs font-semibold text-slate-600">
+        Option 2: PowerShell
+      </p>
       <div className="mt-1 flex items-center gap-2">
         <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
           {rotateSecretCmd}
         </code>
         <CopyButton value={rotateSecretCmd} />
-      </div>
-
-      <p className="mt-2.5 text-xs font-semibold text-slate-600">Azure Cloud Shell</p>
-      <div className="mt-1 flex items-start gap-2">
-        <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
-          {rotateSecretCloudShellCommand}
-        </code>
-        <CopyButton value={rotateSecretCloudShellCommand} />
       </div>
     </div>
   );

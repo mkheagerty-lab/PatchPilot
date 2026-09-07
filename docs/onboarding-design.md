@@ -301,6 +301,54 @@ does not and cannot create it or add anyone to it; that has to be done by an
 existing Global Administrator or Partner Center admin before onboarding.
 Surfaced to the end user on the Architecture page's "Prerequisites" section.
 
+### Home-tenant access groups require Entra ID P1/P2
+
+Creating a role-assignable security group (`isAssignableToRole: true` — what
+both `PatchPilot Read-Only Access` and `PatchPilot Write Access` are) is an
+Entra ID Premium P1 feature, licensed at the tenant level, entirely
+independent of the connected account's own role. A tenant with no P1/P2
+license gets a plain `403 Forbidden` from `POST /groups` either way — this
+is indistinguishable from "the connected account isn't Global
+Administrator/Privileged Role Administrator" until Graph's own JSON error
+body is inspected, which `Get-OrCreate-AccessGroup`'s catch block did not do
+before this was found. This was confirmed live: a genuine Global
+Administrator, on a tenant with no Entra ID P1/P2 license (a free Azure
+subscription with no Microsoft 365 licensing attached), hit exactly this.
+
+`Deploy-PatchPilot.ps1` now checks `/subscribedSkus` for the `AAD_PREMIUM`/
+`AAD_PREMIUM_P2` service plan (`Test-HasEntraIdP1OrHigher`, checked both as a
+standalone SKU and nested inside a bundle SKU) before attempting group
+creation at all, and skips straight to the licensing-specific warning rather
+than a misleading "likely missing Global Administrator" message when it's
+absent.
+
+This does not block PatchPilot itself. The two groups only exist to
+**delegate** home-tenant access to other engineers without making them
+Global Administrator outright — PatchPilot's own authorization never checks
+*how* an engineer's Entra role was granted, only the effective role on their
+token. A Global Administrator (or anyone directly assigned Global Reader,
+Security Reader, Security Administrator, Intune Administrator, and/or
+Windows Update Deployment Administrator on their own account, with no group
+involved at all) manages the home tenant exactly the same way, license or
+not. Surfaced to the end user in the Architecture page's "Prerequisites"
+section and Known Limitations, and in the `access_group_not_provisioned`
+error shown on Settings > Users.
+
+Holding one of the five roles above — however it was granted — only unlocks
+the Graph/Defender API permission that role carries; it does not license
+the underlying service those calls act on. Full home-tenant functionality
+additionally needs: **Microsoft Intune** (backs Intune Administrator +
+Windows Update Deployment Administrator — Intune app deployment, on-demand
+remediation, expedited quality/feature updates) and **Microsoft Defender
+for Business, or Defender for Endpoint Plan 1 or higher** (backs Security
+Administrator — Live Response). Both are bundled into Microsoft 365
+Business Premium and Microsoft 365 E3/E5; Entra ID P1 alone does not include
+either. `packages/shared/src/licensing.ts` already tracks these same two
+capabilities (`intune`, `defender-business-premium`/`mde-p2`) for
+customer-tenant remediation-channel gating — this is the identical
+requirement, just for the home tenant's own devices rather than a
+customer's.
+
 ---
 
 ## Settled / deferred items
