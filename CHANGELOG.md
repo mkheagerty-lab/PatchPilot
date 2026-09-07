@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.11.0] - 2026-09-07
+
 - Add a self-service "Enable Demo Mode" button to the Pairing Page so a
   prospect or evaluator can turn an unpaired instance into a fully
   interactive sandbox with one click, no redeploy or real tenant
