@@ -8,6 +8,7 @@ import { redisSessionStore } from "./session-store.js";
 import { authRoutes } from "./auth/routes.js";
 import { resolveCurrentUser } from "./auth/current-user.js";
 import { bootstrapAdmin } from "./auth/bootstrap.js";
+import { DEMO_ENGINEER_UPN } from "./auth/demo-engineers.js";
 import { dataRoutes } from "./routes/data.js";
 import { statusRoutes } from "./routes/status.js";
 import { catalogRoutes } from "./routes/catalog.js";
@@ -16,6 +17,7 @@ import { readinessRoutes } from "./routes/readiness.js";
 import { licensingRoutes } from "./routes/licensing.js";
 import { onboardingRoutes } from "./routes/onboarding.js";
 import { onboardingPairingRoutes } from "./routes/onboarding-pairing.js";
+import { onboardingDemoModeRoutes } from "./routes/onboarding-demo-mode.js";
 import { preflightRoutes } from "./routes/preflight.js";
 import { jobsRoutes } from "./routes/jobs.js";
 import { schedulesRoutes } from "./routes/schedules.js";
@@ -122,7 +124,7 @@ export async function buildServer() {
     app.addHook("preHandler", async (req) => {
       if (!req.session.engineer) {
         req.session.engineer = {
-          upn: "demo.engineer@blackiron.example",
+          upn: DEMO_ENGINEER_UPN,
           displayName: "Demo Engineer",
           homeTenantId: "msp-root",
         };
@@ -146,14 +148,21 @@ export async function buildServer() {
   // identity to forge in the first place.
   if (!config.DEMO_MODE) {
     const CSRF_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-    // The one deliberate exception: POST /api/onboarding/pair has no session
-    // to carry a CSRF token in the first place (it's the route a genuinely
-    // fresh, never-paired instance uses to receive its Entra credentials —
-    // see routes/onboarding-pairing.ts). Its actual authentication is a
-    // single-use, 30-minute-TTL, cryptographically random token in the body,
-    // which is a stronger guarantee than the double-submit cookie this hook
-    // otherwise enforces.
-    const CSRF_EXEMPT_PATHS = new Set(["/api/onboarding/pair"]);
+    // Two deliberate exceptions, both routes a genuinely fresh, never-paired
+    // instance must be reachable from before any session ever gets a CSRF
+    // token (that token is lazily issued inside GET /auth/me, and only for
+    // an authenticated session — see auth/routes.ts):
+    //  - POST /api/onboarding/pair — see routes/onboarding-pairing.ts. Its
+    //    actual authentication is a single-use, 30-minute-TTL,
+    //    cryptographically random token in the body, which is a stronger
+    //    guarantee than the double-submit cookie this hook otherwise
+    //    enforces.
+    //  - POST /api/onboarding/enable-demo-mode — see
+    //    routes/onboarding-demo-mode.ts. No body/token at all: gated on
+    //    !config.ENTRA_CONFIGURED, and the only thing it can ever do is turn
+    //    this same unpaired instance into a harmless sandbox with no real
+    //    tenant data reachable from it.
+    const CSRF_EXEMPT_PATHS = new Set(["/api/onboarding/pair", "/api/onboarding/enable-demo-mode"]);
     app.addHook("preHandler", async (req, reply) => {
       if (CSRF_SAFE_METHODS.has(req.method)) return;
       if (CSRF_EXEMPT_PATHS.has(req.routeOptions.url ?? req.url)) return;
@@ -178,6 +187,7 @@ export async function buildServer() {
   await app.register(licensingRoutes);
   await app.register(onboardingRoutes);
   await app.register(onboardingPairingRoutes);
+  await app.register(onboardingDemoModeRoutes);
   await app.register(preflightRoutes);
   await app.register(jobsRoutes);
   await app.register(schedulesRoutes);

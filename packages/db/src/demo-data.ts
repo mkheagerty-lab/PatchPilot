@@ -45,6 +45,11 @@ import {
   postureSnapshots,
   remediationEvents,
   engineers,
+  scriptCatalog,
+  featureUpdateCampaigns,
+  qualityUpdateCampaigns,
+  updateRingProfiles,
+  driverUpdateProfiles,
 } from "./schema.js";
 
 export type TenantRow = InferSelectModel<typeof tenants>;
@@ -67,6 +72,11 @@ export type DeviceGroupRow = InferSelectModel<typeof deviceGroups>;
 export type DeviceGroupMemberRow = InferSelectModel<typeof deviceGroupMembers>;
 export type AuditLogRow = InferSelectModel<typeof auditLog>;
 export type RemediationEventRow = InferSelectModel<typeof remediationEvents>;
+export type ScriptCatalogRow = InferSelectModel<typeof scriptCatalog>;
+export type FeatureUpdateCampaignRow = InferSelectModel<typeof featureUpdateCampaigns>;
+export type QualityUpdateCampaignRow = InferSelectModel<typeof qualityUpdateCampaigns>;
+export type UpdateRingProfileRow = InferSelectModel<typeof updateRingProfiles>;
+export type DriverUpdateProfileRow = InferSelectModel<typeof driverUpdateProfiles>;
 // No demo/seed fixture — DEMO_MODE injects a synthetic admin session directly
 // (see server.ts) rather than reading this table, and seed.ts deliberately
 // never touches `engineers` (it must survive a reseed). The type is exported
@@ -83,7 +93,7 @@ export const demoTenants: TenantRow[] = [
   {
     id: "11111111-1111-1111-1111-111111111111",
     tenantId: "msp-root",
-    displayName: "Black Iron (MSP)",
+    displayName: "Meridian MSP",
     consentStatus: "consented",
     reachability: "reachable",
     readOnly: false,
@@ -1410,7 +1420,7 @@ export const demoJobs: JobRow[] = [
     featureUpdateVersion: null,
     channel: "intune-remediation",
     status: "succeeded",
-    engineer: "demo.engineer@blackiron.example",
+    engineer: "demo.engineer@meridianmsp.example",
     exitCode: 0,
     output: "[demo] winget upgrade --id 7zip.7zip — exit 0",
     queueJobId: null,
@@ -1440,7 +1450,7 @@ export const demoJobs: JobRow[] = [
     featureUpdateVersion: null,
     channel: "live-response",
     status: "failed",
-    engineer: "demo.engineer@blackiron.example",
+    engineer: "demo.engineer@meridianmsp.example",
     exitCode: 1,
     output: "[demo] device offline — Live Response session could not be established",
     queueJobId: null,
@@ -1470,7 +1480,7 @@ export const demoJobs: JobRow[] = [
     featureUpdateVersion: null,
     channel: "intune-remediation",
     status: "running",
-    engineer: "demo.engineer@blackiron.example",
+    engineer: "demo.engineer@meridianmsp.example",
     exitCode: null,
     output: null,
     queueJobId: null,
@@ -1500,7 +1510,7 @@ export const demoSchedules: ScheduleRow[] = [
     channel: "intune-remediation",
     target: { severity: "critical", patchType: "app" },
     enabled: true,
-    engineer: "demo.engineer@blackiron.example",
+    engineer: "demo.engineer@meridianmsp.example",
     createdAt: daysFromAnchor(-30),
   },
   {
@@ -1511,7 +1521,7 @@ export const demoSchedules: ScheduleRow[] = [
     channel: "expedited-quality-update",
     target: { patchType: "os" },
     enabled: false,
-    engineer: "demo.engineer@blackiron.example",
+    engineer: "demo.engineer@meridianmsp.example",
     createdAt: daysFromAnchor(-14),
   },
 ];
@@ -1555,7 +1565,7 @@ export const demoDeviceGroupMembers: DeviceGroupMemberRow[] = [];
  * Written through a builder rather than 40 literal objects: the row has 18
  * columns and all but a handful are the same every time.
  */
-const DEMO_ENGINEER = "demo.engineer@blackiron.example";
+const DEMO_ENGINEER = "demo.engineer@meridianmsp.example";
 
 /** Minutes from the anchor — the audit story plays out over hours, not days. */
 const minsFromAnchor = (n: number): Date => new Date(ANCHOR.getTime() + n * 60 * 1000);
@@ -2378,6 +2388,299 @@ function buildDemoRemediationEvents(): RemediationEventRow[] {
 }
 
 export const demoRemediationEvents: RemediationEventRow[] = buildDemoRemediationEvents();
+
+/**
+ * Script Catalog fixtures (see script-catalog.ts). A mix of script types and
+ * scopes — two global (`tenantId: null`) entries alongside tenant-scoped
+ * ones, and one pre-archived row — so the type filter, the tenant/global
+ * split, and the "show archived" toggle all have something to demonstrate on
+ * first load.
+ */
+export const demoScriptCatalog: ScriptCatalogRow[] = [
+  {
+    id: "40000001-0000-0000-0000-000000000001",
+    tenantId: null,
+    name: "Clear WinSxS Component Store",
+    description: "Reclaims disk space by cleaning up superseded Windows component versions.",
+    scriptType: "powershell",
+    scriptContent: "Dism.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase",
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-45),
+    archivedAt: null,
+  },
+  {
+    id: "40000002-0000-0000-0000-000000000002",
+    tenantId: null,
+    name: "Flush DNS Resolver Cache",
+    description: "Clears the local DNS cache — first step for stale-record connectivity complaints.",
+    scriptType: "cmd",
+    scriptContent: "ipconfig /flushdns",
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-38),
+    archivedAt: null,
+  },
+  {
+    id: "40000003-0000-0000-0000-000000000003",
+    tenantId: "msp-root",
+    name: "Restart Print Spooler Service",
+    description: "Recovers a stuck print queue without a full reboot.",
+    scriptType: "powershell",
+    scriptContent: "Restart-Service -Name Spooler -Force",
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-20),
+    archivedAt: null,
+  },
+  {
+    id: "40000004-0000-0000-0000-000000000004",
+    tenantId: "contoso",
+    name: "Disable Legacy TLS 1.0 and 1.1",
+    description: "Hardens the Schannel configuration ahead of Contoso Legal's compliance review.",
+    scriptType: "powershell",
+    scriptContent:
+      "$protocols = 'TLS 1.0', 'TLS 1.1'\n" +
+      "foreach ($p in $protocols) {\n" +
+      "  $path = \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\$p\\Server\"\n" +
+      "  New-Item -Path $path -Force | Out-Null\n" +
+      "  Set-ItemProperty -Path $path -Name Enabled -Value 0 -Type DWord\n" +
+      "}",
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-15),
+    archivedAt: null,
+  },
+  {
+    id: "40000005-0000-0000-0000-000000000005",
+    tenantId: "northwind",
+    name: "Export Battery Health Report",
+    description: "Generates a battery report for laptop fleet triage.",
+    scriptType: "cmd",
+    scriptContent: "powercfg /batteryreport /output C:\\Temp\\battery-report.html",
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-8),
+    archivedAt: null,
+  },
+  {
+    id: "40000006-0000-0000-0000-000000000006",
+    tenantId: "msp-root",
+    name: "Report System Uptime (WSL)",
+    description: "Superseded by the built-in uptime widget — kept only for reference.",
+    scriptType: "bash",
+    scriptContent: "uptime -p",
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-60),
+    archivedAt: daysFromAnchor(-2),
+  },
+];
+
+/**
+ * Feature Update campaign fixtures (see feature-updates.ts). One PatchPilot-
+ * created campaign per demo tenant plus one synced-in-from-Intune row
+ * (`source: "intune"`, `createdBy: null`) so the Feature Updates tab shows
+ * both provenances and a still-open vs. already-elapsed rollout window.
+ */
+export const demoFeatureUpdateCampaigns: FeatureUpdateCampaignRow[] = [
+  {
+    id: "50000001-0000-0000-0000-000000000001",
+    tenantId: "msp-root",
+    displayName: "Meridian MSP — 24H2 Broad Rollout",
+    targetVersion: "24H2",
+    targetBuild: 26100,
+    assignments: [{ kind: "include", groupId: "grp-meridian-all-devices", groupName: "All Devices – Meridian MSP" }],
+    source: "patchpilot",
+    intuneProfileId: "demo-profile-fu-1",
+    offerStartDateTimeInUTC: daysFromAnchor(-10),
+    offerEndDateTimeInUTC: daysFromAnchor(20),
+    offerIntervalInDays: 5,
+    installFeatureUpdatesOptional: false,
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-10),
+  },
+  {
+    id: "50000002-0000-0000-0000-000000000002",
+    tenantId: "contoso",
+    displayName: "Contoso Legal — 23H2 Pilot Ring",
+    targetVersion: "23H2",
+    targetBuild: 22631,
+    assignments: [
+      { kind: "include", groupId: "grp-contoso-pilot-ring", groupName: "Pilot Ring – Contoso Legal" },
+      { kind: "exclude", groupId: "grp-contoso-vip", groupName: "VIP Devices – Contoso Legal" },
+    ],
+    source: "patchpilot",
+    intuneProfileId: "demo-profile-fu-2",
+    offerStartDateTimeInUTC: daysFromAnchor(-3),
+    offerEndDateTimeInUTC: daysFromAnchor(27),
+    offerIntervalInDays: 7,
+    installFeatureUpdatesOptional: true,
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-3),
+  },
+  {
+    id: "50000003-0000-0000-0000-000000000003",
+    tenantId: "northwind",
+    displayName: "Northwind Sales — 22H2 Hold",
+    targetVersion: "22H2",
+    targetBuild: 22621,
+    assignments: [{ kind: "all-devices" }],
+    source: "intune",
+    intuneProfileId: "demo-profile-fu-3",
+    offerStartDateTimeInUTC: daysFromAnchor(-30),
+    offerEndDateTimeInUTC: daysFromAnchor(-5),
+    offerIntervalInDays: 3,
+    installFeatureUpdatesOptional: false,
+    createdBy: null,
+    createdAt: daysFromAnchor(-30),
+  },
+];
+
+/**
+ * Quality Update campaign fixtures (see quality-updates.ts). Covers both
+ * `policyType`s: `"expedite"` rows PatchPilot itself can create/delete, and
+ * `"quality-update"` rows that are a read-only synced mirror — so the tab's
+ * "unified list, policyType-filtered actions" behaviour has both kinds to
+ * show from first load.
+ */
+export const demoQualityUpdateCampaigns: QualityUpdateCampaignRow[] = [
+  {
+    id: "60000001-0000-0000-0000-000000000001",
+    tenantId: "msp-root",
+    policyType: "expedite",
+    displayName: "Expedite – June 2026 B Release",
+    kbId: "KB5039212",
+    catalogItemId: "demo-catalog-item-1",
+    releaseLabel: "2026-06 B",
+    daysUntilForcedReboot: 2,
+    assignments: [{ kind: "include", groupId: "grp-meridian-all-devices", groupName: "All Devices – Meridian MSP" }],
+    source: "patchpilot",
+    intuneProfileId: "demo-profile-qu-1",
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-6),
+  },
+  {
+    id: "60000002-0000-0000-0000-000000000002",
+    tenantId: "contoso",
+    policyType: "expedite",
+    displayName: "Expedite – Critical OOB Patch",
+    kbId: "KB5040442",
+    catalogItemId: "demo-catalog-item-2",
+    releaseLabel: "2026-06 OOB",
+    daysUntilForcedReboot: 0,
+    assignments: [
+      { kind: "include", groupId: "grp-contoso-pilot-ring", groupName: "Pilot Ring – Contoso Legal" },
+      { kind: "exclude", groupId: "grp-contoso-vip", groupName: "VIP Devices – Contoso Legal" },
+    ],
+    source: "patchpilot",
+    intuneProfileId: "demo-profile-qu-2",
+    createdBy: DEMO_ENGINEER,
+    createdAt: daysFromAnchor(-1),
+  },
+  {
+    id: "60000003-0000-0000-0000-000000000003",
+    tenantId: "msp-root",
+    policyType: "quality-update",
+    displayName: "Default Quality Update Policy",
+    kbId: null,
+    catalogItemId: null,
+    releaseLabel: null,
+    daysUntilForcedReboot: null,
+    assignments: [{ kind: "all-devices" }],
+    source: "intune",
+    intuneProfileId: "demo-profile-qu-3",
+    createdBy: null,
+    createdAt: daysFromAnchor(-90),
+  },
+  {
+    id: "60000004-0000-0000-0000-000000000004",
+    tenantId: "northwind",
+    policyType: "quality-update",
+    displayName: "Northwind Standard Cadence",
+    kbId: null,
+    catalogItemId: null,
+    releaseLabel: null,
+    daysUntilForcedReboot: null,
+    assignments: [{ kind: "all-devices" }],
+    source: "intune",
+    intuneProfileId: "demo-profile-qu-4",
+    createdBy: null,
+    createdAt: daysFromAnchor(-45),
+  },
+];
+
+/**
+ * Update Ring fixtures (see update-rings.ts) — a read-only synced mirror,
+ * every row `source`-less/Intune-origin by definition. One ring per demo
+ * tenant with a distinct pace (fast / broad / deferred) so the settings
+ * columns (deferral days, auto-update mode) visibly differ across rows.
+ */
+export const demoUpdateRingProfiles: UpdateRingProfileRow[] = [
+  {
+    id: "70000001-0000-0000-0000-000000000001",
+    tenantId: "msp-root",
+    intuneProfileId: "demo-profile-ur-1",
+    displayName: "Meridian MSP – Ring 1 (Fast)",
+    assignments: [{ kind: "include", groupId: "grp-meridian-all-devices", groupName: "All Devices – Meridian MSP" }],
+    qualityUpdatesDeferralPeriodInDays: 0,
+    featureUpdatesDeferralPeriodInDays: 0,
+    allowWindows11Upgrade: true,
+    automaticUpdateMode: "autoInstallAndRebootAtMaintenanceTime",
+    businessReadyUpdatesOnly: "userDefined",
+    createdAt: daysFromAnchor(-80),
+  },
+  {
+    id: "70000002-0000-0000-0000-000000000002",
+    tenantId: "contoso",
+    intuneProfileId: "demo-profile-ur-2",
+    displayName: "Contoso Legal – Ring 2 (Broad)",
+    assignments: [
+      { kind: "include", groupId: "grp-contoso-pilot-ring", groupName: "Pilot Ring – Contoso Legal" },
+      { kind: "exclude", groupId: "grp-contoso-vip", groupName: "VIP Devices – Contoso Legal" },
+    ],
+    qualityUpdatesDeferralPeriodInDays: 7,
+    featureUpdatesDeferralPeriodInDays: 14,
+    allowWindows11Upgrade: true,
+    automaticUpdateMode: "autoInstallAndRebootAtScheduledTime",
+    businessReadyUpdatesOnly: "all",
+    createdAt: daysFromAnchor(-60),
+  },
+  {
+    id: "70000003-0000-0000-0000-000000000003",
+    tenantId: "northwind",
+    intuneProfileId: "demo-profile-ur-3",
+    displayName: "Northwind Sales – Ring 3 (Deferred)",
+    assignments: [{ kind: "all-devices" }],
+    qualityUpdatesDeferralPeriodInDays: 14,
+    featureUpdatesDeferralPeriodInDays: 30,
+    allowWindows11Upgrade: false,
+    automaticUpdateMode: "notifyDownload",
+    businessReadyUpdatesOnly: "all",
+    createdAt: daysFromAnchor(-40),
+  },
+];
+
+/**
+ * Driver Update fixtures (see driver-updates.ts) — same read-only-mirror
+ * rationale as the update rings above.
+ */
+export const demoDriverUpdateProfiles: DriverUpdateProfileRow[] = [
+  {
+    id: "80000001-0000-0000-0000-000000000001",
+    tenantId: "msp-root",
+    intuneProfileId: "demo-profile-du-1",
+    displayName: "Meridian MSP – Auto-approve Drivers",
+    assignments: [{ kind: "all-devices" }],
+    approvalType: "automatic",
+    deploymentDeferralInDays: 0,
+    createdAt: daysFromAnchor(-70),
+  },
+  {
+    id: "80000002-0000-0000-0000-000000000002",
+    tenantId: "contoso",
+    intuneProfileId: "demo-profile-du-2",
+    displayName: "Contoso Legal – Manual Review Drivers",
+    assignments: [{ kind: "include", groupId: "grp-contoso-pilot-ring", groupName: "Pilot Ring – Contoso Legal" }],
+    approvalType: "manual",
+    deploymentDeferralInDays: 5,
+    createdAt: daysFromAnchor(-50),
+  },
+];
 
 export const demoSla = DEFAULT_SLA;
 

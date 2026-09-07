@@ -1,6 +1,13 @@
+import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { db, tables, type IntuneAssignmentSummary } from "@patchpilot/db";
+import {
+  db,
+  tables,
+  demoQualityUpdateCampaigns,
+  type IntuneAssignmentSummary,
+  type QualityUpdateCampaignRow,
+} from "@patchpilot/db";
 import { CHANNEL_SPECS } from "@patchpilot/shared";
 import {
   audit,
@@ -29,12 +36,38 @@ import { resolveAssignmentTargets } from "../services/win32-app-deploy.js";
  * route is KB-first (a specific Defender missing-KB drives the release
  * match), while `POST /api/quality-updates/campaigns` here is a standalone
  * release-first picker with no KB requirement.
+ *
+ * DEMO_MODE forks every route onto an in-memory `demoCampaigns` array seeded
+ * from fixtures, bypassing every Graph call (catalog lookup, assignment
+ * resolution, profile create/delete) entirely — same pattern as
+ * script-catalog.ts's `demoScripts`.
  */
 
 function idList(items: readonly string[], max = 10): string {
   if (items.length <= max) return items.join(", ");
   return `${items.slice(0, max).join(", ")} + ${items.length - max} more`;
 }
+
+/** Newest-first in-memory campaign log used only in DEMO_MODE, seeded from fixtures. */
+const demoCampaigns: QualityUpdateCampaignRow[] = [...demoQualityUpdateCampaigns].sort(
+  (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+);
+
+/** Canned release picker results — no Graph catalog call in demo mode. */
+const demoReleaseCatalog = [
+  {
+    id: "demo-catalog-2026-06-b",
+    displayName: "2026-06 Cumulative Update for Windows 11 (KB5099001)",
+    isExpeditable: true,
+    cadence: "B" as const,
+  },
+  {
+    id: "demo-catalog-2026-06-oob",
+    displayName: "2026-06 Out-of-band Update for Windows 11 (KB5099045)",
+    isExpeditable: true,
+    cadence: "OOB" as const,
+  },
+];
 
 interface CreateExpediteBody {
   tenantId?: string;
@@ -60,8 +93,10 @@ export async function qualityUpdatesRoutes(app: FastifyInstance): Promise<void> 
     "/api/quality-updates/campaigns",
     { preHandler: requirePermission("operations:read") },
     async (req) => {
-      if (config.DEMO_MODE) return { campaigns: [] };
       const { tenantId } = req.query ?? {};
+      if (config.DEMO_MODE) {
+        return { campaigns: demoCampaigns.filter((c) => (tenantId ? c.tenantId === tenantId : true)) };
+      }
       const rows = await db
         .select()
         .from(tables.qualityUpdateCampaigns)
@@ -83,7 +118,7 @@ export async function qualityUpdatesRoutes(app: FastifyInstance): Promise<void> 
     async (req, reply) => {
       const { tenantId } = req.query ?? {};
       if (!tenantId) return reply.code(400).send({ error: "tenantId is required" });
-      if (config.DEMO_MODE) return { releases: [] };
+      if (config.DEMO_MODE) return { releases: demoReleaseCatalog };
 
       const engineer = req.session.engineer!.upn;
       const homeTenantId = req.session.engineer!.homeTenantId;
@@ -128,9 +163,6 @@ export async function qualityUpdatesRoutes(app: FastifyInstance): Promise<void> 
     "/api/quality-updates/campaigns",
     { preHandler: requirePermission("operations:write") },
     async (req, reply) => {
-      if (config.DEMO_MODE) {
-        return reply.code(409).send({ error: "Quality update campaigns are unavailable in demo mode" });
-      }
       const {
         tenantId,
         displayName,
@@ -161,6 +193,51 @@ export async function qualityUpdatesRoutes(app: FastifyInstance): Promise<void> 
         return reply.code(400).send({ error: "daysUntilForcedReboot must be 0, 1 or 2" });
       }
 
+      const engineer = req.session.engineer!.upn;
+
+      if (config.DEMO_MODE) {
+        const assignments: IntuneAssignmentSummary[] = [
+          { kind: "include", groupId: groupId.trim(), groupName: groupName.trim() },
+        ];
+        if (excludeGroupId?.trim()) {
+          assignments.push({
+            kind: "exclude",
+            groupId: excludeGroupId.trim(),
+            groupName: excludeGroupName?.trim() || undefined,
+          });
+        }
+        const campaign: QualityUpdateCampaignRow = {
+          id: randomUUID(),
+          tenantId,
+          policyType: "expedite",
+          source: "patchpilot",
+          displayName: displayName.trim(),
+          kbId: null,
+          catalogItemId: catalogItemId.trim(),
+          releaseLabel: releaseLabel.trim(),
+          daysUntilForcedReboot,
+          assignments,
+          intuneProfileId: `demo-quality-${randomUUID()}`,
+          createdBy: engineer,
+          createdAt: new Date(),
+        };
+        demoCampaigns.unshift(campaign);
+        await audit({
+          engineer,
+          tenantId,
+          endpoint: CHANNEL_SPECS["expedited-quality-update"].endpointTemplate,
+          method: "POST",
+          action: "quality-update-campaign:create",
+          resourceType: "quality-update-campaign",
+          resourceId: campaign.id,
+          resourceLabel: `${displayName} (${releaseLabel} → ${groupName})`,
+          summary: `Created expedite policy "${displayName}" targeting ${releaseLabel} for group "${groupName}"`,
+          outcome: "success",
+          responseStatus: 201,
+        });
+        return reply.code(201).send({ campaign });
+      }
+
       const [tenant] = await db.select().from(tables.tenants).where(eq(tables.tenants.tenantId, tenantId)).limit(1);
       if (!tenant) return reply.code(404).send({ error: "tenant not found" });
       if (tenant.readOnly) {
@@ -169,7 +246,6 @@ export async function qualityUpdatesRoutes(app: FastifyInstance): Promise<void> 
           .send({ error: "Tenant is read-only — opt in to write actions before creating a policy." });
       }
 
-      const engineer = req.session.engineer!.upn;
       const homeTenantId = req.session.engineer!.homeTenantId;
 
       let targets;
@@ -259,10 +335,32 @@ export async function qualityUpdatesRoutes(app: FastifyInstance): Promise<void> 
     "/api/quality-updates/campaigns/:id",
     { preHandler: requirePermission("operations:write") },
     async (req, reply) => {
-      if (config.DEMO_MODE) {
-        return reply.code(409).send({ error: "Quality update campaigns are unavailable in demo mode" });
-      }
       const { id } = req.params;
+
+      if (config.DEMO_MODE) {
+        const index = demoCampaigns.findIndex((c) => c.id === id);
+        if (index === -1) return reply.code(404).send({ error: "policy not found" });
+        const campaign = demoCampaigns[index]!;
+        if (campaign.policyType !== "expedite") {
+          return reply.code(400).send({ error: "only expedite policies can be deleted through PatchPilot" });
+        }
+        demoCampaigns.splice(index, 1);
+        const engineer = req.session.engineer!.upn;
+        await audit({
+          engineer,
+          tenantId: campaign.tenantId,
+          endpoint: "/api/quality-updates/campaigns/:id",
+          method: "DELETE",
+          action: "quality-update-campaign:delete",
+          resourceType: "quality-update-campaign",
+          resourceId: campaign.id,
+          resourceLabel: campaign.displayName,
+          summary: `Deleted expedite policy "${campaign.displayName}"`,
+          outcome: "success",
+          responseStatus: 200,
+        });
+        return { deleted: true };
+      }
 
       const [campaign] = await db
         .select()
@@ -346,13 +444,55 @@ export async function qualityUpdatesRoutes(app: FastifyInstance): Promise<void> 
     "/api/quality-updates/campaigns/bulk-delete",
     { preHandler: requirePermission("operations:write") },
     async (req, reply) => {
-      if (config.DEMO_MODE) {
-        return reply.code(409).send({ error: "Quality update campaigns are unavailable in demo mode" });
-      }
       const { tenantId, ids } = req.body ?? {};
       if (!tenantId?.trim()) return reply.code(400).send({ error: "tenantId is required" });
       if (!Array.isArray(ids) || ids.length === 0) {
         return reply.code(400).send({ error: "ids must be a non-empty array" });
+      }
+      const trimmedTenant = tenantId.trim();
+
+      if (config.DEMO_MODE) {
+        const matched = demoCampaigns.filter((c) => ids.includes(c.id) && c.tenantId === trimmedTenant);
+        const foundIds = new Set(matched.map((c) => c.id));
+        const notFound = ids.filter((id) => !foundIds.has(id));
+        const skipped = matched.filter((c) => c.policyType !== "expedite");
+        const eligible = matched.filter((c) => c.policyType === "expedite");
+
+        const deleted: string[] = [];
+        const deletedLabels: string[] = [];
+        for (const campaign of eligible) {
+          const index = demoCampaigns.findIndex((c) => c.id === campaign.id);
+          if (index !== -1) demoCampaigns.splice(index, 1);
+          deleted.push(campaign.id);
+          deletedLabels.push(campaign.displayName);
+        }
+
+        const engineer = req.session.engineer!.upn;
+        await audit({
+          engineer,
+          tenantId: trimmedTenant,
+          endpoint: "/api/quality-updates/campaigns/bulk-delete",
+          method: "POST",
+          action: "quality-update-campaign:bulk-delete",
+          resourceType: "quality-update-campaign",
+          summary: `Deleted ${deleted.length} of ${ids.length} quality update policies`,
+          detail: [
+            deletedLabels.length ? `Deleted: ${idList(deletedLabels)}` : null,
+            notFound.length ? `Not found: ${idList(notFound)}` : null,
+            skipped.length ? `Skipped (read-only policyType): ${idList(skipped.map((s) => s.displayName))}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          outcome: notFound.length || skipped.length ? "partial" : "success",
+          responseStatus: 200,
+        });
+
+        return {
+          deleted,
+          notFound,
+          failed: [],
+          skipped: skipped.map((s) => s.id),
+        };
       }
 
       const [tenant] = await db

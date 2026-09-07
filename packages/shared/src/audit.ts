@@ -57,6 +57,11 @@ export const SYSTEM_ACTORS = {
   // its Entra credentials authenticated solely by a single-use token, so this
   // is the only actor a successful pairing row can carry.
   onboardingPairing: "system:onboarding-pairing",
+  // Same "no session yet" shape as onboardingPairing above, for the sibling
+  // public route that flips a fresh, unpaired instance into DEMO_MODE
+  // instead of pairing it to a real tenant — see
+  // apps/api/src/routes/onboarding-demo-mode.ts.
+  onboardingDemoMode: "system:onboarding-demo-mode",
   // The periodic background poll of GitHub Releases (Settings > Updates),
   // structured like catalogRefresh above — only writes an audit row on a
   // successful version-check cycle, per apps/api/src/updates/auto-check.ts.
@@ -269,6 +274,12 @@ export const AUDIT_ACTIONS = [
   // endpoint itself, under SYSTEM_ACTORS.onboardingPairing.
   "onboarding:pairing-token-issued",
   "onboarding:paired",
+  // Self-service demo mode, the pairing screen's other option — flips a
+  // fresh, unpaired instance into DEMO_MODE and restarts it. Always written
+  // under SYSTEM_ACTORS.onboardingDemoMode; there is no admin-issued
+  // counterpart the way "pairing-token-issued" is for pairing, since there's
+  // nothing to issue ahead of time.
+  "onboarding:demo-mode-enabled",
   // feature updates — the group-campaign flow only. The single-device
   // "Update to <version>" action is a job dispatch and reuses
   // "remediation:dispatch", same as every other channel.
@@ -463,6 +474,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
 
   "onboarding:pairing-token-issued": "Pairing script downloaded",
   "onboarding:paired": "Instance paired with Entra app registration",
+  "onboarding:demo-mode-enabled": "Demo mode enabled",
 
   "feature-update-campaign:create": "Feature update campaign created",
   "feature-update-campaign:sync": "Feature update campaigns synced",
@@ -634,7 +646,7 @@ export const AUDIT_ACTION_GROUPS: ReadonlyArray<{
   },
   {
     label: "Onboarding",
-    actions: ["onboarding:pairing-token-issued", "onboarding:paired"],
+    actions: ["onboarding:pairing-token-issued", "onboarding:paired", "onboarding:demo-mode-enabled"],
   },
   {
     label: "Feature updates",

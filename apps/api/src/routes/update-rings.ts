@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { desc, eq } from "drizzle-orm";
-import { db, tables } from "@patchpilot/db";
+import { db, tables, demoUpdateRingProfiles } from "@patchpilot/db";
 import { config } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
 
@@ -9,6 +9,10 @@ import { requirePermission } from "../auth/rbac.js";
  * `windowsUpdateForBusinessConfigurations`. No PatchPilot write path exists
  * for this resource, so unlike feature-updates.ts/quality-updates.ts this
  * file has no create/delete/bulk-delete routes, only the list.
+ *
+ * DEMO_MODE serves a fixed fixture list instead — no mutation is possible
+ * against this resource even in the real path, so there's nothing to fork
+ * beyond the read itself.
  */
 export async function updateRingsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", async (req, reply) => {
@@ -21,7 +25,12 @@ export async function updateRingsRoutes(app: FastifyInstance): Promise<void> {
     "/api/update-rings",
     { preHandler: requirePermission("operations:read") },
     async (req) => {
-      if (config.DEMO_MODE) return { profiles: [] };
+      if (config.DEMO_MODE) {
+        const { tenantId } = req.query ?? {};
+        return {
+          profiles: demoUpdateRingProfiles.filter((p) => (tenantId ? p.tenantId === tenantId : true)),
+        };
+      }
       const { tenantId } = req.query ?? {};
       const rows = await db
         .select()

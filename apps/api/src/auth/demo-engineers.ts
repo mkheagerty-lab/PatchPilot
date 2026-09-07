@@ -41,7 +41,7 @@ const seededAt = new Date().toISOString();
 
 /** The UPN server.ts's DEMO_MODE hook injects — kept in one place so the
  * store and the session-injection hook can't drift apart. */
-export const DEMO_ENGINEER_UPN = "demo.engineer@blackiron.example";
+export const DEMO_ENGINEER_UPN = "demo.engineer@meridianmsp.example";
 
 export const demoEngineers: DemoEngineer[] = [
   {

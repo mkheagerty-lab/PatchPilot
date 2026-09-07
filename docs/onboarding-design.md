@@ -433,6 +433,76 @@ customer-tenant remediation-channel gating — this is the identical
 requirement, just for the home tenant's own devices rather than a
 customer's.
 
+### Demo mode: self-service toggle
+
+PatchPilot has run on fixture data (`packages/db/src/demo-data.ts`, served
+entirely from memory — no database touched) since early on, but turning it
+on required setting `DEMO_MODE=true` in `.env` and redeploying. That's fine
+for the team's own environments; it's a dead end for a prospect or evaluator
+who lands on the Pairing Page with no way to run the product at all.
+
+**`POST /api/onboarding/enable-demo-mode`** (`apps/api/src/routes/
+onboarding-demo-mode.ts`) makes this self-service. It is deliberately public
+and unauthenticated — the same posture as `/pair` — gated on
+`!config.ENTRA_CONFIGURED`: reachable only while the instance is genuinely
+unpaired, 400s `already_configured` the moment it's paired for real or
+already in demo mode. On success it writes a `demo-mode-enabled` row to the
+`settings` table, audits `onboarding:demo-mode-enabled`, and triggers the
+same restart-after-reply mechanism `/pair` uses (`restart-after-reply.ts`).
+`load-env.ts`'s `loadDemoModeOverride()` reads that row on boot, ahead of
+the pairing-credential loaders, and sets `process.env.DEMO_MODE = "true"`
+before `loadConfig()` runs — from there, `config.ts`'s existing
+`ENTRA_CONFIGURED = true` forcing rule takes over and `AuthGate` stops
+rendering `<SetupPairing>` on its own, with no frontend routing change.
+
+**Why exposing this publicly is an acceptable trade-off, unlike `/pair`.**
+`/pair` writes real Entra credentials — a successful call against it could
+redirect a genuine tenant's app registration at an attacker-controlled
+instance, so its exposure is a real (if narrow, rate-limited) risk.
+`enable-demo-mode` cannot touch a real tenant at all: its only effect is to
+flip the instance into a mode that serves nothing but in-memory fixture
+data and rejects every credential/pairing write. The worst outcome of
+someone hitting this endpoint against an otherwise-unpaired instance is
+that it now shows a sandbox instead of the pairing screen — recoverable by
+redeploying, and never a path to real data. It's still rate-limited
+(`max: 5, timeWindow: "1 minute"`, matching `/pair`) purely to keep the
+restart from being spammable, not because of any data-exposure risk.
+
+**One-way, same as pairing.** There is no in-app "disable demo mode" flow
+today, mirroring pairing's own one-way nature. `SetupPairing.tsx` presents
+this as a third, visually distinct option below the two real-pairing paths,
+with an inline confirm step (not a native `confirm()`) explaining that it
+loads fictional sample data only and can't be undone from that screen.
+
+**Fixture-naming policy.** This redesign also replaced the demo tenant's
+display name (previously "Black Iron (MSP)") and the seeded demo engineer's
+UPN (previously `demo.engineer@blackiron.example`) — PatchPilot's own pilot
+MSP's real name had leaked into what's supposed to be a fully generic
+sandbox. Every fixture in `demo-data.ts` must use invented names only —
+never the MSP's own name, a pilot customer's name, or any other real
+organization — and email-shaped fixtures should keep using the RFC 2606
+reserved `.example` TLD (as `@meridianmsp.example` now does) so a stray
+fixture email can never resolve to a real mailbox.
+
+**Everything a viewer can do in demo mode.** Beyond the dashboard/device/
+vulnerability pages that already ran on rich fixtures, this redesign also
+made Reports (`apps/api/src/routes/reports.ts`), Script Catalog, and all
+four Windows Updates tabs (Quality Updates, Feature Updates, Update Rings,
+Driver Updates) fully interactive rather than read-only or blocked:
+Reports serves a canned, pre-rendered sample PDF instantly instead of
+enqueuing a real render job; the other four fork every read *and* write
+route onto an in-memory array seeded from fixtures (create/archive/delete/
+bulk actions all mutate that array and persist for the rest of the
+process's life, resetting only on restart — the same pattern
+`apps/api/src/jobs.ts` already used for Jobs/Schedules). No Graph call, no
+Puppeteer render, and no database write happens in demo mode anywhere in
+the app.
+
+A small "Demo mode" badge in the app header (`apps/web/src/App.tsx`,
+sourced from `/auth/me`'s `demoMode` field) reminds a viewer mid-session
+that everything on screen is fictional — nothing did this before demo mode
+became one click away from the Pairing Page.
+
 ---
 
 ## Settled / deferred items

@@ -10,6 +10,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { searchGroupsMock } = vi.hoisted(() => ({ searchGroupsMock: vi.fn() }));
 
+// This suite exercises the real (non-DEMO_MODE) searchGroups path — see
+// quality-updates.test.ts for the same pattern, needed since groups.ts forked
+// on config.DEMO_MODE to serve a canned fixture instead (see groups.ts).
+vi.mock("../config.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../config.js")>();
+  return { ...actual, config: { ...actual.config, DEMO_MODE: false } };
+});
+
 vi.mock("@patchpilot/graph", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@patchpilot/graph")>();
   return { ...actual, searchGroups: searchGroupsMock };

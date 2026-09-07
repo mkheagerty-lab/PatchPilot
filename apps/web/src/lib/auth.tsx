@@ -22,11 +22,20 @@ export interface Engineer {
   permissions: Permission[];
   /** Personal light/dark UI preference — see lib/theme.tsx. */
   theme: "light" | "dark";
+  /**
+   * True when the whole API process is running in DEMO_MODE (fixture data
+   * only, no real tenant). Not a per-engineer setting — every session gets
+   * the same value while the instance is in this mode. Stitched onto
+   * Engineer here (rather than a separate context) purely so app-shell
+   * chrome can read it via the existing `useEngineer()` hook.
+   */
+  demoMode: boolean;
 }
 
 interface MeResponse {
   authenticated: boolean;
   entraConfigured?: boolean;
+  demoMode?: boolean;
   engineer?: Engineer;
   csrfToken?: string;
 }
@@ -133,5 +142,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  return <AuthContext.Provider value={data.engineer}>{children}</AuthContext.Provider>;
+  const engineer: Engineer = { ...data.engineer, demoMode: data.demoMode ?? false };
+  return <AuthContext.Provider value={engineer}>{children}</AuthContext.Provider>;
 }

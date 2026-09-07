@@ -30,6 +30,7 @@ import {
   type CsvTable,
 } from "../reports/csv.js";
 import { deleteReport, getReport, insertReport, listReports, loadReportPdf } from "../reports/store.js";
+import { demoReportsWithPdfBytes, findDemoReport, loadSamplePdf } from "../reports/demo-reports.js";
 import { reportQueue } from "../queue.js";
 
 /**
@@ -105,10 +106,18 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
 
   app.post<{ Body: z.infer<typeof CreateReportBody> }>(
     "/api/reports",
-    { preHandler: rejectInDemoMode },
     async (req, reply) => {
       const parsed = CreateReportBody.safeParse(req.body ?? {});
       if (!parsed.success) return reply.code(400).send({ error: "invalid_body" });
+
+      // No queue, no worker, no database: hand back one of the two fixed
+      // demo rows that already matches the requested type (falling back to
+      // the first) so "Generate" reads as instant instead of unsupported.
+      if (config.DEMO_MODE) {
+        const demoRows = demoReportsWithPdfBytes();
+        const fixed = demoRows.find((r) => r.reportType === parsed.data.reportType) ?? demoRows[0]!;
+        return reply.code(202).send({ id: fixed.id, status: fixed.status });
+      }
 
       const reportType: ReportType = parsed.data.reportType;
       const def = REPORT_TYPE_DEFS[reportType];
@@ -213,10 +222,16 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
 
   app.get<{ Querystring: z.infer<typeof ListQuery> }>(
     "/api/reports",
-    { preHandler: rejectInDemoMode },
     async (req, reply) => {
       const parsed = ListQuery.safeParse(req.query ?? {});
       if (!parsed.success) return reply.code(400).send({ error: "invalid_query" });
+
+      if (config.DEMO_MODE) {
+        let rows = demoReportsWithPdfBytes();
+        if (parsed.data.reportType) rows = rows.filter((r) => r.reportType === parsed.data.reportType);
+        if (parsed.data.tenantId) rows = rows.filter((r) => r.tenantId === parsed.data.tenantId);
+        return { rows, nextCursor: null };
+      }
 
       return listReports({
         engineer: req.currentUser!.upn,
@@ -230,8 +245,13 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
 
   app.get<{ Params: { id: string } }>(
     "/api/reports/:id",
-    { preHandler: rejectInDemoMode },
     async (req, reply) => {
+      if (config.DEMO_MODE) {
+        const row = findDemoReport(req.params.id);
+        if (!row) return reply.code(404).send({ error: "not_found" });
+        return row;
+      }
+
       const row = await getReport(req.params.id, req.currentUser!.upn);
       // 404, not 403: someone else's report id and an id that never existed
       // must be indistinguishable from out here.
@@ -242,8 +262,38 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
 
   app.get<{ Params: { id: string } }>(
     "/api/reports/:id/download",
-    { preHandler: rejectInDemoMode },
     async (req, reply) => {
+      // audit() already forks on DEMO_MODE internally (writes into an
+      // in-memory ring buffer instead of the database), so the call below
+      // needs no demo-specific branch of its own in either path.
+      if (config.DEMO_MODE) {
+        const row = findDemoReport(req.params.id);
+        if (!row) return reply.code(404).send({ error: "not_found" });
+        const pdf = loadSamplePdf();
+
+        await audit({
+          engineer: req.currentUser!.upn,
+          tenantId: row.tenantId ?? undefined,
+          endpoint: `/api/reports/${req.params.id}/download`,
+          method: "GET",
+          action: "report:download",
+          resourceType: "report",
+          resourceId: req.params.id,
+          resourceLabel: row.title,
+          summary: `Downloaded the report "${row.title}"`,
+          outcome: "success",
+          responseStatus: 200,
+        });
+
+        return reply
+          .header("content-type", "application/pdf")
+          .header("content-disposition", `attachment; filename="${row.filename}"`)
+          .header("content-length", String(row.pdfBytes ?? pdf.length))
+          .header("cache-control", "no-store, private")
+          .header("x-content-type-options", "nosniff")
+          .send(pdf);
+      }
+
       const row = await loadReportPdf(req.params.id, req.currentUser!.upn);
       if (!row) return reply.code(404).send({ error: "not_found" });
       if (row.status !== "ready" || !row.pdf) {

@@ -40,6 +40,25 @@ import { Help } from "./pages/Help";
 import { ChatWidget } from "./components/ai/ChatWidget";
 import { UpdateAvailableBanner } from "./components/UpdateAvailableBanner";
 
+/**
+ * Persistent reminder that everything on screen is fictional sample data —
+ * nothing today told a viewer mid-session that this instance never talks to
+ * a real tenant, and demo mode is now one click away from the Pairing Page
+ * (see SetupPairing.tsx) for anyone with a link to it.
+ */
+function DemoModeBadge() {
+  const { demoMode } = useEngineer();
+  if (!demoMode) return null;
+  return (
+    <span
+      title="This instance is running in demo mode — all data shown is fictional sample data, not a real tenant."
+      className="ml-3 shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-500/15 dark:text-amber-400"
+    >
+      Demo mode
+    </span>
+  );
+}
+
 function EngineerMenu() {
   const engineer = useEngineer();
   const logout = useLogout();
@@ -117,6 +136,7 @@ function Layout() {
               <div className="flex min-w-0 items-center">
                 <MobileMenuButton />
                 <TenantSwitcher />
+                <DemoModeBadge />
               </div>
               <EngineerMenu />
             </header>
