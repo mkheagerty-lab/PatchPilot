@@ -12,6 +12,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Deploy-PatchPilot.ps1 now detects a missing Entra ID P1/P2 license before
+  attempting to create the home-tenant access groups (a tenant-wide licensing
+  gate, independent of the connected account's own Global Administrator
+  role) and gives an actionable warning instead of a misleading "likely
+  missing Global Administrator" message. Settings > Users and the
+  Architecture page now document the licensing prerequisite and confirm that
+  a Global Administrator can still manage the home tenant directly without
+  either access group.
+
 ## [0.8.0] - 2026-09-06
 
 - Add home-tenant access groups so a PatchPilot user's real Microsoft write
