@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.10.0] - 2026-09-07
+
 - Add a Check Access tab to Setup Health so an engineer (or an admin, on
   another user's behalf) can see exactly where they stand across
   PatchPilot's role, home-tenant Entra roles, and per-customer-tenant GDAP
