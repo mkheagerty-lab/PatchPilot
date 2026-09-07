@@ -12,6 +12,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Add a Check Access tab to Setup Health so an engineer (or an admin, on
+  another user's behalf) can see exactly where they stand across
+  PatchPilot's role, home-tenant Entra roles, and per-customer-tenant GDAP
+  roles, instead of guessing which of the three is blocking them.
+- App Registration Step 1 now offers Windows PowerShell cmdlet variants
+  alongside the existing pwsh ones; Step 3's "Add API Permissions" moved
+  into a new "Option 1: Browser" action, with "Option 2: PowerShell"
+  gaining matching manual cmdlets.
+
 ## [0.9.0] - 2026-09-07
 
 - Deploy-PatchPilot.ps1 now detects a missing Entra ID P1/P2 license before
