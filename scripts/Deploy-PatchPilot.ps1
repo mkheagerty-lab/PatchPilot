@@ -1135,6 +1135,21 @@ try {
     )
     $graphScopes += $accessGroupScopes
 
+    # Check Access (Setup Health tab; see docs/onboarding-design.md and
+    # packages/graph/src/msal.ts's CHECK_ACCESS_SCOPES, which this must stay in
+    # sync with): the read-only sibling of $accessGroupScopes above, used only to
+    # look up - never modify - an engineer's own or another user's Entra role and
+    # group membership when they check their access. Requested unconditionally
+    # (same reasoning as $accessGroupScopes: this is a home-tenant RBAC read, not
+    # a customer-facing remediation write) via silent tenant-wide admin consent,
+    # so no per-check interactive step-up is needed.
+    $checkAccessScopes = @(
+        "User.Read.All",
+        "RoleManagement.Read.Directory",
+        "GroupMember.Read.All"
+    )
+    $graphScopes += $checkAccessScopes
+
     # Defender for Endpoint names its Application and Delegated permissions
     # DIFFERENTLY for the same read (e.g. get-machines: Machine.Read.All is
     # Application-only, Machine.Read is the Delegated equivalent -

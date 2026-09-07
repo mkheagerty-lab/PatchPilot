@@ -281,6 +281,90 @@ step and the in-app toggle degrade gracefully (a named warning listing the group
 still needed, or an in-app "ask a Global Administrator" message) rather than treating
 it as an error.
 
+### Check Access
+
+Setup Health's **Check Access** tab lets an engineer see where they actually
+stand across PatchPilot's three independent access layers (PatchPilot role,
+home-tenant Entra role, GDAP role) for the selected tenant, and lets a
+`users:manage` admin run the same check on someone else — mainly so "why
+can't I do X" support questions can be answered by looking, rather than by
+guessing which of the three gates is the problem.
+
+**Three categories, matching the three gates:**
+
+1. **PatchPilot** — role, whether the tenant is write-enabled, and access
+   per permission area. Pure DB + RBAC (`buildPatchPilotCategory` in
+   [check-access.ts](../packages/shared/src/check-access.ts)), so it's
+   served immediately by its own endpoint with no Graph call and no
+   consent prompt. Uses the real 6-area `PERMISSION_AREAS` grouping — not a
+   finer-grained "Intune vs. Defender Live Response" breakdown, since
+   PatchPilot's actual enforcement doesn't distinguish those (both sit
+   behind `operations:write`); the UI never claims a distinction the
+   system doesn't enforce.
+2. **Entra Roles (Direct)** — only meaningful in the home tenant. Customer
+   tenants show "not applicable": engineers hold no direct role assignments
+   there and are never guest users, by design (GDAP is the only access
+   path into a customer tenant).
+3. **GDAP Roles (Partner Centre)** — only meaningful in a customer tenant.
+   Looks up that tenant's Admin Relationship, reads its access-assignment
+   security groups (`accessAssignments`), and cross-references the
+   target's actual group membership — a role only counts as "held" when
+   the target is a confirmed member of a group carrying it, not merely
+   that the relationship carries the role in the abstract.
+
+**Consent: tenant-wide, not per-check step-up.** Reading *another*
+engineer's Entra/GDAP role membership needs Graph permissions
+(`CHECK_ACCESS_SCOPES` = `User.Read.All`, `RoleManagement.Read.Directory`,
+`GroupMember.Read.All`) beyond a self-check's own ambient privilege.
+Rather than an interactive step-up prompt on every single check,
+`Deploy-PatchPilot.ps1` grants these tenant-wide (`AllPrincipals`) via the
+same `Set-DelegatedAdminConsent` mechanism as `ACCESS_GROUP_SCOPES` — a
+one-time deploy-time grant, read-only (least privilege: Check Access never
+writes to Entra), rather than a repeated per-check interruption. A short
+step-up redemption still happens per check (mirroring every other flow in
+this app — see "Home-tenant access groups" above), but it authenticates
+*which account* is running the Graph call, not *whether* the app may ask;
+Microsoft's own per-call authorization (does this account's role actually
+allow reading another user's role membership) still applies underneath.
+
+**Self vs. admin gating** is per-request, not a blanket permission gate on
+the whole feature: `assertCanCheck` in
+[check-access.ts](../apps/api/src/routes/check-access.ts) allows
+`targetUserId === actor.id` unconditionally (every role can check their own
+access) or `can(actor.role, "users:manage")` for anyone else. The frontend
+picker in `CheckAccessPanel.tsx` is hidden for non-admins, but the real
+enforcement is server-side — editing the URL to target someone else 403s
+without `users:manage`.
+
+**GDAP relationship lookup runs live, not from a cached table.**
+`syncTenants` never persists GDAP relationship ids, so
+`assembleCheckAccessSummary` re-fetches
+`/tenantRelationships/delegatedAdminRelationships` on every check via the
+requesting engineer's own standing home-tenant token (Admin Relationships
+are a partner/home-tenant concept, not a customer-tenant one — the
+relationship list itself needs no step-up token at all, only the
+finer-grained `accessAssignments`/`transitiveMemberOf` reads do). Accepted
+v1 cost: an extra Graph round trip per check, in exchange for never having
+a second, potentially stale copy of relationship state to keep in sync.
+
+**Getting the result back out of a redirect-based step-up.** Every
+existing step-up flow only ever posted back `{ ok: boolean }` — nothing
+before this needed to carry real data through a Microsoft redirect.
+`postMessagePage` ([auth/routes.ts](../apps/api/src/auth/routes.ts)) is now
+generic over the payload shape, so the silent (hidden-iframe) path posts
+`{ ok: true, result: CheckAccessSummary }` straight back with no extra round
+trip. The interactive fallback (silent `prompt=none` fails — no active SSO
+session, or a conditional-access step-up) can't hand back JS data through a
+top-level redirect, so that branch stashes the result in Redis instead
+(`pp:checkaccess:result:<id>`, 5-minute TTL, deleted on read — the same
+one-shot spirit as the step-up token itself) and the return link carries
+only the id; the panel fetches it once on mount and strips the query
+param.
+
+Every run — self or admin-on-behalf-of — is recorded in the audit log
+(`check-access:run`), with the summary text distinguishing "checked their
+own access" from "checked `{upn}`'s access".
+
 ### GDAP relationship discovery requires AdminAgents
 
 `Deploy-PatchPilot.ps1`'s GDAP-enumeration step

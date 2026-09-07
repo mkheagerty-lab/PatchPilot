@@ -3,13 +3,15 @@ import { PageHeader } from "../../components/ui";
 import { ConnectionsPanel } from "./ConnectionsPanel";
 import { ReadinessPanel } from "./ReadinessPanel";
 import { PreflightPanel } from "./PreflightPanel";
+import { CheckAccessPanel } from "./CheckAccessPanel";
 
-type Tab = "connections" | "readiness" | "preflight";
+type Tab = "connections" | "readiness" | "preflight" | "checkAccess";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "connections", label: "Connections" },
   { id: "readiness", label: "Readiness" },
   { id: "preflight", label: "Pre-flight" },
+  { id: "checkAccess", label: "Check Access" },
 ];
 
 export function SetupHealth() {
@@ -45,6 +47,7 @@ export function SetupHealth() {
       {tab === "connections" && <ConnectionsPanel />}
       {tab === "readiness" && <ReadinessPanel />}
       {tab === "preflight" && <PreflightPanel />}
+      {tab === "checkAccess" && <CheckAccessPanel />}
     </div>
   );
 }

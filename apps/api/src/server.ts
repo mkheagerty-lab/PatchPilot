@@ -33,6 +33,7 @@ import { dashboardRoutes } from "./routes/dashboard.js";
 import { reportsRoutes } from "./routes/reports.js";
 import { usersRoutes } from "./routes/users.js";
 import { accessGroupsRoutes } from "./routes/access-groups.js";
+import { checkAccessRoutes } from "./routes/check-access.js";
 import { notificationSettingsRoutes } from "./routes/notification-settings.js";
 import { entitlementSettingsRoutes } from "./routes/entitlement-settings.js";
 import { updateSettingsRoutes } from "./routes/update-settings.js";
@@ -194,6 +195,7 @@ export async function buildServer() {
   await app.register(reportsRoutes);
   await app.register(usersRoutes);
   await app.register(accessGroupsRoutes);
+  await app.register(checkAccessRoutes);
   await app.register(notificationSettingsRoutes);
   await app.register(entitlementSettingsRoutes);
   await app.register(updateSettingsRoutes);

@@ -262,6 +262,20 @@ export const APP_REGISTRATION_TEST_SCOPES = ["Application.Read.All", "Directory.
 export const ACCESS_GROUP_SCOPES = ["User.Read.All", "GroupMember.ReadWrite.All", "RoleManagement.ReadWrite.Directory"];
 
 /**
+ * Scopes requested for the Check Access step-up consent (Setup Health ->
+ * Check Access, see packages/graph/src/check-access.ts). The read-only
+ * sibling of ACCESS_GROUP_SCOPES above — Check Access only ever looks up an
+ * engineer's own or another user's Entra role/group membership, never
+ * modifies it, so it deliberately requests the *.Read.* counterpart of each
+ * scope instead of reusing ACCESS_GROUP_SCOPES wholesale (least privilege).
+ * Deploy-PatchPilot.ps1's $checkAccessScopes must stay in sync with this
+ * array. Granted via the same silent tenant-wide (AllPrincipals) admin
+ * consent as ACCESS_GROUP_SCOPES, so a Check Access run never needs its own
+ * interactive step-up prompt in the common case.
+ */
+export const CHECK_ACCESS_SCOPES = ["User.Read.All", "RoleManagement.Read.Directory", "GroupMember.Read.All"];
+
+/**
  * Redeems a one-time step-up consent authorization code for a short-lived
  * access token, used once server-side to sync PatchPilot's requested API
  * permissions onto its own app registration, or to test their live status

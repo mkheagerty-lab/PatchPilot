@@ -86,6 +86,16 @@ function Step({
  */
 function GettingStarted({ report }: { report: OnboardingReport }) {
   const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
+  const deployCmdWindows =
+    "powershell.exe -ExecutionPolicy Bypass -File .\\scripts\\Deploy-PatchPilot.ps1";
+  // Same script, same already-existing app registration (Deploy-PatchPilot.ps1
+  // reuses it by display name and only unions in new scopes — see its own
+  // "App already exists. Reusing AppId" log line), so this is the exact manual
+  // equivalent of Step 3's "Add API Permissions" button with the "Include
+  // remediation write scopes" checkbox checked. Omitting the flag re-syncs the
+  // read-only scopes only — identical to Step 1's command above.
+  const writeScopesCmd = `${deployCmd} -EnableRemediationWriteScopes`;
+  const writeScopesCmdWindows = `${deployCmdWindows} -EnableRemediationWriteScopes`;
   const canWrite = useCan("settings:write");
   return (
     <Card className="border-slate-900/10 bg-gradient-to-br from-slate-50 to-white">
@@ -184,6 +194,15 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
               </code>
               <CopyButton value={deployCmd} />
             </div>
+            <p className="mt-2 text-xs text-slate-500">
+              No PowerShell 7 installed? Use Windows PowerShell instead:
+            </p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+                {deployCmdWindows}
+              </code>
+              <CopyButton value={deployCmdWindows} />
+            </div>
           </div>
         </Step>
 
@@ -234,6 +253,58 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
             <span className="font-medium text-slate-600">Test Connection</span>{" "}
             to confirm each permission below is actually live.
           </p>
+
+          <div className="mt-2.5 rounded-lg border border-sky-200 bg-sky-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              Option 1: Browser
+              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+                Recommended
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Click below and approve as a Global Administrator — a one-time
+              Microsoft sign-in updates this app registration&apos;s
+              permissions directly, no script needed:
+            </p>
+            <div className="mt-2.5">
+              <AddApiPermissionsAction canWrite={canWrite} />
+            </div>
+          </div>
+
+          <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              Option 2: PowerShell
+              <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                Manual
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Same effect as the button above — additive/idempotent against
+              this same app registration, so re-running it is always safe.
+              Run the downloaded script from Step 1 on a local machine
+              instead:
+            </p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+                {writeScopesCmd}
+              </code>
+              <CopyButton value={writeScopesCmd} />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              No PowerShell 7 installed? Use Windows PowerShell instead:
+            </p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+                {writeScopesCmdWindows}
+              </code>
+              <CopyButton value={writeScopesCmdWindows} />
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-400">
+              Omit the flag to re-sync read-only permissions only — same
+              command as Step 1&apos;s Option 2.
+            </p>
+          </div>
+
           <div className="mt-3">
             <RequestedPermissionsStep report={report} />
           </div>
@@ -258,18 +329,110 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
 }
 
 /**
- * The body of Get Started's Step 3 ("Add write API permissions"). This is
- * the one narrow exception to "the in-app console never writes to Entra" —
- * see README invariant #7. "Add API Permissions" reuses the app's existing
+ * "Add API Permissions" button + its confirm modal — Step 3's Option 1
+ * action, and the one narrow exception to "the in-app console never writes
+ * to Entra" (see README invariant #7). Reuses the app's existing
  * /auth/callback redirect to run a one-time step-up consent
  * (apps/api/src/routes/onboarding.ts + apps/api/src/auth/routes.ts), applying
  * whatever scopes.ts currently requests to an *already-existing* app
- * registration. "Test Connection" is the read-only counterpart (same step-up
- * mechanics, calls testAppRegistrationScopes instead) — it never mutates
- * anything, just reports each scope's live status as a colour-coded pill,
- * which also drives the failed-scope banners below (a "failed" status means
- * the scope isn't published on the resource's own service principal at all —
- * for Partner Center that's almost always a GDAP misconfiguration; for
+ * registration. A standalone component (rather than inline in GettingStarted)
+ * purely to keep its confirm-modal state local; `canWrite` is passed down
+ * from GettingStarted's own useCan check rather than re-fetched here.
+ */
+function AddApiPermissionsAction({ canWrite }: { canWrite: boolean }) {
+  const [confirming, setConfirming] = useState(false);
+  const [includeWriteScopes, setIncludeWriteScopes] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        disabled={!canWrite}
+        title={!canWrite ? "Your role doesn't include settings write access." : undefined}
+        onClick={() => setConfirming(true)}
+        className="rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Add API Permissions
+      </button>
+
+      {!canWrite && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          Your role doesn&apos;t include settings write access.
+        </div>
+      )}
+
+      {confirming && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setConfirming(false)}
+            aria-hidden
+          />
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900">
+              Add app registration permissions?
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              You&apos;ll be sent to a Microsoft sign-in to approve two one-time,
+              elevated permissions (
+              <code className="font-mono text-xs">Application.ReadWrite.All</code>,{" "}
+              <code className="font-mono text-xs">
+                DelegatedPermissionGrant.ReadWrite.All
+              </code>
+              ). They&apos;re used once to update the requested scopes and
+              refresh admin consent, then discarded — PatchPilot&apos;s normal
+              day-to-day access is unchanged. Must be approved by a Global
+              Administrator.
+            </p>
+            <label className="mt-4 flex items-start gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={includeWriteScopes}
+                onChange={(e) => setIncludeWriteScopes(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Include remediation write scopes
+                <span className="block text-xs text-slate-400">
+                  Adds the Intune/Windows Update write permissions used for
+                  in-app remediation dispatch. Leave unchecked to stay
+                  read-only.
+                </span>
+              </span>
+            </label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = `/api/onboarding/sync-permissions/start?includeWriteScopes=${includeWriteScopes}`;
+                }}
+                className="rounded-md bg-slate-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+              >
+                Continue to Microsoft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * The scope-status body of Get Started's Step 3. "Test Connection" runs a
+ * read-only step-up (same mechanics as Add API Permissions above, calls
+ * testAppRegistrationScopes instead) — it never mutates anything, just
+ * reports each scope's live status as a colour-coded pill, which also
+ * drives the failed-scope banners below (a "failed" status means the scope
+ * isn't published on the resource's own service principal at all — for
+ * Partner Center that's almost always a GDAP misconfiguration; for
  * Defender/Graph it usually just means Deploy-PatchPilot.ps1/Sync hasn't run
  * yet). Licensing is a separate, genuine question a "failed" status can't
  * answer — a resource's delegated-permission catalog ships identically to
@@ -278,9 +441,8 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
  * license at all. That real answer comes from checkTenantLicensing's
  * `/organization` assignedPlans read, riding along on the same Test
  * Connection run, and renders as the separate amber "Not licensed" banner
- * below when it finds a gap. First-time creation still needs
- * Deploy-PatchPilot.ps1. In demo mode neither action could authorize or check
- * anything real, so this falls back to a plain read-only list.
+ * below when it finds a gap. In demo mode neither action could authorize or
+ * check anything real, so this falls back to a plain read-only list.
  */
 /**
  * Runs "Test Connection" without leaving the page: loads
@@ -329,10 +491,7 @@ function runSilentTestConnection(onSettled: (ok: boolean) => void): void {
 }
 
 function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
-  const canWrite = useCan("settings:write");
   const qc = useQueryClient();
-  const [confirming, setConfirming] = useState(false);
-  const [includeWriteScopes, setIncludeWriteScopes] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
 
   if (report.demoMode) {
@@ -439,23 +598,8 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
           >
             {testingConnection ? "Testing…" : "Test Connection"}
           </button>
-          <button
-            type="button"
-            disabled={!canWrite}
-            title={!canWrite ? "Your role doesn't include settings write access." : undefined}
-            onClick={() => setConfirming(true)}
-            className="rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Add API Permissions
-          </button>
         </div>
       </div>
-
-      {!canWrite && (
-        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          Your role doesn&apos;t include settings write access.
-        </div>
-      )}
 
       {failedBanners.map((b) => (
         <div
@@ -502,67 +646,6 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
           statusFor={statusFor}
         />
       </div>
-
-      {confirming && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-slate-900/40"
-            onClick={() => setConfirming(false)}
-            aria-hidden
-          />
-          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
-              Add app registration permissions?
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              You&apos;ll be sent to a Microsoft sign-in to approve two one-time,
-              elevated permissions (
-              <code className="font-mono text-xs">Application.ReadWrite.All</code>,{" "}
-              <code className="font-mono text-xs">
-                DelegatedPermissionGrant.ReadWrite.All
-              </code>
-              ). They&apos;re used once to update the requested scopes above and
-              refresh admin consent, then discarded — PatchPilot&apos;s normal
-              day-to-day access is unchanged. Must be approved by a Global
-              Administrator.
-            </p>
-            <label className="mt-4 flex items-start gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={includeWriteScopes}
-                onChange={(e) => setIncludeWriteScopes(e.target.checked)}
-                className="mt-0.5"
-              />
-              <span>
-                Include remediation write scopes
-                <span className="block text-xs text-slate-400">
-                  Adds the Intune/Windows Update write permissions used for
-                  in-app remediation dispatch. Leave unchecked to stay
-                  read-only.
-                </span>
-              </span>
-            </label>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirming(false)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = `/api/onboarding/sync-permissions/start?includeWriteScopes=${includeWriteScopes}`;
-                }}
-                className="rounded-md bg-slate-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
-              >
-                Continue to Microsoft
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -585,12 +668,21 @@ function RegistrationCommand({ domainId }: { domainId: string }) {
     queryFn: () => api.get<{ command: string }>(`/api/domains/${domainId}/registration-command`),
   });
   if (!data) return null;
+  const windowsCommand = `powershell.exe -ExecutionPolicy Bypass -File ${data.command}`;
   return (
-    <div className="mt-2 flex items-center gap-2">
-      <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
-        {data.command}
-      </code>
-      <CopyButton value={data.command} />
+    <div className="mt-2 space-y-1.5">
+      <div className="flex items-center gap-2">
+        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+          {data.command}
+        </code>
+        <CopyButton value={data.command} />
+      </div>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+          {windowsCommand}
+        </code>
+        <CopyButton value={windowsCommand} />
+      </div>
     </div>
   );
 }
@@ -1025,6 +1117,9 @@ function RotateClientSecretSection({ demoMode }: { demoMode: boolean }) {
 
   const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
   const rotateSecretCmd = `${deployCmd} -RotateClientSecret`;
+  const deployCmdWindows =
+    "powershell.exe -ExecutionPolicy Bypass -File .\\scripts\\Deploy-PatchPilot.ps1";
+  const rotateSecretCmdWindows = `${deployCmdWindows} -RotateClientSecret`;
 
   return (
     <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -1061,6 +1156,15 @@ function RotateClientSecretSection({ demoMode }: { demoMode: boolean }) {
           {rotateSecretCmd}
         </code>
         <CopyButton value={rotateSecretCmd} />
+      </div>
+      <p className="mt-2 text-xs text-slate-500">
+        No PowerShell 7 installed? Use Windows PowerShell instead:
+      </p>
+      <div className="mt-1 flex items-center gap-2">
+        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+          {rotateSecretCmdWindows}
+        </code>
+        <CopyButton value={rotateSecretCmdWindows} />
       </div>
     </div>
   );

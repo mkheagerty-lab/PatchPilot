@@ -19,6 +19,7 @@ import {
   redeemStepUpConsentCode,
   APP_REGISTRATION_TEST_SCOPES,
   ACCESS_GROUP_SCOPES,
+  CHECK_ACCESS_SCOPES,
   syncAppRegistrationScopes,
   testAppRegistrationScopes,
   updateAppRegistrationRedirectUris,
@@ -31,6 +32,7 @@ import {
   removeFromGroup,
   AccessGroupPermissionError,
 } from "@patchpilot/graph";
+import { assembleCheckAccessSummary, stashCheckAccessResult } from "../routes/check-access.js";
 
 /**
  * Who to attribute an auth event to before the identity is known.
@@ -96,6 +98,9 @@ const APP_REGISTRATION_PATH = "/setup/app-registration";
 
 /** Every home-tenant access-group step-up flow starts from Settings -> Users. */
 const USERS_PATH = "/settings/users";
+
+/** Every Check Access step-up flow starts from Setup Health -> Check Access. */
+const CHECK_ACCESS_PATH = "/setup/health?tab=checkAccess";
 
 type AccessGroupAction = "add-readonly" | "grant-write" | "revoke-write";
 
@@ -199,8 +204,14 @@ function accessGroupAuditAction(action: AccessGroupAction): "access-group:add-re
  * silent iframe flow shares the same `window` event namespace, so a listener
  * that only checked `event.origin` would react to *any* hidden-iframe flow
  * running anywhere on the page, not just its own.
+ *
+ * Generic over `T` (rather than the original fixed `{ ok: boolean }`) so a
+ * flow that needs to hand back real data — Check Access's silent path posts
+ * `{ ok, result: CheckAccessSummary }` straight through this same channel —
+ * can do so without a second round trip. Every existing call site's literal
+ * `{ ok: true/false }` still satisfies `T extends { ok: boolean }` unchanged.
  */
-function postMessagePage(payload: { ok: boolean }, targetOrigin: string, source: string): string {
+function postMessagePage<T extends { ok: boolean }>(payload: T, targetOrigin: string, source: string): string {
   const json = JSON.stringify({ source, ...payload }).replace(/</g, "\\u003c");
   const safeOrigin = JSON.stringify(targetOrigin);
   return `<!doctype html><html><head><meta charset="utf-8" /></head><body><script>
@@ -552,6 +563,166 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
               body: `Microsoft returned an error: ${
                 err instanceof Error ? err.message : "unknown error"
               }. No changes may have been applied — try again from PatchPilot.`,
+            }),
+          );
+        }
+      }
+
+      // Silent Check Access step-up (hidden iframe, prompt=none) — see
+      // routes/check-access.ts's /start route and CheckAccessPanel.tsx's
+      // runSilentCheckAccess. Unlike the access-group flows above, this is a
+      // pure read (never mutates Entra), so silent applies to both a
+      // self-check and an admin checking someone else. Same postMessage-not-
+      // landingPage handling as the other hidden-iframe flows, and — unlike
+      // every prior silent flow — the postMessage payload carries the actual
+      // result (`result: CheckAccessSummary`) so the panel never needs a
+      // second round trip on the common path.
+      const SILENT_CHECK_ACCESS_STATE_PREFIX = "patchpilot-checkaccess-silent:";
+      if (state?.startsWith(SILENT_CHECK_ACCESS_STATE_PREFIX)) {
+        const [sessionId, targetUserId, checkTenantId] = state.slice(SILENT_CHECK_ACCESS_STATE_PREFIX.length).split(":");
+        const engineer = req.session.engineer;
+
+        if (error || !code || !engineer || !targetUserId || !checkTenantId || sessionId !== req.session.sessionId) {
+          // Expected, silent outcome (no SSO session, MFA step-up, a rotated
+          // session) — the panel's fallback to the visible flow handles it;
+          // no audit needed beyond what that human-driven retry produces.
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin, "patchpilot-check-access"));
+        }
+
+        try {
+          const stepUp = await redeemStepUpConsentCode(code, `${origin}/auth/callback`, CHECK_ACCESS_SCOPES);
+
+          const [target] = await db.select().from(tables.engineers).where(eq(tables.engineers.id, targetUserId)).limit(1);
+          const [tenant] = await db.select().from(tables.tenants).where(eq(tables.tenants.tenantId, checkTenantId)).limit(1);
+          if (!target || !tenant) {
+            return reply.type("text/html").send(postMessagePage({ ok: false }, origin, "patchpilot-check-access"));
+          }
+
+          const result = await assembleCheckAccessSummary(stepUp.accessToken, engineer, target, tenant);
+
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "check-access:run",
+            resourceType: "user",
+            resourceId: target.id,
+            resourceLabel: target.upn,
+            summary:
+              target.upn === engineer.upn
+                ? `${engineer.upn} checked their own access in ${tenant.displayName}`
+                : `${engineer.upn} checked ${target.upn}'s access in ${tenant.displayName}`,
+            outcome: "success",
+            responseStatus: 200,
+          });
+
+          return reply.type("text/html").send(postMessagePage({ ok: true, result }, origin, "patchpilot-check-access"));
+        } catch (err) {
+          // Same reasoning as the other silent flows' failure paths — an
+          // expected outcome the panel's own fallback already covers.
+          return reply.type("text/html").send(postMessagePage({ ok: false }, origin, "patchpilot-check-access"));
+        }
+      }
+
+      // Interactive Check Access step-up return (Setup Health -> Check
+      // Access), used when the silent attempt above fails (no active SSO
+      // session, a Conditional Access step-up). A top-level redirect can't
+      // hand back JS data the way postMessage can, so the result is stashed
+      // one-shot in Redis (stashCheckAccessResult) and the return link
+      // carries its id — CheckAccessPanel.tsx picks it up on mount.
+      const CHECK_ACCESS_STATE_PREFIX = "patchpilot-checkaccess:";
+      if (code && state?.startsWith(CHECK_ACCESS_STATE_PREFIX)) {
+        const [sessionId, targetUserId, checkTenantId] = state.slice(CHECK_ACCESS_STATE_PREFIX.length).split(":");
+        const engineer = req.session.engineer;
+
+        if (!engineer || !targetUserId || !checkTenantId || sessionId !== req.session.sessionId) {
+          return reply.type("text/html").code(400).send(
+            landingPage({
+              origin,
+              returnPath: CHECK_ACCESS_PATH,
+              tone: "error",
+              title: "PatchPilot — check access",
+              heading: "This link is no longer valid",
+              body: "This link doesn't match your current PatchPilot session. Start the request again from Setup Health → Check Access.",
+            }),
+          );
+        }
+
+        try {
+          const stepUp = await redeemStepUpConsentCode(code, `${origin}/auth/callback`, CHECK_ACCESS_SCOPES);
+
+          const [target] = await db.select().from(tables.engineers).where(eq(tables.engineers.id, targetUserId)).limit(1);
+          const [tenant] = await db.select().from(tables.tenants).where(eq(tables.tenants.tenantId, checkTenantId)).limit(1);
+          if (!target || !tenant) {
+            return reply.type("text/html").code(404).send(
+              landingPage({
+                origin,
+                returnPath: CHECK_ACCESS_PATH,
+                tone: "error",
+                title: "PatchPilot — check access",
+                heading: "Something went wrong",
+                body: "That user or tenant no longer exists in PatchPilot.",
+              }),
+            );
+          }
+
+          const result = await assembleCheckAccessSummary(stepUp.accessToken, engineer, target, tenant);
+          const resultId = randomBytes(16).toString("hex");
+          await stashCheckAccessResult(resultId, result);
+
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "check-access:run",
+            resourceType: "user",
+            resourceId: target.id,
+            resourceLabel: target.upn,
+            summary:
+              target.upn === engineer.upn
+                ? `${engineer.upn} checked their own access in ${tenant.displayName}`
+                : `${engineer.upn} checked ${target.upn}'s access in ${tenant.displayName}`,
+            outcome: "success",
+            responseStatus: 200,
+          });
+
+          return reply.type("text/html").send(
+            landingPage({
+              origin,
+              returnPath: `${CHECK_ACCESS_PATH}&resultId=${resultId}`,
+              tone: "ok",
+              title: "PatchPilot — check access",
+              heading: "Access check complete",
+              body: "Return to PatchPilot to see the result.",
+            }),
+          );
+        } catch (err) {
+          await auditSafe({
+            engineer: engineer.upn,
+            tenantId: engineer.homeTenantId,
+            endpoint: "/auth/callback",
+            method: "GET",
+            action: "check-access:run",
+            resourceType: "user",
+            resourceId: targetUserId,
+            summary: `${engineer.upn}'s check-access step-up failed`,
+            outcome: "failure",
+            detail: err instanceof Error ? err.message : String(err),
+            responseStatus: 500,
+          });
+
+          return reply.type("text/html").code(500).send(
+            landingPage({
+              origin,
+              returnPath: CHECK_ACCESS_PATH,
+              tone: "error",
+              title: "PatchPilot — check access",
+              heading: "Request failed",
+              body: `Microsoft returned an error: ${
+                err instanceof Error ? err.message : "unknown error"
+              }. Try again from PatchPilot.`,
             }),
           );
         }
