@@ -89,7 +89,7 @@ interface OdataPage<T> {
 const MAX_PAGES = 100;
 
 /** A collected OData collection, plus whether the page guard cut the walk short. */
-interface PagedResult<T> {
+export interface PagedResult<T> {
   rows: T[];
   /**
    * True when {@link MAX_PAGES} stopped the walk before the feed ran out, so
@@ -116,8 +116,13 @@ interface PagedResult<T> {
  * against BLACK IRON's tenant, where the OS recommendation's own read landed on a
  * 429 and `osVulnerabilityBackfill` came back 0 even though the recommendation
  * genuinely had 999 CVEs.
+ *
+ * Exported for reuse by routes/check-access.ts's GDAP relationship lookup,
+ * which needs the exact same standing-token pagination syncTenants uses
+ * below (DelegatedAdminRelationship.Read.All is already a standing-consented
+ * scope, so that lookup has no reason to duplicate this walk).
  */
-async function collectPaged<T>(
+export async function collectPaged<T>(
   engineer: Engineer,
   tenantId: string,
   host: GraphHost,
@@ -208,7 +213,8 @@ interface OrgRow {
   displayName: string;
 }
 
-interface DelegatedAdminRelationship {
+/** Exported for reuse by routes/check-access.ts's GDAP relationship lookup. */
+export interface DelegatedAdminRelationship {
   id: string;
   displayName?: string;
   status?: string;

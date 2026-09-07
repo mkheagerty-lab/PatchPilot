@@ -22,6 +22,7 @@ export {
   APP_REGISTRATION_SYNC_SCOPES,
   APP_REGISTRATION_TEST_SCOPES,
   ACCESS_GROUP_SCOPES,
+  CHECK_ACCESS_SCOPES,
   ccaForEngineer,
   clearMsalCache,
   redeemLoginCode,
@@ -174,6 +175,12 @@ export {
   removeFromGroup,
   AccessGroupPermissionError,
 } from "./access-groups.js";
+export {
+  getUserMemberships,
+  getGdapAccessAssignments,
+  type GraphDirectoryRoleMembership,
+  type GdapAccessAssignment,
+} from "./check-access.js";
 export {
   createAndAssignCampaignFeatureUpdateProfile,
   type CreateAndAssignCampaignFeatureUpdateProfileInput,

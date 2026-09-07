@@ -19,5 +19,6 @@ export * from "./text.js";
 export * from "./audit.js";
 export * from "./rbac.js";
 export * from "./access-groups.js";
+export * from "./check-access.js";
 export * from "./palette.js";
 export * from "./reports.js";

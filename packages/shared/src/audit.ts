@@ -317,6 +317,12 @@ export const AUDIT_ACTIONS = [
   "access-group:add-readonly",
   "access-group:grant-write",
   "access-group:revoke-write",
+  // Check Access (Setup Health tab, packages/graph/src/check-access.ts) — an
+  // engineer viewing their own or (users:manage only) another user's
+  // PatchPilot role, home-tenant Entra roles, and GDAP roles. Read-only, but
+  // still worth its own accountability row: it's the one place an admin can
+  // enumerate another engineer's real permission footprint.
+  "check-access:run",
   // ai
   // One row per user turn, not per model round-trip — a turn that calls three
   // tools before answering is still one accountability entry, with the tool
@@ -481,6 +487,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "access-group:add-readonly": "Added to home-tenant read-only access group",
   "access-group:grant-write": "Granted home-tenant write access",
   "access-group:revoke-write": "Revoked home-tenant write access",
+
+  "check-access:run": "Checked access",
 
   "ai:chat-message": "AI chat message sent",
   "ai:tool-call-denied": "AI tool call denied",
@@ -661,6 +669,7 @@ export const AUDIT_ACTION_GROUPS: ReadonlyArray<{
       "access-group:add-readonly",
       "access-group:grant-write",
       "access-group:revoke-write",
+      "check-access:run",
     ],
   },
   {
