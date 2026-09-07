@@ -618,7 +618,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           });
 
           return reply.type("text/html").send(postMessagePage({ ok: true, result }, origin, "patchpilot-check-access"));
-        } catch (err) {
+        } catch (_err) {
           // Same reasoning as the other silent flows' failure paths — an
           // expected outcome the panel's own fallback already covers.
           return reply.type("text/html").send(postMessagePage({ ok: false }, origin, "patchpilot-check-access"));
