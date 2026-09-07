@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { db, tables } from "@patchpilot/db";
+import { db, tables, demoFeatureUpdateCampaigns } from "@patchpilot/db";
 import { CHANNEL_SPECS, CLIENT_BUILDS, resolveTargetBuild } from "@patchpilot/shared";
 import {
   audit,
@@ -8,7 +9,7 @@ import {
   createAndAssignCampaignFeatureUpdateProfile,
   deleteFeatureUpdateProfile,
 } from "@patchpilot/graph";
-import type { FeatureUpdateAssignmentSummary } from "@patchpilot/db";
+import type { FeatureUpdateAssignmentSummary, FeatureUpdateCampaignRow } from "@patchpilot/db";
 import { config } from "../config.js";
 import { resolveAssignmentTargets } from "../services/win32-app-deploy.js";
 import { requirePermission } from "../auth/rbac.js";
@@ -28,12 +29,21 @@ import { syncFeatureUpdateProfiles } from "../graph/sync.js";
  * `rolloutSettings`, so this is a direct synchronous Graph write, recorded in
  * `feature_update_campaigns` purely as a creation-time snapshot for the list
  * UI.
+ *
+ * DEMO_MODE forks every route onto an in-memory `demoCampaigns` array seeded
+ * from fixtures, bypassing every Graph call (assignment resolution, profile
+ * create/delete, tenant sync) entirely — same pattern as quality-updates.ts.
  */
 
 function idList(items: readonly string[], max = 10): string {
   if (items.length <= max) return items.join(", ");
   return `${items.slice(0, max).join(", ")} + ${items.length - max} more`;
 }
+
+/** Newest-first in-memory campaign log used only in DEMO_MODE, seeded from fixtures. */
+const demoCampaigns: FeatureUpdateCampaignRow[] = [...demoFeatureUpdateCampaigns].sort(
+  (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+);
 
 interface FeatureUpdateCampaignBody {
   tenantId?: string;
@@ -64,8 +74,10 @@ export async function featureUpdatesRoutes(app: FastifyInstance): Promise<void> 
     "/api/feature-updates/campaigns",
     { preHandler: requirePermission("operations:read") },
     async (req) => {
-      if (config.DEMO_MODE) return { campaigns: [] };
       const { tenantId } = req.query ?? {};
+      if (config.DEMO_MODE) {
+        return { campaigns: demoCampaigns.filter((c) => (tenantId ? c.tenantId === tenantId : true)) };
+      }
       const rows = await db
         .select()
         .from(tables.featureUpdateCampaigns)
@@ -87,11 +99,25 @@ export async function featureUpdatesRoutes(app: FastifyInstance): Promise<void> 
     "/api/feature-updates/campaigns/sync",
     { preHandler: requirePermission("operations:write") },
     async (req, reply) => {
-      if (config.DEMO_MODE) {
-        return reply.code(409).send({ error: "Feature update campaign sync is unavailable in demo mode" });
-      }
       const { tenantId } = req.body ?? {};
       if (!tenantId) return reply.code(400).send({ error: "tenantId is required" });
+
+      if (config.DEMO_MODE) {
+        const count = demoCampaigns.filter((c) => c.tenantId === tenantId).length;
+        const engineer = req.session.engineer!.upn;
+        await audit({
+          engineer,
+          tenantId,
+          endpoint: "/api/feature-updates/campaigns/sync",
+          method: "POST",
+          action: "feature-update-campaign:sync",
+          resourceType: "feature-update-campaign",
+          summary: `Synced ${count} feature update campaign(s)`,
+          outcome: "success",
+          responseStatus: 200,
+        });
+        return { count };
+      }
 
       const [tenant] = await db
         .select()
@@ -154,9 +180,6 @@ export async function featureUpdatesRoutes(app: FastifyInstance): Promise<void> 
     "/api/feature-updates/campaigns",
     { preHandler: requirePermission("operations:write") },
     async (req, reply) => {
-      if (config.DEMO_MODE) {
-        return reply.code(409).send({ error: "Feature update campaigns are unavailable in demo mode" });
-      }
       const {
         tenantId,
         displayName,
@@ -199,6 +222,53 @@ export async function featureUpdatesRoutes(app: FastifyInstance): Promise<void> 
         return reply.code(400).send({ error: "offerIntervalInDays must be a positive integer" });
       }
 
+      const engineer = req.session.engineer!.upn;
+      const targetBuild = resolveTargetBuild(targetVersionLabel);
+
+      if (config.DEMO_MODE) {
+        const assignments: FeatureUpdateAssignmentSummary[] = [
+          { kind: "include", groupId: groupId.trim(), groupName: groupName.trim() },
+        ];
+        if (excludeGroupId?.trim()) {
+          assignments.push({
+            kind: "exclude",
+            groupId: excludeGroupId.trim(),
+            groupName: excludeGroupName?.trim() || undefined,
+          });
+        }
+        const campaign: FeatureUpdateCampaignRow = {
+          id: randomUUID(),
+          tenantId,
+          displayName: displayName.trim(),
+          targetVersion: targetVersionLabel,
+          targetBuild,
+          assignments,
+          source: "patchpilot",
+          intuneProfileId: `demo-feature-${randomUUID()}`,
+          offerStartDateTimeInUTC: start,
+          offerEndDateTimeInUTC: end,
+          offerIntervalInDays,
+          installFeatureUpdatesOptional: Boolean(installFeatureUpdatesOptional),
+          createdBy: engineer,
+          createdAt: new Date(),
+        };
+        demoCampaigns.unshift(campaign);
+        await audit({
+          engineer,
+          tenantId,
+          endpoint: CHANNEL_SPECS["expedited-feature-update"].endpointTemplate,
+          method: "POST",
+          action: "feature-update-campaign:create",
+          resourceType: "feature-update-campaign",
+          resourceId: campaign.id,
+          resourceLabel: `${displayName} (${targetVersionLabel} → ${groupName})`,
+          summary: `Created feature update campaign "${displayName}" targeting ${targetVersionLabel} for group "${groupName}"`,
+          outcome: "success",
+          responseStatus: 201,
+        });
+        return reply.code(201).send({ campaign });
+      }
+
       const [tenant] = await db
         .select()
         .from(tables.tenants)
@@ -211,9 +281,7 @@ export async function featureUpdatesRoutes(app: FastifyInstance): Promise<void> 
           .send({ error: "Tenant is read-only — opt in to write actions before creating a campaign." });
       }
 
-      const engineer = req.session.engineer!.upn;
       const homeTenantId = req.session.engineer!.homeTenantId;
-      const targetBuild = resolveTargetBuild(targetVersionLabel);
 
       let targets;
       try {
@@ -306,10 +374,29 @@ export async function featureUpdatesRoutes(app: FastifyInstance): Promise<void> 
     "/api/feature-updates/campaigns/:id",
     { preHandler: requirePermission("operations:write") },
     async (req, reply) => {
-      if (config.DEMO_MODE) {
-        return reply.code(409).send({ error: "Feature update campaigns are unavailable in demo mode" });
-      }
       const { id } = req.params;
+
+      if (config.DEMO_MODE) {
+        const index = demoCampaigns.findIndex((c) => c.id === id);
+        if (index === -1) return reply.code(404).send({ error: "campaign not found" });
+        const campaign = demoCampaigns[index]!;
+        demoCampaigns.splice(index, 1);
+        const engineer = req.session.engineer!.upn;
+        await audit({
+          engineer,
+          tenantId: campaign.tenantId,
+          endpoint: "/api/feature-updates/campaigns/:id",
+          method: "DELETE",
+          action: "feature-update-campaign:delete",
+          resourceType: "feature-update-campaign",
+          resourceId: campaign.id,
+          resourceLabel: `${campaign.displayName} (${campaign.targetVersion})`,
+          summary: `Deleted feature update campaign "${campaign.displayName}"`,
+          outcome: "success",
+          responseStatus: 200,
+        });
+        return { deleted: true };
+      }
 
       const [campaign] = await db
         .select()
@@ -394,13 +481,47 @@ export async function featureUpdatesRoutes(app: FastifyInstance): Promise<void> 
     "/api/feature-updates/campaigns/bulk-delete",
     { preHandler: requirePermission("operations:write") },
     async (req, reply) => {
-      if (config.DEMO_MODE) {
-        return reply.code(409).send({ error: "Feature update campaigns are unavailable in demo mode" });
-      }
       const { tenantId, ids } = req.body ?? {};
       if (!tenantId?.trim()) return reply.code(400).send({ error: "tenantId is required" });
       if (!Array.isArray(ids) || ids.length === 0) {
         return reply.code(400).send({ error: "ids must be a non-empty array" });
+      }
+      const trimmedTenant = tenantId.trim();
+
+      if (config.DEMO_MODE) {
+        const matched = demoCampaigns.filter((c) => ids.includes(c.id) && c.tenantId === trimmedTenant);
+        const foundIds = new Set(matched.map((c) => c.id));
+        const notFound = ids.filter((id) => !foundIds.has(id));
+
+        const deleted: string[] = [];
+        const deletedLabels: string[] = [];
+        for (const campaign of matched) {
+          const index = demoCampaigns.findIndex((c) => c.id === campaign.id);
+          if (index !== -1) demoCampaigns.splice(index, 1);
+          deleted.push(campaign.id);
+          deletedLabels.push(campaign.displayName);
+        }
+
+        const engineer = req.session.engineer!.upn;
+        await audit({
+          engineer,
+          tenantId: trimmedTenant,
+          endpoint: "/api/feature-updates/campaigns/bulk-delete",
+          method: "POST",
+          action: "feature-update-campaign:bulk-delete",
+          resourceType: "feature-update-campaign",
+          summary: `Deleted ${deleted.length} of ${ids.length} feature update campaigns`,
+          detail: [
+            deletedLabels.length ? `Deleted: ${idList(deletedLabels)}` : null,
+            notFound.length ? `Not found: ${idList(notFound)}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          outcome: notFound.length ? "partial" : "success",
+          responseStatus: 200,
+        });
+
+        return { deleted, notFound, failed: [] };
       }
 
       const [tenant] = await db
