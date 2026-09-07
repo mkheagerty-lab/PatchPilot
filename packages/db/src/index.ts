@@ -34,6 +34,11 @@ export {
   demoAuditLog,
   demoPostureSnapshots,
   demoRemediationEvents,
+  demoScriptCatalog,
+  demoFeatureUpdateCampaigns,
+  demoQualityUpdateCampaigns,
+  demoUpdateRingProfiles,
+  demoDriverUpdateProfiles,
 } from "./demo-data.js";
 export type {
   TenantRow,
@@ -58,4 +63,9 @@ export type {
   PostureSnapshotRow,
   RemediationEventRow,
   EngineerRow,
+  ScriptCatalogRow,
+  FeatureUpdateCampaignRow,
+  QualityUpdateCampaignRow,
+  UpdateRingProfileRow,
+  DriverUpdateProfileRow,
 } from "./demo-data.js";

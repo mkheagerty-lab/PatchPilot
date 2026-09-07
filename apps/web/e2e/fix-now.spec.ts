@@ -16,7 +16,7 @@ test.describe("fix now dispatch gating", () => {
 
     // The default tenant selection (alphabetically-first reachable tenant) has
     // no vulnerability data — switch to the demo fixture tenant that does.
-    await page.getByRole("button", { name: "Black Iron (MSP)" }).click();
+    await page.getByRole("button", { name: "Meridian MSP" }).click();
     await page.getByRole("button", { name: /Contoso Legal/ }).click();
 
     await page.getByTitle("Run remediation").first().click();

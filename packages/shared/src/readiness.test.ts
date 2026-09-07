@@ -7,7 +7,7 @@ import {
 
 const mspTenant: ReadinessTenant = {
   tenantId: "msp-root",
-  displayName: "Black Iron (MSP)",
+  displayName: "Meridian MSP",
   consentStatus: "consented",
   readOnly: false,
   licenses: ["intune", "mde-p2"],
