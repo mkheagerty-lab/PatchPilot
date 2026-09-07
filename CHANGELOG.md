@@ -12,6 +12,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Add a self-service "Enable Demo Mode" button to the Pairing Page so a
+  prospect or evaluator can turn an unpaired instance into a fully
+  interactive sandbox with one click, no redeploy or real tenant
+  connection required. Demo mode now also has proper mock data and
+  simulated create/edit/delete actions for Windows Updates and the Script
+  Catalog, and Reports serves a real sample PDF instead of a dead end.
+  Fictional demo data no longer reuses the MSP's own branding.
+
 ## [0.10.0] - 2026-09-07
 
 - Add a Check Access tab to Setup Health so an engineer (or an admin, on
