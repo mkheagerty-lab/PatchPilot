@@ -54,6 +54,36 @@ function decryptPairedSecret(payload: string, keySource: string): string {
   return Buffer.concat([decipher.update(Buffer.from(dataB64, "base64")), decipher.final()]).toString("utf8");
 }
 
+/**
+ * Picks up the self-service "Enable Demo Mode" flip from the Pairing Page
+ * (see routes/onboarding-demo-mode.ts) — the settings row it writes is the
+ * ONLY thing that can turn a fresh, unpaired instance into DEMO_MODE without
+ * an operator editing `.env` and redeploying. Must run FIRST, before every
+ * other loader in this file: they all early-return on `process.env.DEMO_MODE
+ * !== "false"` (i.e. they only do anything once DEMO_MODE is confirmed
+ * false), whereas this function's entire job is to flip DEMO_MODE itself —
+ * gated the opposite way, only when it ISN'T already explicitly false.
+ *
+ * Deliberately one-way, matching pairing's own one-way nature: there is no
+ * corresponding "disable" write anywhere in the app.
+ */
+async function loadDemoModeOverride(): Promise<void> {
+  if (process.env.DEMO_MODE === "false" || process.env.DEMO_MODE === undefined) {
+    try {
+      const { db, tables, eq } = await import("@patchpilot/db");
+      const [row] = await db
+        .select()
+        .from(tables.settings)
+        .where(eq(tables.settings.key, "demo-mode-enabled"));
+      if ((row?.value as { enabled?: boolean } | undefined)?.enabled) {
+        process.env.DEMO_MODE = "true";
+      }
+    } catch (err) {
+      console.error("[load-env] failed to load demo-mode override:", err);
+    }
+  }
+}
+
 async function loadPairedEntraCredentials(): Promise<void> {
   // Mirrors config.ts's own DEMO_MODE parsing (default true) without importing
   // it — config.ts must not be imported before this function has run.
@@ -173,6 +203,7 @@ async function loadBootstrapAdminUpn(): Promise<void> {
   }
 }
 
+await loadDemoModeOverride();
 await loadPairedEntraCredentials();
 await loadPairedAccessGroupIds();
 await loadCustomDomains();

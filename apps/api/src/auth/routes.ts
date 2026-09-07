@@ -1361,6 +1361,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return {
       authenticated: true,
       entraConfigured: config.ENTRA_CONFIGURED,
+      demoMode: config.DEMO_MODE,
       engineer: {
         ...req.session.engineer,
         role: req.currentUser.role,

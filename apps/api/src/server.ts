@@ -8,6 +8,7 @@ import { redisSessionStore } from "./session-store.js";
 import { authRoutes } from "./auth/routes.js";
 import { resolveCurrentUser } from "./auth/current-user.js";
 import { bootstrapAdmin } from "./auth/bootstrap.js";
+import { DEMO_ENGINEER_UPN } from "./auth/demo-engineers.js";
 import { dataRoutes } from "./routes/data.js";
 import { statusRoutes } from "./routes/status.js";
 import { catalogRoutes } from "./routes/catalog.js";
@@ -16,6 +17,7 @@ import { readinessRoutes } from "./routes/readiness.js";
 import { licensingRoutes } from "./routes/licensing.js";
 import { onboardingRoutes } from "./routes/onboarding.js";
 import { onboardingPairingRoutes } from "./routes/onboarding-pairing.js";
+import { onboardingDemoModeRoutes } from "./routes/onboarding-demo-mode.js";
 import { preflightRoutes } from "./routes/preflight.js";
 import { jobsRoutes } from "./routes/jobs.js";
 import { schedulesRoutes } from "./routes/schedules.js";
@@ -122,7 +124,7 @@ export async function buildServer() {
     app.addHook("preHandler", async (req) => {
       if (!req.session.engineer) {
         req.session.engineer = {
-          upn: "demo.engineer@blackiron.example",
+          upn: DEMO_ENGINEER_UPN,
           displayName: "Demo Engineer",
           homeTenantId: "msp-root",
         };
@@ -178,6 +180,7 @@ export async function buildServer() {
   await app.register(licensingRoutes);
   await app.register(onboardingRoutes);
   await app.register(onboardingPairingRoutes);
+  await app.register(onboardingDemoModeRoutes);
   await app.register(preflightRoutes);
   await app.register(jobsRoutes);
   await app.register(schedulesRoutes);

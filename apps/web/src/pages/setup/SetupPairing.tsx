@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { CopyButton } from "../../components/ui";
@@ -121,7 +121,106 @@ export function SetupPairing() {
           This page updates automatically once pairing completes — no need to
           reload.
         </p>
+
+        <div className="mt-6 border-t border-slate-200 pt-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Or, to explore without connecting a tenant
+          </p>
+          <div className="mt-2.5">
+            <EnableDemoModeAction />
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The Pairing Page's other option: instead of connecting a real tenant, flip
+ * this fresh, unpaired instance into DEMO_MODE — see
+ * apps/api/src/routes/onboarding-demo-mode.ts. Confirm-modal pattern mirrors
+ * AddApiPermissionsAction (apps/web/src/pages/setup/AppRegistration.tsx).
+ *
+ * No new polling logic needed: the same 5-second /auth/me poll above already
+ * notices `entraConfigured: true` the moment the restarted process comes back
+ * up in demo mode (config.ts forces ENTRA_CONFIGURED=true whenever
+ * DEMO_MODE=true) and hands off to the normal app shell.
+ */
+function EnableDemoModeAction() {
+  const [confirming, setConfirming] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleConfirm() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await api.post<{ enabled: boolean }>("/api/onboarding/enable-demo-mode", {});
+      // The api process restarts itself right after replying (see
+      // exitAfterReply in the route) — nothing left to do here but wait for
+      // the poll above to notice. Leave the modal up with a "restarting"
+      // message rather than closing it, so the admin isn't left staring at
+      // an unchanged screen wondering if the click registered.
+    } catch (err) {
+      setSubmitting(false);
+      setError(err instanceof Error ? err.message : "Failed to enable demo mode.");
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="rounded-md border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+      >
+        Enable Demo Mode
+      </button>
+
+      {confirming && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => !submitting && setConfirming(false)}
+            aria-hidden
+          />
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900">
+              Enable demo mode?
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              This instance will restart in a few seconds, filled with
+              fictional sample tenants, devices, and vulnerabilities — no
+              Microsoft 365 tenant is connected, and no real data is ever
+              involved. This is one-way, the same as pairing: there&apos;s no
+              in-app way to switch back afterward.
+            </p>
+            {error && (
+              <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+                {error}
+              </p>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setConfirming(false)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => void handleConfirm()}
+                className="rounded-md bg-slate-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting ? "Restarting…" : "Enable Demo Mode"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

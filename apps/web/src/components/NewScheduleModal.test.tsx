@@ -31,6 +31,7 @@ function engineer(overrides: Partial<Engineer> = {}): Engineer {
     role: "admin",
     permissions: ["operations:write"],
     theme: "light",
+    demoMode: false,
     ...overrides,
   };
 }
