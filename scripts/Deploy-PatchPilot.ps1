@@ -531,6 +531,54 @@ function Get-GraphAllPages {
     return @($allItems | Where-Object { $_ })
 }
 
+function Test-HasEntraIdP1OrHigher {
+    <#
+        Role-assignable security groups (isAssignableToRole: true) - what
+        both home-tenant access groups are - are an Entra ID Premium P1
+        feature, licensed at the tenant level. This is completely
+        independent of whether the connected account is Global
+        Administrator/Privileged Role Administrator: a tenant with no P1/P2
+        license gets an identical 403 Forbidden from group creation either
+        way, and the two causes are otherwise indistinguishable without
+        checking Graph's own error body (confirmed live: a genuine Global
+        Administrator, on a free/no-Entra-P1 tenant, hit exactly this).
+
+        Checks /subscribedSkus for the standalone AAD_PREMIUM/AAD_PREMIUM_P2
+        SKUs, and for the same two service plan names nested inside any
+        bundle SKU (SPE_E3/SPE_E5/EMS/EMSPREMIUM/SPB and similar all include
+        Entra ID P1 as a service plan rather than selling it standalone) -
+        mirrors packages/shared/src/licensing.ts's own SKU-vs-service-plan
+        distinction, kept separate here since this runs from a plain
+        PowerShell script with no dependency on that package.
+
+        Returns $false (not a throw) on any Graph error reading
+        /subscribedSkus (e.g. missing Organization.Read.All - already a
+        required scope elsewhere in this script, so this should be rare) so
+        the caller can fall back to just attempting group creation and
+        reporting whatever Graph says, rather than blocking the whole step
+        on an unrelated read failure.
+    #>
+    $p1ServicePlanNames = @("AAD_PREMIUM", "AAD_PREMIUM_P2")
+
+    try {
+        $skus = Get-GraphAllPages -Uri "https://graph.microsoft.com/v1.0/subscribedSkus?`$select=skuPartNumber,capabilityStatus,servicePlans"
+    }
+    catch {
+        return $null
+    }
+
+    foreach ($sku in $skus) {
+        if ($sku.capabilityStatus -ne "Enabled") { continue }
+        if ($p1ServicePlanNames -contains $sku.skuPartNumber) { return $true }
+        foreach ($plan in @($sku.servicePlans)) {
+            if ($plan.provisioningStatus -eq "Success" -and $p1ServicePlanNames -contains $plan.servicePlanName) {
+                return $true
+            }
+        }
+    }
+    return $false
+}
+
 function Get-OrCreate-AccessGroup {
     <#
         Idempotent lookup-or-create for one home-tenant role-assignable
@@ -587,7 +635,25 @@ function Get-OrCreate-AccessGroup {
         return $group
     }
     catch {
-        Write-WarningMessage "Could not create '$DisplayName': $($_.Exception.Message)"
+        # Surface Graph's actual JSON error body (code + message), not just
+        # the generic "Forbidden" HTTP status text - that's all
+        # $_.Exception.Message gives you, and it can't distinguish "this
+        # account isn't Global Administrator/Privileged Role Administrator"
+        # from "this tenant has no Entra ID P1/P2 license" - both 403, but
+        # only Graph's own error body says which (see Grant-GroupDirectoryRole
+        # below for the same extraction pattern).
+        $graphErrorDetail = $_.Exception.Message
+        try {
+            $parsed = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop
+            if ($parsed.error) {
+                $graphErrorDetail = "$($parsed.error.code): $($parsed.error.message)"
+            }
+        }
+        catch {
+            # Response body wasn't JSON (or wasn't captured) - fall back to
+            # the exception's own message set above.
+        }
+        Write-WarningMessage "Could not create '$DisplayName': $graphErrorDetail"
         return $null
     }
 }
@@ -1508,32 +1574,42 @@ try {
     $writeGroupId = $null
 
     if ($PSCmdlet.ShouldProcess($MspTenantId, "Create or reuse home-tenant access groups")) {
-        $readOnlyGroup = Get-OrCreate-AccessGroup -DisplayName $readOnlyGroupName
-        $writeGroup = Get-OrCreate-AccessGroup -DisplayName $writeGroupName
+        $hasP1 = Test-HasEntraIdP1OrHigher
 
-        if (-not $readOnlyGroup -or -not $writeGroup) {
-            Write-WarningMessage "Could not create one or both access groups - likely missing Global Administrator/Privileged Role Administrator on the connected account."
-            Write-WarningMessage "Ask a Global Administrator to create these two role-assignable security groups manually and assign the listed roles:"
-            Write-WarningMessage "  - '$readOnlyGroupName': $($readOnlyGroupRoles -join ', ')"
-            Write-WarningMessage "  - '$writeGroupName': $($writeGroupRoles -join ', ')"
+        if ($hasP1 -eq $false) {
+            Write-WarningMessage "This tenant has no Entra ID P1/P2 license - skipping home-tenant access group creation."
+            Write-WarningMessage "'$readOnlyGroupName' and '$writeGroupName' are role-assignable security groups, which is an Entra ID Premium P1 feature. This is separate from being Global Administrator: even a genuine Global Administrator gets a plain 403 Forbidden trying to create one on a tenant with no P1/P2 license."
+            Write-WarningMessage "PatchPilot still works without this: a Global Administrator (or anyone directly assigned Global Reader, Security Reader, Security Administrator, Intune Administrator, and/or Windows Update Deployment Administrator) can manage the home tenant exactly as before - PatchPilot only ever checks the signed-in engineer's effective Entra role, not whether it came from one of these groups. The groups exist purely to delegate that access to other engineers without making them Global Administrator outright."
+            Write-WarningMessage "To enable this feature later, add an Entra ID P1 (or P2) license to the tenant - or a bundle that includes it (Microsoft 365 Business Premium, EMS E3/E5, or Microsoft 365 E3/E5) - then re-run this script."
         }
         else {
-            $readOnlyGroupId = $readOnlyGroup.Id
-            $writeGroupId = $writeGroup.Id
+            $readOnlyGroup = Get-OrCreate-AccessGroup -DisplayName $readOnlyGroupName
+            $writeGroup = Get-OrCreate-AccessGroup -DisplayName $writeGroupName
 
-            $allRolesAssigned = $true
-            foreach ($roleName in $readOnlyGroupRoles) {
-                if (-not (Grant-GroupDirectoryRole -GroupId $readOnlyGroupId -RoleName $roleName)) { $allRolesAssigned = $false }
-            }
-            foreach ($roleName in $writeGroupRoles) {
-                if (-not (Grant-GroupDirectoryRole -GroupId $writeGroupId -RoleName $roleName)) { $allRolesAssigned = $false }
-            }
-
-            if ($allRolesAssigned) {
-                Write-Success "Home-tenant access groups ready: '$readOnlyGroupName' ($readOnlyGroupId), '$writeGroupName' ($writeGroupId)."
+            if (-not $readOnlyGroup -or -not $writeGroup) {
+                Write-WarningMessage "Could not create one or both access groups - likely missing Global Administrator/Privileged Role Administrator on the connected account."
+                Write-WarningMessage "Ask a Global Administrator to create these two role-assignable security groups manually and assign the listed roles:"
+                Write-WarningMessage "  - '$readOnlyGroupName': $($readOnlyGroupRoles -join ', ')"
+                Write-WarningMessage "  - '$writeGroupName': $($writeGroupRoles -join ', ')"
             }
             else {
-                Write-WarningMessage "One or more role assignments failed - see warnings above. PatchPilot will still write group IDs to .env; retry this script once the missing roles are assigned manually."
+                $readOnlyGroupId = $readOnlyGroup.Id
+                $writeGroupId = $writeGroup.Id
+
+                $allRolesAssigned = $true
+                foreach ($roleName in $readOnlyGroupRoles) {
+                    if (-not (Grant-GroupDirectoryRole -GroupId $readOnlyGroupId -RoleName $roleName)) { $allRolesAssigned = $false }
+                }
+                foreach ($roleName in $writeGroupRoles) {
+                    if (-not (Grant-GroupDirectoryRole -GroupId $writeGroupId -RoleName $roleName)) { $allRolesAssigned = $false }
+                }
+
+                if ($allRolesAssigned) {
+                    Write-Success "Home-tenant access groups ready: '$readOnlyGroupName' ($readOnlyGroupId), '$writeGroupName' ($writeGroupId)."
+                }
+                else {
+                    Write-WarningMessage "One or more role assignments failed - see warnings above. PatchPilot will still write group IDs to .env; retry this script once the missing roles are assigned manually."
+                }
             }
         }
 

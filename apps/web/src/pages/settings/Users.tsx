@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ROLES,
@@ -152,8 +153,10 @@ const ACCESS_STYLE: Record<AreaAccess, string> = {
 };
 
 /** The specific 409 codes the server invariants (§3.7 of the plan) return,
- *  turned into the sentence an operator actually needs to read. */
-function errorMessage(err: unknown, fallback: string): string {
+ *  turned into the sentence an operator actually needs to read. Returns a
+ *  ReactNode rather than a plain string so the access-group case can link
+ *  straight to the App Registration page instead of just naming a script. */
+function errorMessage(err: unknown, fallback: string): ReactNode {
   if (err instanceof ApiError) {
     const data = err.data as { error?: string; groupName?: string } | undefined;
     const code = data?.error;
@@ -164,7 +167,18 @@ function errorMessage(err: unknown, fallback: string): string {
       return "You can't change your own role or disable/remove your own account.";
     }
     if (code === "access_group_not_provisioned") {
-      return `${data?.groupName ?? "That access group"} hasn't been provisioned in the home tenant yet — ask a Global Administrator to run Deploy-PatchPilot.ps1.`;
+      return (
+        <>
+          <strong>{data?.groupName ?? "That access group"}</strong> hasn't been provisioned in the
+          home tenant yet.{" "}
+          <Link to="/setup/app-registration" className="font-medium underline hover:no-underline">
+            See App Registration
+          </Link>{" "}
+          for the setup steps and script to run — if it warns about a missing Entra ID P1/P2
+          license, that's expected on a tenant without one; a Global Administrator can still
+          manage the home tenant directly without this group.
+        </>
+      );
     }
     return err.message || fallback;
   }
@@ -202,7 +216,7 @@ export function Users() {
   // default in apps/api/src/routes/users.ts.
   const [alertsTouched, setAlertsTouched] = useState(false);
   const [receiveJobAlerts, setReceiveJobAlerts] = useState(DEFAULT_NEW_ROLE === "admin");
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<ReactNode>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<User | null>(null);
   // Write-access toggle confirm dialog — set for either direction (grant or
