@@ -950,6 +950,12 @@ export const schedules = pgTable("schedules", {
   // cron expression driving the BullMQ repeatable job.
   cron: text("cron").notNull(),
   channel: channelEnum("channel").notNull(),
+  // IANA timezone the cron is interpreted in (e.g. "Australia/Sydney"). The
+  // worker passes this straight to BullMQ's job-scheduler so a "2am" schedule
+  // fires at 2am in this zone, not 2am UTC. Captured from the creating
+  // engineer's browser; rows predating this column default to "UTC" (the
+  // behaviour they already had, since no tz was ever passed).
+  timezone: text("timezone").notNull().default("UTC"),
   // Dynamic device group / target descriptor.
   target: jsonb("target").$type<Record<string, unknown>>().notNull().default({}),
   enabled: boolean("enabled").notNull().default(true),

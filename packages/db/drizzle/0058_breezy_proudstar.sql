@@ -1,0 +1,1 @@
+ALTER TABLE "schedules" ADD COLUMN "timezone" text DEFAULT 'UTC' NOT NULL;

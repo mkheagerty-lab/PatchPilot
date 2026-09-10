@@ -24,6 +24,8 @@ export interface ScheduleRecord {
   channel: RemediationChannel;
   target: Record<string, unknown>;
   enabled: boolean;
+  /** IANA timezone the cron fires in (e.g. "Australia/Sydney"). "UTC" for rows created before this existed. */
+  timezone: string;
   /** UPN the recurring run is attributed to; null for pre-attribution rows. */
   engineer: string | null;
   createdAt: string;
@@ -34,6 +36,8 @@ export interface NewSchedule {
   name: string;
   cron: string;
   channel: RemediationChannel;
+  /** IANA timezone the cron fires in; defaults to "UTC" when the caller omits it. */
+  timezone?: string;
   target?: Record<string, unknown>;
   /** UPN of the creating engineer — recurring fires run under this identity. */
   engineer: string;
@@ -43,6 +47,7 @@ export interface SchedulePatch {
   name?: string;
   cron?: string;
   channel?: RemediationChannel;
+  timezone?: string;
   target?: Record<string, unknown>;
   enabled?: boolean;
 }
@@ -56,6 +61,7 @@ function rowToRecord(row: ScheduleRow): ScheduleRecord {
     channel: row.channel as RemediationChannel,
     target: row.target,
     enabled: row.enabled,
+    timezone: row.timezone,
     engineer: row.engineer,
     createdAt: (row.createdAt as Date).toISOString(),
   };
@@ -107,6 +113,7 @@ export async function createSchedule(
     channel: input.channel,
     target: input.target ?? {},
     enabled: true,
+    timezone: input.timezone ?? "UTC",
     engineer: input.engineer,
     createdAt: new Date().toISOString(),
   };
@@ -126,6 +133,7 @@ export async function createSchedule(
       channel: record.channel,
       target: record.target,
       enabled: record.enabled,
+      timezone: record.timezone,
       engineer: record.engineer,
     })
     .returning();
@@ -142,6 +150,7 @@ export async function updateSchedule(
     if (patch.name !== undefined) schedule.name = patch.name;
     if (patch.cron !== undefined) schedule.cron = patch.cron;
     if (patch.channel !== undefined) schedule.channel = patch.channel;
+    if (patch.timezone !== undefined) schedule.timezone = patch.timezone;
     if (patch.target !== undefined) schedule.target = patch.target;
     if (patch.enabled !== undefined) schedule.enabled = patch.enabled;
     return schedule;

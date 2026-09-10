@@ -1206,6 +1206,7 @@ export function RunNowModal({
         tenantId,
         name: scheduleName.trim() || `Recurring patch — ${software}`,
         cron: toCron(recurrence),
+        timezone: recurrence.timezone,
         channel,
         target: {
           patchType,

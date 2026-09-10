@@ -12,6 +12,22 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fix recurring schedules missing their fire. The worker's 30s reconcile
+  loop re-registered every BullMQ job-scheduler on every pass; because
+  `upsertJobScheduler` runs with `override: true` (which deletes the
+  pending next-fire job and recomputes from now), any worker restart while
+  a fire was overdue-but-unrun — credential rotation, a deploy, a
+  self-update — silently skipped that occurrence. A weekly schedule then
+  missed almost every week. The reconciler now leaves an unchanged
+  job-scheduler alone, and only re-arms one whose cron/timezone changed or
+  whose pending fire was genuinely lost (missing or more than 10 minutes
+  overdue).
+- Recurring schedules now fire in a chosen timezone instead of always
+  UTC. The schedule form captures the creating engineer's browser zone
+  (editable, full IANA list), stored on a new `schedules.timezone` column
+  and passed straight through to BullMQ; existing rows default to `UTC`,
+  which is the behaviour they already had.
+
 ## [0.11.1] - 2026-09-10
 
 - Fix tenant sync failing with `MAX_PARAMETERS_EXCEEDED` on larger tenants:

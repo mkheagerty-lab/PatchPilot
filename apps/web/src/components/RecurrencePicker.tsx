@@ -18,10 +18,60 @@ export interface Recurrence {
   daysOfWeek: number[];
   /** Monthly only — 1 through 28 (kept sub-29 so every month has the day). */
   dayOfMonth: number;
+  /**
+   * IANA timezone the `time` above is read in — the cron has no zone of its own,
+   * so this is what the worker hands BullMQ. Defaults to the creator's browser
+   * zone; stored on the schedule row.
+   */
+  timezone: string;
+}
+
+/** The creating engineer's own timezone, falling back to UTC if the browser won't say. */
+export function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+/**
+ * Every IANA zone the browser knows, for the picker's dropdown. Falls back to a
+ * short common-zone list on the handful of engines without `supportedValuesOf`.
+ */
+export function timeZoneOptions(): string[] {
+  try {
+    const all = (
+      Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
+    ).supportedValuesOf?.("timeZone");
+    if (all && all.length > 0) return all;
+  } catch {
+    /* fall through to the short list */
+  }
+  return [
+    "UTC",
+    "America/Los_Angeles",
+    "America/Denver",
+    "America/Chicago",
+    "America/New_York",
+    "Europe/London",
+    "Europe/Berlin",
+    "Asia/Kolkata",
+    "Asia/Singapore",
+    "Australia/Perth",
+    "Australia/Sydney",
+    "Pacific/Auckland",
+  ];
 }
 
 export function defaultRecurrence(): Recurrence {
-  return { freq: "daily", time: "02:00", daysOfWeek: [new Date().getDay()], dayOfMonth: 1 };
+  return {
+    freq: "daily",
+    time: "02:00",
+    daysOfWeek: [new Date().getDay()],
+    dayOfMonth: 1,
+    timezone: browserTimeZone(),
+  };
 }
 
 /** Builds a standard 5-field cron expression from a recurrence — the shape `schedules.cron` stores. */
@@ -112,8 +162,12 @@ export function describeCron(cron: string): string {
  * or both day-of-month and day-of-week constrained) returns null, since there's
  * no `Recurrence` that round-trips it — callers should fall back to
  * `defaultRecurrence()` and let the engineer redefine it.
+ *
+ * `timezone` is carried alongside the cron on the schedule row, not encoded in
+ * it, so the caller passes the stored value in (defaulting to "UTC" for rows
+ * that predate the column).
  */
-export function cronToRecurrence(cron: string): Recurrence | null {
+export function cronToRecurrence(cron: string, timezone = "UTC"): Recurrence | null {
   const parts = cron.trim().split(/\s+/);
   if (parts.length !== 5) return null;
   const [minute = "", hour = "", dom = "", month = "", dow = ""] = parts;
@@ -126,21 +180,22 @@ export function cronToRecurrence(cron: string): Recurrence | null {
   if (month !== "*") return null;
 
   const time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  const tz = timezone || "UTC";
 
   if (dom === "*" && dow === "*") {
-    return { freq: "daily", time, daysOfWeek: [new Date().getDay()], dayOfMonth: 1 };
+    return { freq: "daily", time, daysOfWeek: [new Date().getDay()], dayOfMonth: 1, timezone: tz };
   }
 
   if (dom === "*" && dow !== "*") {
     const days = dow.split(",").map(Number);
     if (days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) return null;
-    return { freq: "weekly", time, daysOfWeek: [...new Set(days)].sort(), dayOfMonth: 1 };
+    return { freq: "weekly", time, daysOfWeek: [...new Set(days)].sort(), dayOfMonth: 1, timezone: tz };
   }
 
   if (dow === "*" && dom !== "*") {
     const day = Number(dom);
     if (!Number.isInteger(day) || day < 1 || day > 31) return null;
-    return { freq: "monthly", time, daysOfWeek: [new Date().getDay()], dayOfMonth: day };
+    return { freq: "monthly", time, daysOfWeek: [new Date().getDay()], dayOfMonth: day, timezone: tz };
   }
 
   return null;
@@ -151,6 +206,9 @@ const FREQ_OPTIONS: { id: RecurrenceFrequency; label: string }[] = [
   { id: "weekly", label: "Weekly" },
   { id: "monthly", label: "Monthly" },
 ];
+
+/** IANA zone list for the picker — resolved once, it doesn't change mid-session. */
+const TZ_OPTIONS = timeZoneOptions();
 
 /**
  * Recurrence builder — Daily / Weekly / Monthly + time — for creating a
@@ -232,18 +290,38 @@ export function RecurrencePicker({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <label className="text-xs font-medium text-slate-600">Time</label>
-        <input
-          type="time"
-          value={value.time}
-          onChange={(e) => onChange({ ...value, time: e.target.value })}
-          className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"
-        />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-slate-600">Time</label>
+          <input
+            type="time"
+            value={value.time}
+            onChange={(e) => onChange({ ...value, time: e.target.value })}
+            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-slate-600">Timezone</label>
+          <select
+            value={value.timezone}
+            onChange={(e) => onChange({ ...value, timezone: e.target.value })}
+            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"
+          >
+            {(TZ_OPTIONS.includes(value.timezone)
+              ? TZ_OPTIONS
+              : [value.timezone, ...TZ_OPTIONS]
+            ).map((tz) => (
+              <option key={tz} value={tz}>
+                {tz}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <p className="text-[11px] leading-tight text-slate-500">
-        {describeRecurrence(value)} · <code className="font-mono">{toCron(value)}</code>
+        {describeRecurrence(value)} · <code className="font-mono">{toCron(value)}</code> ·{" "}
+        {value.timezone}
       </p>
     </div>
   );
