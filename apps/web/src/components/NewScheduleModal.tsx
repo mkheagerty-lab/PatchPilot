@@ -46,7 +46,8 @@ export function NewScheduleModal({
       // Falls back to the default recurrence if the stored cron doesn't match
       // one of the three shapes the picker can express — see cronToRecurrence.
       setRecurrence(
-        (schedule?.cron ? cronToRecurrence(schedule.cron) : null) ?? defaultRecurrence(),
+        (schedule?.cron ? cronToRecurrence(schedule.cron, schedule.timezone) : null) ??
+          defaultRecurrence(),
       );
       setChannel(schedule?.channel ?? CHANNELS[0]!.id);
       setTarget((schedule?.target as Target) ?? {});
@@ -67,9 +68,10 @@ export function NewScheduleModal({
   const save = useMutation<Schedule, Error>({
     mutationFn: () => {
       const cron = toCron(recurrence);
+      const timezone = recurrence.timezone;
       return isEdit
-        ? api.put<Schedule>(`/api/schedules/${schedule!.id}`, { name, cron, channel, target })
-        : api.post<Schedule>("/api/schedules", { tenantId, name, cron, channel, target });
+        ? api.put<Schedule>(`/api/schedules/${schedule!.id}`, { name, cron, channel, timezone, target })
+        : api.post<Schedule>("/api/schedules", { tenantId, name, cron, channel, timezone, target });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["schedules"] });

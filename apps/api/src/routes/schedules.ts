@@ -29,6 +29,7 @@ interface CreateScheduleBody {
   name?: string;
   cron?: string;
   channel?: string;
+  timezone?: string;
   target?: Record<string, unknown>;
 }
 
@@ -36,8 +37,23 @@ interface UpdateScheduleBody {
   name?: string;
   cron?: string;
   channel?: string;
+  timezone?: string;
   target?: Record<string, unknown>;
   enabled?: boolean;
+}
+
+/**
+ * Is `tz` an IANA zone the runtime (and so cron-parser / BullMQ) will accept?
+ * `Intl.DateTimeFormat` throws a RangeError for anything it doesn't know, which
+ * is exactly the set we must reject before it reaches the worker's job-scheduler.
+ */
+function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function schedulesRoutes(app: FastifyInstance): Promise<void> {
@@ -59,7 +75,7 @@ export async function schedulesRoutes(app: FastifyInstance): Promise<void> {
     "/api/schedules",
     { preHandler: requirePermission("operations:write") },
     async (req, reply) => {
-      const { tenantId, name, cron, channel, target } = req.body ?? {};
+      const { tenantId, name, cron, channel, timezone, target } = req.body ?? {};
 
       if (!tenantId || !name || !cron || !channel) {
         return reply
@@ -72,11 +88,16 @@ export async function schedulesRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(400).send({ error: `unknown channel: ${channel}` });
       }
 
+      if (timezone !== undefined && !isValidTimeZone(timezone)) {
+        return reply.code(400).send({ error: `unknown timezone: ${timezone}` });
+      }
+
       const schedule = await createSchedule({
         tenantId,
         name,
         cron,
         channel: parsedChannel.data,
+        timezone,
         target,
         engineer: req.session.engineer!.upn,
       });
@@ -90,7 +111,7 @@ export async function schedulesRoutes(app: FastifyInstance): Promise<void> {
         resourceType: "schedule",
         resourceId: schedule.id,
         resourceLabel: schedule.name,
-        summary: `Created the "${schedule.name}" schedule (${cron}, ${parsedChannel.data})`,
+        summary: `Created the "${schedule.name}" schedule (${cron} ${schedule.timezone}, ${parsedChannel.data})`,
         outcome: "success",
         payload: schedule,
         responseStatus: 201,
@@ -104,7 +125,7 @@ export async function schedulesRoutes(app: FastifyInstance): Promise<void> {
     "/api/schedules/:id",
     { preHandler: requirePermission("operations:write") },
     async (req, reply) => {
-      const { name, cron, channel, target, enabled } = req.body ?? {};
+      const { name, cron, channel, timezone, target, enabled } = req.body ?? {};
 
       let parsedChannel: RemediationChannel | undefined;
       if (channel !== undefined) {
@@ -115,10 +136,15 @@ export async function schedulesRoutes(app: FastifyInstance): Promise<void> {
         parsedChannel = result.data;
       }
 
+      if (timezone !== undefined && !isValidTimeZone(timezone)) {
+        return reply.code(400).send({ error: `unknown timezone: ${timezone}` });
+      }
+
       const schedule = await updateSchedule(req.params.id, {
         name,
         cron,
         channel: parsedChannel,
+        timezone,
         target,
         enabled,
       });

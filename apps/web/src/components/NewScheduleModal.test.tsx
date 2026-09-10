@@ -91,6 +91,7 @@ describe("NewScheduleModal", () => {
       tenantId: "tenant-1",
       name: "Existing schedule",
       cron: "0 2 * * *",
+      timezone: "UTC",
       channel: "live-response",
       target: {},
       enabled: true,

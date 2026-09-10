@@ -71,10 +71,17 @@ export function Schedules() {
 
   function exportCsv() {
     const csv =
-      csvRow(["name", "cron", "channel", "engineer", "enabled"]) +
+      csvRow(["name", "cron", "timezone", "channel", "engineer", "enabled"]) +
       schedules
         .map((s) =>
-          csvRow([s.name, s.cron, CHANNEL_LABELS[s.channel] ?? s.channel, s.engineer ?? "", s.enabled]),
+          csvRow([
+            s.name,
+            s.cron,
+            s.timezone,
+            CHANNEL_LABELS[s.channel] ?? s.channel,
+            s.engineer ?? "",
+            s.enabled,
+          ]),
         )
         .join("");
     downloadCsv("schedules.csv", csv);
@@ -111,6 +118,7 @@ export function Schedules() {
       cell: (s) => (
         <div className="text-xs text-slate-500 dark:text-slate-400">
           <span title={s.cron}>{describeCron(s.cron)}</span>
+          <span className="text-slate-400 dark:text-slate-500"> · {s.timezone}</span>
           <div className="mt-0.5">
             {CHANNEL_LABELS[s.channel] ?? s.channel}
             {s.engineer ? ` · runs as ${s.engineer}` : ""}

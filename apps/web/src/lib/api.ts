@@ -821,6 +821,8 @@ export interface Schedule {
   channel: string;
   target: Record<string, unknown>;
   enabled: boolean;
+  /** IANA timezone the cron fires in (e.g. "Australia/Sydney"). "UTC" for pre-column rows. */
+  timezone: string;
   /** UPN the recurring run is attributed to; null for pre-attribution rows. */
   engineer: string | null;
   createdAt: string;

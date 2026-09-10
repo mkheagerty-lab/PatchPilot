@@ -63,6 +63,17 @@ const log = logger.child({ module: "scheduler" });
 /** How often the reconciler re-syncs DB schedules to BullMQ job-schedulers. */
 const RECONCILE_INTERVAL_MS = 30_000;
 
+/**
+ * How far past its due time a scheduler's next fire may sit before the reconciler
+ * treats the pending delayed job as lost and re-arms it. Comfortably larger than
+ * the reconcile interval plus BullMQ's own promotion latency, so a fire that is
+ * merely mid-promotion is never mistaken for a lost one.
+ */
+const MISSED_FIRE_GRACE_MS = 10 * 60_000;
+
+/** Default IANA zone for a schedule row with no timezone (pre-column rows). */
+const DEFAULT_SCHEDULE_TZ = "UTC";
+
 const scheduleQueue = new Queue(SCHEDULE_QUEUE, { connection });
 // Same rationale as apps/worker/src/queue.ts: an unlistened "error" on a
 // BullMQ Queue/Worker crashes the whole process, taking the job worker and
@@ -77,11 +88,36 @@ scheduleQueue.on("error", (err) => {
 });
 
 /**
- * Reconcile DB schedules -> BullMQ job-schedulers. Idempotent: upserting a
- * scheduler with the same id+pattern is a no-op, and any scheduler whose schedule
- * is no longer enabled (disabled, deleted, or cron made invalid) is removed.
+ * Reconcile DB schedules -> BullMQ job-schedulers. Registers a scheduler for any
+ * eligible schedule that has none, re-registers one whose cron changed, and
+ * removes any whose schedule is no longer enabled (disabled, deleted, or the
+ * owning engineer/cron cleared).
+ *
+ * It deliberately leaves an already-correct scheduler completely untouched.
+ * `Queue.upsertJobScheduler` runs with `override: true`, whose Lua path DELETES
+ * the pending next-fire delayed job and recomputes the next fire from `now()`.
+ * Calling it on every 30s pass therefore races the worker promoting a fire that
+ * has just come due — and, worse, on any worker restart while a fire is
+ * overdue-but-not-yet-run (the worker was down over its 2am slot, say), the
+ * startup reconcile would delete that overdue fire and re-arm for the *next*
+ * slot, so the occurrence is silently skipped. A weekly schedule then misses
+ * essentially every week, because this process restarts more than weekly
+ * (credential rotation, deploys, self-update). So: only upsert when the cron or
+ * timezone changed.
+ *
+ * The one exception is the heal path: if a scheduler's config still matches but
+ * its recorded next fire is missing or more than MISSED_FIRE_GRACE_MS in the
+ * past, its pending delayed job was destroyed out-of-band (Redis eviction, a
+ * manual queue drain) and will never fire again on its own. Re-upserting re-arms
+ * it. That only ever moves the next fire *forward* from an already-missed slot,
+ * so it does not reintroduce the skip-an-occurrence bug the match check prevents.
+ *
+ * Cron is stored as a plain string with no zone, so a schedule's `timezone`
+ * column is passed straight through to BullMQ here — without it every schedule
+ * fires at UTC regardless of where the tenant (or the engineer who created it)
+ * actually is.
  */
-async function reconcileSchedules(): Promise<void> {
+export async function reconcileSchedules(): Promise<void> {
   const rows = await db
     .select()
     .from(tables.schedules)
@@ -95,33 +131,62 @@ async function reconcileSchedules(): Promise<void> {
   );
 
   const existing = await scheduleQueue.getJobSchedulers(0, -1, true);
-  const existingKeys = new Set(existing.map((s) => s.key));
+  const existingByKey = new Map(existing.map((s) => [s.key, s] as const));
 
   // Remove schedulers whose schedule is gone or no longer eligible.
-  for (const key of existingKeys) {
+  for (const { key } of existing) {
     if (!desired.has(key)) {
       await scheduleQueue.removeJobScheduler(key);
       log.info({ scheduleId: key }, "removed job-scheduler (disabled/deleted)");
     }
   }
 
-  // Upsert a scheduler per eligible schedule, keyed by the schedule id.
+  // Register or re-register a scheduler per eligible schedule, keyed by the
+  // schedule id — but only when it is missing, its cron/timezone changed, or its
+  // pending next fire was lost (see the heal path in this function's doc).
+  const now = Date.now();
   for (const [id, schedule] of desired) {
+    const current = existingByKey.get(id);
+    const tz = schedule.timezone || DEFAULT_SCHEDULE_TZ;
+
+    const configMatches =
+      current !== undefined &&
+      current.pattern === schedule.cron &&
+      (current.tz ?? DEFAULT_SCHEDULE_TZ) === tz;
+
+    const nextFire = typeof current?.next === "number" ? current.next : null;
+    const nextFireLost = nextFire === null || nextFire < now - MISSED_FIRE_GRACE_MS;
+
+    if (configMatches && !nextFireLost) continue;
+
+    const action = !current
+      ? "registered job-scheduler"
+      : configMatches
+        ? "re-armed job-scheduler (pending fire was lost or long overdue)"
+        : "re-registered job-scheduler (cron/timezone changed)";
+
     try {
       await scheduleQueue.upsertJobScheduler(
         id,
-        { pattern: schedule.cron },
+        { pattern: schedule.cron, tz },
         { name: "fire", data: { scheduleId: id } },
       );
-      if (!existingKeys.has(id)) {
-        log.info(
-          { scheduleId: id, scheduleName: schedule.name, cron: schedule.cron, tenantId: schedule.tenantId },
-          "registered job-scheduler",
-        );
-      }
+      log.info(
+        {
+          scheduleId: id,
+          scheduleName: schedule.name,
+          cron: schedule.cron,
+          tz,
+          tenantId: schedule.tenantId,
+          previousCron: current?.pattern ?? null,
+          previousTz: current?.tz ?? null,
+          previousNext: nextFire,
+        },
+        action,
+      );
     } catch (err) {
       // A bad cron expression should not take down the reconcile loop.
-      log.error({ err, scheduleId: id, cron: schedule.cron }, "failed to register schedule");
+      log.error({ err, scheduleId: id, cron: schedule.cron, tz }, "failed to register schedule");
     }
   }
 }
