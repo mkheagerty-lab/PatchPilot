@@ -1,5 +1,6 @@
 export { db, schema } from "./client.js";
 export type { Database } from "./client.js";
+export { insertInChunks, CHUNK_SIZE } from "./chunked-insert.js";
 export * as tables from "./schema.js";
 export type {
   FeatureUpdateAssignmentKind,

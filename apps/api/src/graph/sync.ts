@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { and, eq, inArray, isNull, lt, notInArray, or } from "drizzle-orm";
-import { db, tables } from "@patchpilot/db";
+import { db, tables, insertInChunks } from "@patchpilot/db";
 import {
   matchWinget,
   prettifySoftwareTitle,
@@ -603,26 +603,28 @@ async function upsertCveCatalog(metas: DefenderVulnerability[]): Promise<void> {
       fetchedAt: now,
     }));
   if (values.length === 0) return;
-  await db
-    .insert(tables.cveCatalog)
-    .values(values)
-    .onConflictDoUpdate({
-      target: tables.cveCatalog.cveId,
-      set: {
-        name: sql`excluded.name`,
-        description: sql`excluded.description`,
-        severity: sql`excluded.severity`,
-        cvssV3: sql`excluded.cvss_v3`,
-        cvssVector: sql`excluded.cvss_vector`,
-        publishedOn: sql`excluded.published_on`,
-        updatedOn: sql`excluded.updated_on`,
-        epss: sql`excluded.epss`,
-        publicExploit: sql`excluded.public_exploit`,
-        exploitVerified: sql`excluded.exploit_verified`,
-        exploitInKit: sql`excluded.exploit_in_kit`,
-        fetchedAt: sql`excluded.fetched_at`,
-      },
-    });
+  await insertInChunks(values, (chunk) =>
+    db
+      .insert(tables.cveCatalog)
+      .values(chunk)
+      .onConflictDoUpdate({
+        target: tables.cveCatalog.cveId,
+        set: {
+          name: sql`excluded.name`,
+          description: sql`excluded.description`,
+          severity: sql`excluded.severity`,
+          cvssV3: sql`excluded.cvss_v3`,
+          cvssVector: sql`excluded.cvss_vector`,
+          publishedOn: sql`excluded.published_on`,
+          updatedOn: sql`excluded.updated_on`,
+          epss: sql`excluded.epss`,
+          publicExploit: sql`excluded.public_exploit`,
+          exploitVerified: sql`excluded.exploit_verified`,
+          exploitInKit: sql`excluded.exploit_in_kit`,
+          fetchedAt: sql`excluded.fetched_at`,
+        },
+      }),
+  );
 }
 
 /**
@@ -1308,22 +1310,24 @@ export async function syncVulnerabilities(engineer: Engineer, tenantId: string):
       // device_vulns_unique_idx. linkByKey already dedupes within this run,
       // so this only ever resolves a genuine cross-transaction race, not an
       // in-batch duplicate — mirrors the vulnerabilities upsert above.
-      await tx
-        .insert(tables.deviceVulnerabilities)
-        .values(linkRows)
-        .onConflictDoUpdate({
-          target: [
-            tables.deviceVulnerabilities.tenantId,
-            tables.deviceVulnerabilities.defenderMachineId,
-            tables.deviceVulnerabilities.cveId,
-            tables.deviceVulnerabilities.software,
-          ],
-          set: {
-            softwareVersion: sql`excluded.software_version`,
-            diskPaths: sql`excluded.disk_paths`,
-            registryPaths: sql`excluded.registry_paths`,
-          },
-        });
+      await insertInChunks(linkRows, (chunk) =>
+        tx
+          .insert(tables.deviceVulnerabilities)
+          .values(chunk)
+          .onConflictDoUpdate({
+            target: [
+              tables.deviceVulnerabilities.tenantId,
+              tables.deviceVulnerabilities.defenderMachineId,
+              tables.deviceVulnerabilities.cveId,
+              tables.deviceVulnerabilities.software,
+            ],
+            set: {
+              softwareVersion: sql`excluded.software_version`,
+              diskPaths: sql`excluded.disk_paths`,
+              registryPaths: sql`excluded.registry_paths`,
+            },
+          }),
+      );
     }
   });
 
@@ -1742,25 +1746,27 @@ export async function syncSoftwareInventory(
 
   await db.transaction(async (tx) => {
     if (inventoryRows.length > 0) {
-      await tx
-        .insert(tables.softwareInventory)
-        .values(inventoryRows)
-        .onConflictDoUpdate({
-          target: [tables.softwareInventory.tenantId, tables.softwareInventory.softwareId],
-          set: {
-            name: sql`excluded."name"`,
-            vendor: sql`excluded."vendor"`,
-            weaknessCount: sql`excluded."weakness_count"`,
-            exposedMachinesCount: sql`excluded."exposed_machines_count"`,
-            installedMachinesCount: sql`excluded."installed_machines_count"`,
-            publicExploit: sql`excluded."public_exploit"`,
-            context: sql`excluded."context"`,
-            matchedPackageId: sql`excluded."matched_package_id"`,
-            matchedPackageSource: sql`excluded."matched_package_source"`,
-            matchedLatestVersion: sql`excluded."matched_latest_version"`,
-            lastSeenAt: sql`excluded."last_seen_at"`,
-          },
-        });
+      await insertInChunks(inventoryRows, (chunk) =>
+        tx
+          .insert(tables.softwareInventory)
+          .values(chunk)
+          .onConflictDoUpdate({
+            target: [tables.softwareInventory.tenantId, tables.softwareInventory.softwareId],
+            set: {
+              name: sql`excluded."name"`,
+              vendor: sql`excluded."vendor"`,
+              weaknessCount: sql`excluded."weakness_count"`,
+              exposedMachinesCount: sql`excluded."exposed_machines_count"`,
+              installedMachinesCount: sql`excluded."installed_machines_count"`,
+              publicExploit: sql`excluded."public_exploit"`,
+              context: sql`excluded."context"`,
+              matchedPackageId: sql`excluded."matched_package_id"`,
+              matchedPackageSource: sql`excluded."matched_package_source"`,
+              matchedLatestVersion: sql`excluded."matched_latest_version"`,
+              lastSeenAt: sql`excluded."last_seen_at"`,
+            },
+          }),
+      );
       if (!truncated) {
         await tx.delete(tables.softwareInventory).where(
           and(
@@ -1781,7 +1787,7 @@ export async function syncSoftwareInventory(
     // replace, mirroring syncVulnerabilities's device<->CVE linkage refresh.
     await tx.delete(tables.deviceSoftware).where(eq(tables.deviceSoftware.tenantId, tenantId));
     if (deviceSoftwareRows.length > 0) {
-      await tx.insert(tables.deviceSoftware).values(deviceSoftwareRows);
+      await insertInChunks(deviceSoftwareRows, (chunk) => tx.insert(tables.deviceSoftware).values(chunk));
     }
   });
 
@@ -1897,7 +1903,7 @@ export async function syncMissingKbs(
   await db.transaction(async (tx) => {
     await tx.delete(tables.missingKbs).where(eq(tables.missingKbs.tenantId, tenantId));
     if (rows.length > 0) {
-      await tx.insert(tables.missingKbs).values(rows);
+      await insertInChunks(rows, (chunk) => tx.insert(tables.missingKbs).values(chunk));
     }
   });
 
@@ -2977,7 +2983,7 @@ export async function backfillOsRecommendationVulnerabilities(
       );
     const linkRows = [...linkByKey.values()];
     if (linkRows.length > 0) {
-      await tx.insert(tables.deviceVulnerabilities).values(linkRows);
+      await insertInChunks(linkRows, (chunk) => tx.insert(tables.deviceVulnerabilities).values(chunk));
     }
   });
 
