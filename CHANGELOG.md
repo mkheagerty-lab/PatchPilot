@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.12.0] - 2026-09-10
+
 - Fix recurring schedules missing their fire. The worker's 30s reconcile
   loop re-registered every BullMQ job-scheduler on every pass; because
   `upsertJobScheduler` runs with `override: true` (which deletes the
