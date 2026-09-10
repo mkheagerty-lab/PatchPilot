@@ -13,9 +13,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## Unreleased
 
 - Fix tenant sync failing with `MAX_PARAMETERS_EXCEEDED` on larger tenants:
-  the per-tenant device/software/CVE/missing-KB writes built a single
-  multi-row INSERT that exceeded PostgreSQL's 65534 bind-parameter cap once
-  a tenant had enough devices. Those inserts are now batched.
+  the per-tenant device, software, CVE, vulnerability-link, missing-KB, and
+  remediation-event writes each built a single multi-row INSERT that
+  exceeded PostgreSQL's 65534 bind-parameter cap once a tenant had enough
+  devices. Those inserts are now batched via a shared `insertInChunks`
+  helper.
 
 ## [0.11.0] - 2026-09-07
 

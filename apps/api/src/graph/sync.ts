@@ -456,27 +456,29 @@ export async function syncDevices(engineer: Engineer, tenantId: string): Promise
 
   await db.transaction(async (tx) => {
     if (rows.length > 0) {
-      await tx
-        .insert(tables.devices)
-        .values(rows)
-        .onConflictDoUpdate({
-          target: [tables.devices.tenantId, tables.devices.managedDeviceId],
-          set: {
-            defenderMachineId: sql`excluded."defender_machine_id"`,
-            hostname: sql`excluded."hostname"`,
-            os: sql`excluded."os"`,
-            osBuild: sql`excluded."os_build"`,
-            lastSeen: sql`excluded."last_seen"`,
-            compliance: sql`excluded."compliance"`,
-            vulnerabilityCount: sql`excluded."vulnerability_count"`,
-            owner: sql`excluded."owner"`,
-            model: sql`excluded."model"`,
-            manufacturer: sql`excluded."manufacturer"`,
-            serialNumber: sql`excluded."serial_number"`,
-            deviceGroupId: sql`excluded."device_group_id"`,
-            deviceGroupName: sql`excluded."device_group_name"`,
-          },
-        });
+      await insertInChunks(rows, (chunk) =>
+        tx
+          .insert(tables.devices)
+          .values(chunk)
+          .onConflictDoUpdate({
+            target: [tables.devices.tenantId, tables.devices.managedDeviceId],
+            set: {
+              defenderMachineId: sql`excluded."defender_machine_id"`,
+              hostname: sql`excluded."hostname"`,
+              os: sql`excluded."os"`,
+              osBuild: sql`excluded."os_build"`,
+              lastSeen: sql`excluded."last_seen"`,
+              compliance: sql`excluded."compliance"`,
+              vulnerabilityCount: sql`excluded."vulnerability_count"`,
+              owner: sql`excluded."owner"`,
+              model: sql`excluded."model"`,
+              manufacturer: sql`excluded."manufacturer"`,
+              serialNumber: sql`excluded."serial_number"`,
+              deviceGroupId: sql`excluded."device_group_id"`,
+              deviceGroupName: sql`excluded."device_group_name"`,
+            },
+          }),
+      );
       await tx.delete(tables.devices).where(
         and(
           eq(tables.devices.tenantId, tenantId),
@@ -1203,36 +1205,35 @@ export async function syncVulnerabilities(engineer: Engineer, tenantId: string):
             now,
           ),
         ]);
-        await tx.insert(tables.remediationEvents).values(
-          doomed.map((d) => {
-            const attr = attributions.get(`${d.cveId ?? ""}|${d.software ?? ""}`);
-            return {
-              tenantId,
-              kind: "vulnerability" as const,
-              cveId: d.cveId,
-              software: d.software,
-              severity: d.severity,
-              detectedAt: d.detectedAt,
-              remediatedAt: now,
-              closure: (d.cveId && reclassifiedCves.has(d.cveId) ? "reclassified" : "cleared") as
-                | "cleared"
-                | "reclassified",
-              ...(attr
-                ? {
-                    attribution: attr.attribution,
-                    deviceId: attr.deviceId,
-                    deviceHostname: attr.deviceHostname,
-                    engineer: attr.engineer,
-                    jobId: attr.jobId,
-                    channel: attr.channel,
-                    fixStartedAt: attr.fixStartedAt,
-                    fixFinishedAt: attr.fixFinishedAt,
-                    contributingJobs: attr.contributingJobs,
-                  }
-                : {}),
-            };
-          }),
-        );
+        const eventRows = doomed.map((d) => {
+          const attr = attributions.get(`${d.cveId ?? ""}|${d.software ?? ""}`);
+          return {
+            tenantId,
+            kind: "vulnerability" as const,
+            cveId: d.cveId,
+            software: d.software,
+            severity: d.severity,
+            detectedAt: d.detectedAt,
+            remediatedAt: now,
+            closure: (d.cveId && reclassifiedCves.has(d.cveId) ? "reclassified" : "cleared") as
+              | "cleared"
+              | "reclassified",
+            ...(attr
+              ? {
+                  attribution: attr.attribution,
+                  deviceId: attr.deviceId,
+                  deviceHostname: attr.deviceHostname,
+                  engineer: attr.engineer,
+                  jobId: attr.jobId,
+                  channel: attr.channel,
+                  fixStartedAt: attr.fixStartedAt,
+                  fixFinishedAt: attr.fixFinishedAt,
+                  contributingJobs: attr.contributingJobs,
+                }
+              : {}),
+          };
+        });
+        await insertInChunks(eventRows, (chunk) => tx.insert(tables.remediationEvents).values(chunk));
       }
       await tx.delete(tables.vulnerabilities).where(pruneWhere);
     });
@@ -2157,33 +2158,32 @@ export async function syncRecommendations(
         detectedAt: d.detectedAt,
       }));
       const attributions = await attributeClears(tx, tenantId, findings, now);
-      await tx.insert(tables.remediationEvents).values(
-        doomed.map((d) => {
-          const attr = attributions.get(`${d.recommendationId ?? ""}|${d.productName ?? ""}`);
-          return {
-            tenantId,
-            kind: "recommendation" as const,
-            recommendationId: d.recommendationId,
-            software: d.productName,
-            severity: d.severity,
-            detectedAt: d.detectedAt,
-            remediatedAt: now,
-            ...(attr
-              ? {
-                  attribution: attr.attribution,
-                  deviceId: attr.deviceId,
-                  deviceHostname: attr.deviceHostname,
-                  engineer: attr.engineer,
-                  jobId: attr.jobId,
-                  channel: attr.channel,
-                  fixStartedAt: attr.fixStartedAt,
-                  fixFinishedAt: attr.fixFinishedAt,
-                  contributingJobs: attr.contributingJobs,
-                }
-              : {}),
-          };
-        }),
-      );
+      const eventRows = doomed.map((d) => {
+        const attr = attributions.get(`${d.recommendationId ?? ""}|${d.productName ?? ""}`);
+        return {
+          tenantId,
+          kind: "recommendation" as const,
+          recommendationId: d.recommendationId,
+          software: d.productName,
+          severity: d.severity,
+          detectedAt: d.detectedAt,
+          remediatedAt: now,
+          ...(attr
+            ? {
+                attribution: attr.attribution,
+                deviceId: attr.deviceId,
+                deviceHostname: attr.deviceHostname,
+                engineer: attr.engineer,
+                jobId: attr.jobId,
+                channel: attr.channel,
+                fixStartedAt: attr.fixStartedAt,
+                fixFinishedAt: attr.fixFinishedAt,
+                contributingJobs: attr.contributingJobs,
+              }
+            : {}),
+        };
+      });
+      await insertInChunks(eventRows, (chunk) => tx.insert(tables.remediationEvents).values(chunk));
     }
     await tx.delete(tables.recommendations).where(pruneWhere);
   });
@@ -2935,36 +2935,35 @@ export async function backfillOsRecommendationVulnerabilities(
           now,
         ),
       ]);
-      await tx.insert(tables.remediationEvents).values(
-        doomed.map((d) => {
-          const attr = attributions.get(`${d.cveId ?? ""}|${d.software ?? ""}`);
-          return {
-            tenantId,
-            kind: "vulnerability" as const,
-            cveId: d.cveId,
-            software: d.software,
-            severity: d.severity,
-            detectedAt: d.detectedAt,
-            remediatedAt: now,
-            closure: (d.cveId && reclassifiedCves.has(d.cveId) ? "reclassified" : "cleared") as
-              | "cleared"
-              | "reclassified",
-            ...(attr
-              ? {
-                  attribution: attr.attribution,
-                  deviceId: attr.deviceId,
-                  deviceHostname: attr.deviceHostname,
-                  engineer: attr.engineer,
-                  jobId: attr.jobId,
-                  channel: attr.channel,
-                  fixStartedAt: attr.fixStartedAt,
-                  fixFinishedAt: attr.fixFinishedAt,
-                  contributingJobs: attr.contributingJobs,
-                }
-              : {}),
-          };
-        }),
-      );
+      const eventRows = doomed.map((d) => {
+        const attr = attributions.get(`${d.cveId ?? ""}|${d.software ?? ""}`);
+        return {
+          tenantId,
+          kind: "vulnerability" as const,
+          cveId: d.cveId,
+          software: d.software,
+          severity: d.severity,
+          detectedAt: d.detectedAt,
+          remediatedAt: now,
+          closure: (d.cveId && reclassifiedCves.has(d.cveId) ? "reclassified" : "cleared") as
+            | "cleared"
+            | "reclassified",
+          ...(attr
+            ? {
+                attribution: attr.attribution,
+                deviceId: attr.deviceId,
+                deviceHostname: attr.deviceHostname,
+                engineer: attr.engineer,
+                jobId: attr.jobId,
+                channel: attr.channel,
+                fixStartedAt: attr.fixStartedAt,
+                fixFinishedAt: attr.fixFinishedAt,
+                contributingJobs: attr.contributingJobs,
+              }
+            : {}),
+        };
+      });
+      await insertInChunks(eventRows, (chunk) => tx.insert(tables.remediationEvents).values(chunk));
     }
     await tx.delete(tables.vulnerabilities).where(backfillPruneWhere);
   });
