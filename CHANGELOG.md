@@ -12,6 +12,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- App Registration's PowerShell instructions (Step 1, Step 3, and client
+  secret rotation) now show a single Windows PowerShell command each,
+  instead of a redundant `pwsh` variant above it — the `pwsh` line assumed
+  a locally-installed PowerShell 7, while every command here is meant to
+  run the script downloaded from Step 1, which Windows PowerShell can
+  already execute. The remaining command also no longer assumes a
+  `scripts\` subfolder relative to the current directory, matching how the
+  downloaded file is actually laid out.
 - App Registration and Architecture now document that Defender for
   Endpoint's Live Response and its unsigned-script execution are gated
   behind two "Advanced features" toggles in the Microsoft 365 Defender

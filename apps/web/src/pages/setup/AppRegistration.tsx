@@ -85,16 +85,14 @@ function Step({
  * mode, where nothing here could authorize or discover anything real.
  */
 function GettingStarted({ report }: { report: OnboardingReport }) {
-  const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
   const deployCmdWindows =
-    "powershell.exe -ExecutionPolicy Bypass -File .\\scripts\\Deploy-PatchPilot.ps1";
+    "powershell.exe -ExecutionPolicy Bypass -File .\\Deploy-PatchPilot.ps1";
   // Same script, same already-existing app registration (Deploy-PatchPilot.ps1
   // reuses it by display name and only unions in new scopes — see its own
   // "App already exists. Reusing AppId" log line), so this is the exact manual
   // equivalent of Step 3's "Add API Permissions" button with the "Include
   // remediation write scopes" checkbox checked. Omitting the flag re-syncs the
   // read-only scopes only — identical to Step 1's command above.
-  const writeScopesCmd = `${deployCmd} -EnableRemediationWriteScopes`;
   const writeScopesCmdWindows = `${deployCmdWindows} -EnableRemediationWriteScopes`;
   const canWrite = useCan("settings:write");
   return (
@@ -183,19 +181,7 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
               </span>
             </p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Run the downloaded script on a local machine. Prefer to run it
-              unmodified and hand-edit{" "}
-              <code className="font-mono text-xs">.env</code> yourself? Copy
-              this into an elevated PowerShell from the repo root instead:
-            </p>
-            <div className="mt-1.5 flex items-center gap-2">
-              <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                {deployCmd}
-              </code>
-              <CopyButton value={deployCmd} />
-            </div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              No PowerShell 7 installed? Use Windows PowerShell instead:
+              Run the downloaded script from Step 1 on a local machine:
             </p>
             <div className="mt-1.5 flex items-center gap-2">
               <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
@@ -279,19 +265,7 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
               </span>
             </p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Same effect as the button above — additive/idempotent against
-              this same app registration, so re-running it is always safe.
-              Run the downloaded script from Step 1 on a local machine
-              instead:
-            </p>
-            <div className="mt-1.5 flex items-center gap-2">
-              <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                {writeScopesCmd}
-              </code>
-              <CopyButton value={writeScopesCmd} />
-            </div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              No PowerShell 7 installed? Use Windows PowerShell instead:
+              Run the downloaded script from Step 1 on a local machine:
             </p>
             <div className="mt-1.5 flex items-center gap-2">
               <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
@@ -299,10 +273,6 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
               </code>
               <CopyButton value={writeScopesCmdWindows} />
             </div>
-            <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
-              Omit the flag to re-sync read-only permissions only — same
-              command as Step 1&apos;s Option 2.
-            </p>
           </div>
 
           <div className="mt-3">
@@ -1195,10 +1165,8 @@ function RegistrationCommands({ demoMode }: { demoMode: boolean }) {
 function RotateClientSecretSection({ demoMode }: { demoMode: boolean }) {
   if (demoMode) return null;
 
-  const deployCmd = "pwsh ./scripts/Deploy-PatchPilot.ps1";
-  const rotateSecretCmd = `${deployCmd} -RotateClientSecret`;
   const deployCmdWindows =
-    "powershell.exe -ExecutionPolicy Bypass -File .\\scripts\\Deploy-PatchPilot.ps1";
+    "powershell.exe -ExecutionPolicy Bypass -File .\\Deploy-PatchPilot.ps1";
   const rotateSecretCmdWindows = `${deployCmdWindows} -RotateClientSecret`;
 
   return (
@@ -1231,14 +1199,8 @@ function RotateClientSecretSection({ demoMode }: { demoMode: boolean }) {
       <p className="mt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
         Option 2: PowerShell
       </p>
-      <div className="mt-1 flex items-center gap-2">
-        <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
-          {rotateSecretCmd}
-        </code>
-        <CopyButton value={rotateSecretCmd} />
-      </div>
-      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-        No PowerShell 7 installed? Use Windows PowerShell instead:
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Run the downloaded script from Step 1 on a local machine:
       </p>
       <div className="mt-1 flex items-center gap-2">
         <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
