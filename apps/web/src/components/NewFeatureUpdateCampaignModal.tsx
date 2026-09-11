@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CLIENT_BUILDS } from "@patchpilot/shared";
 import { api, ApiError, type FeatureUpdateCampaign } from "../lib/api";
@@ -24,12 +24,13 @@ const LABEL_OPTIONS = (() => {
   return labels;
 })();
 
-/** Local datetime-input value (no timezone) → an ISO string for the API. */
-function toIso(localDateTime: string): string | null {
-  if (!localDateTime) return null;
-  const d = new Date(localDateTime);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
+// The backend (and the underlying Graph `rolloutSettings` block) still
+// requires both ends of an offer window — PatchPilot doesn't yet support a
+// scheduled-start campaign, so "Make update available as soon as possible"
+// is computed as start = now, end = start + this many days, rather than
+// exposed as pickers. A year is effectively "no end": the rollout interval
+// below is what actually paces the offer, not this window's length.
+const DEFAULT_OFFER_WINDOW_DAYS = 365;
 
 export function NewFeatureUpdateCampaignModal({
   open,
@@ -47,8 +48,6 @@ export function NewFeatureUpdateCampaignModal({
   const [targetVersionLabel, setTargetVersionLabel] = useState(LABEL_OPTIONS[LABEL_OPTIONS.length - 1] ?? "");
   const [group, setGroup] = useState<EntraGroupPick | null>(null);
   const [excludeGroup, setExcludeGroup] = useState<EntraGroupPick | null>(null);
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
   const [intervalDays, setIntervalDays] = useState(7);
   const [optional, setOptional] = useState(false);
 
@@ -58,19 +57,16 @@ export function NewFeatureUpdateCampaignModal({
       setTargetVersionLabel(LABEL_OPTIONS[LABEL_OPTIONS.length - 1] ?? "");
       setGroup(null);
       setExcludeGroup(null);
-      setStart("");
-      setEnd("");
       setIntervalDays(7);
       setOptional(false);
     }
   }, [open]);
 
-  const startIso = useMemo(() => toIso(start), [start]);
-  const endIso = useMemo(() => toIso(end), [end]);
-
   const create = useMutation<{ campaign: FeatureUpdateCampaign }, ApiError>({
-    mutationFn: () =>
-      api.post<{ campaign: FeatureUpdateCampaign }>("/api/feature-updates/campaigns", {
+    mutationFn: () => {
+      const start = new Date();
+      const end = new Date(start.getTime() + DEFAULT_OFFER_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+      return api.post<{ campaign: FeatureUpdateCampaign }>("/api/feature-updates/campaigns", {
         tenantId,
         displayName: displayName.trim(),
         targetVersionLabel,
@@ -78,11 +74,12 @@ export function NewFeatureUpdateCampaignModal({
         groupName: group?.displayName,
         excludeGroupId: excludeGroup?.id,
         excludeGroupName: excludeGroup?.displayName,
-        offerStartDateTimeInUTC: startIso,
-        offerEndDateTimeInUTC: endIso,
+        offerStartDateTimeInUTC: start.toISOString(),
+        offerEndDateTimeInUTC: end.toISOString(),
         offerIntervalInDays: intervalDays,
         installFeatureUpdatesOptional: optional,
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["feature-update-campaigns"] });
       onClose();
@@ -90,14 +87,7 @@ export function NewFeatureUpdateCampaignModal({
   });
 
   const canCreate =
-    canWrite &&
-    !!displayName.trim() &&
-    !!targetVersionLabel &&
-    !!group &&
-    !!startIso &&
-    !!endIso &&
-    intervalDays >= 1 &&
-    !create.isPending;
+    canWrite && !!displayName.trim() && !!targetVersionLabel && !!group && intervalDays >= 1 && !create.isPending;
 
   return (
     <WizardShell
@@ -132,15 +122,78 @@ export function NewFeatureUpdateCampaignModal({
               ))}
             </select>
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Included group</label>
-            <EntraGroupPicker
-              tenantId={tenantId}
-              value={group}
-              onChange={setGroup}
-              placeholder="Search Entra groups…"
-            />
+          <div className="flex items-end pb-2">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                checked={optional}
+                onChange={(e) => setOptional(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 dark:border-slate-700"
+              />
+              Optional (not enforced at deadline)
+            </label>
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+            Rollout interval (days)
+          </label>
+          <input
+            type="number"
+            min={1}
+            className={INPUT_CLASS}
+            value={intervalDays}
+            onChange={(e) => setIntervalDays(Math.max(1, Number(e.target.value) || 1))}
+          />
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            How often Intune offers the update to another slice of the group within the window.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Deployment options</label>
+          <div className="space-y-2 rounded-lg border border-slate-300 dark:border-slate-700 p-3">
+            <label className="flex items-start gap-2.5 rounded-md border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-2.5">
+              <input
+                type="radio"
+                checked
+                readOnly
+                disabled
+                className="mt-0.5 h-4 w-4 border-slate-300 dark:border-slate-700"
+              />
+              <span>
+                <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">
+                  Make update available as soon as possible
+                </span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400">
+                  Intune starts offering the update to the assigned group right away, paced by the
+                  rollout interval above.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5 rounded-md border border-slate-200 dark:border-slate-800 px-3 py-2.5 opacity-50">
+              <input type="radio" disabled className="mt-0.5 h-4 w-4 border-slate-300 dark:border-slate-700" />
+              <span>
+                <span className="block text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Make update available on a specific date
+                </span>
+                <span className="block text-xs text-slate-500 dark:text-slate-500">
+                  Not yet supported by PatchPilot.
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Included group</label>
+          <EntraGroupPicker
+            tenantId={tenantId}
+            value={group}
+            onChange={setGroup}
+            placeholder="Search Entra groups…"
+          />
         </div>
 
         <div>
@@ -153,56 +206,6 @@ export function NewFeatureUpdateCampaignModal({
             onChange={setExcludeGroup}
             placeholder="Search Entra groups to exclude…"
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Offer starts</label>
-            <input
-              type="datetime-local"
-              className={INPUT_CLASS}
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Offer ends</label>
-            <input
-              type="datetime-local"
-              className={INPUT_CLASS}
-              value={end}
-              onChange={(e) => setEnd(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
-              Rollout interval (days)
-            </label>
-            <input
-              type="number"
-              min={1}
-              className={INPUT_CLASS}
-              value={intervalDays}
-              onChange={(e) => setIntervalDays(Math.max(1, Number(e.target.value) || 1))}
-            />
-            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-              How often Intune offers the update to another slice of the group within the window.
-            </p>
-          </div>
-          <div className="flex items-end pb-2">
-            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-              <input
-                type="checkbox"
-                checked={optional}
-                onChange={(e) => setOptional(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 dark:border-slate-700"
-              />
-              Optional (not enforced at deadline)
-            </label>
-          </div>
         </div>
 
         {!canWrite && (

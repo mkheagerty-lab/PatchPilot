@@ -4,7 +4,7 @@ import { csvRow } from "@patchpilot/shared";
 import { api, ApiError, type FeatureUpdateCampaign } from "../../lib/api";
 import { useTenant } from "../../lib/tenant";
 import { useCan } from "../../lib/auth";
-import { Card } from "../../components/ui";
+import { Card, DetailRow, SlideOver } from "../../components/ui";
 import { downloadCsv } from "../../lib/csv";
 import { useSortableTable } from "../../lib/useSortableTable";
 import { SortableTh } from "../../components/SortableTh";
@@ -57,6 +57,7 @@ export function FeatureUpdatesTab() {
   const [createOpen, setCreateOpen] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<FeatureUpdateCampaign[] | null>(null);
+  const [detail, setDetail] = useState<FeatureUpdateCampaign | null>(null);
 
   const queryKey = ["feature-update-campaigns", activeTenantId];
   const { data: campaigns = [], isLoading } = useQuery<FeatureUpdateCampaign[]>({
@@ -262,7 +263,11 @@ export function FeatureUpdatesTab() {
             </thead>
             <tbody>
               {table.sorted.map((c) => (
-                <tr key={c.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
+                <tr
+                  key={c.id}
+                  onClick={() => setDetail(c)}
+                  className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
@@ -302,7 +307,7 @@ export function FeatureUpdatesTab() {
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                     {c.createdBy ? `${c.createdBy} · ${formatDate(c.createdAt)}` : `Intune · ${formatDate(c.createdAt)}`}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       onClick={() => setPendingDelete([c])}
@@ -320,6 +325,48 @@ export function FeatureUpdatesTab() {
       )}
 
       <NewFeatureUpdateCampaignModal open={createOpen} onClose={() => setCreateOpen(false)} tenantId={activeTenantId} />
+
+      <SlideOver
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail?.displayName ?? ""}
+        subtitle={detail ? <SourceBadge source={detail.source} /> : undefined}
+      >
+        {detail && (
+          <dl>
+            <DetailRow label="Target version">{detail.targetVersion}</DetailRow>
+            <DetailRow label="Target build">{detail.targetBuild ?? "—"}</DetailRow>
+            <DetailRow label="Assigned to">
+              <AssignmentSummary assignments={detail.assignments} />
+            </DetailRow>
+            <DetailRow label="Offer window">
+              {detail.offerStartDateTimeInUTC && detail.offerEndDateTimeInUTC
+                ? `${formatDate(detail.offerStartDateTimeInUTC)} – ${formatDate(detail.offerEndDateTimeInUTC)}`
+                : "—"}
+            </DetailRow>
+            <DetailRow label="Rollout interval">
+              {detail.offerIntervalInDays != null ? `every ${detail.offerIntervalInDays}d` : "—"}
+            </DetailRow>
+            <DetailRow label="Deadline">
+              {detail.installFeatureUpdatesOptional ? (
+                <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Optional
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  Enforced
+                </span>
+              )}
+            </DetailRow>
+            <DetailRow label="Created">
+              {detail.createdBy ? `${detail.createdBy} · ${formatDate(detail.createdAt)}` : `Intune · ${formatDate(detail.createdAt)}`}
+            </DetailRow>
+            <DetailRow label="Intune profile ID">
+              <span className="break-all font-mono text-xs">{detail.intuneProfileId}</span>
+            </DetailRow>
+          </dl>
+        )}
+      </SlideOver>
 
       {pendingDelete && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4">

@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { csvRow } from "@patchpilot/shared";
 import { api, type UpdateRingProfile } from "../../lib/api";
 import { useTenant } from "../../lib/tenant";
 import { useQuery } from "@tanstack/react-query";
-import { Card } from "../../components/ui";
+import { Card, DetailRow, SlideOver } from "../../components/ui";
 import { downloadCsv } from "../../lib/csv";
 import { useSortableTable } from "../../lib/useSortableTable";
 import { SortableTh } from "../../components/SortableTh";
@@ -39,6 +40,7 @@ function sortValue(p: UpdateRingProfile, key: SortKey): string | number {
 
 export function UpdateRingsTab() {
   const { activeTenantId, isAllTenants } = useTenant();
+  const [detail, setDetail] = useState<UpdateRingProfile | null>(null);
 
   const queryKey = ["update-ring-profiles", activeTenantId];
   const { data: profiles = [], isLoading } = useQuery<UpdateRingProfile[]>({
@@ -172,7 +174,11 @@ export function UpdateRingsTab() {
             </thead>
             <tbody>
               {table.sorted.map((p) => (
-                <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
+                <tr
+                  key={p.id}
+                  onClick={() => setDetail(p)}
+                  className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
@@ -200,6 +206,31 @@ export function UpdateRingsTab() {
           </table>
         </Card>
       )}
+
+      <SlideOver open={!!detail} onClose={() => setDetail(null)} title={detail?.displayName ?? ""}>
+        {detail && (
+          <dl>
+            <DetailRow label="Quality deferral">
+              {detail.qualityUpdatesDeferralPeriodInDays != null ? `${detail.qualityUpdatesDeferralPeriodInDays}d` : "—"}
+            </DetailRow>
+            <DetailRow label="Feature deferral">
+              {detail.featureUpdatesDeferralPeriodInDays != null ? `${detail.featureUpdatesDeferralPeriodInDays}d` : "—"}
+            </DetailRow>
+            <DetailRow label="Allow Windows 11 upgrade">
+              {detail.allowWindows11Upgrade == null ? "—" : detail.allowWindows11Upgrade ? "Yes" : "No"}
+            </DetailRow>
+            <DetailRow label="Automatic update mode">{detail.automaticUpdateMode ?? "—"}</DetailRow>
+            <DetailRow label="Business ready updates only">{detail.businessReadyUpdatesOnly ?? "—"}</DetailRow>
+            <DetailRow label="Assigned to">
+              <AssignmentSummary assignments={detail.assignments} />
+            </DetailRow>
+            <DetailRow label="Synced">{formatDate(detail.createdAt)}</DetailRow>
+            <DetailRow label="Intune profile ID">
+              <span className="break-all font-mono text-xs">{detail.intuneProfileId}</span>
+            </DetailRow>
+          </dl>
+        )}
+      </SlideOver>
     </div>
   );
 }

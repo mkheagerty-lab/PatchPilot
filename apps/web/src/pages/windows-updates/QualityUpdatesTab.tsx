@@ -4,7 +4,7 @@ import { csvRow } from "@patchpilot/shared";
 import { api, ApiError, type QualityUpdateCampaign } from "../../lib/api";
 import { useTenant } from "../../lib/tenant";
 import { useCan } from "../../lib/auth";
-import { Card } from "../../components/ui";
+import { Card, DetailRow, SlideOver } from "../../components/ui";
 import { downloadCsv } from "../../lib/csv";
 import { useSortableTable } from "../../lib/useSortableTable";
 import { SortableTh } from "../../components/SortableTh";
@@ -75,6 +75,7 @@ export function QualityUpdatesTab() {
   const [createOpen, setCreateOpen] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<QualityUpdateCampaign[] | null>(null);
+  const [detail, setDetail] = useState<QualityUpdateCampaign | null>(null);
 
   const queryKey = ["quality-update-campaigns", activeTenantId];
   const { data: campaigns = [], isLoading } = useQuery<QualityUpdateCampaign[]>({
@@ -274,7 +275,11 @@ export function QualityUpdatesTab() {
             </thead>
             <tbody>
               {table.sorted.map((c) => (
-                <tr key={c.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
+                <tr
+                  key={c.id}
+                  onClick={() => setDetail(c)}
+                  className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
@@ -301,7 +306,7 @@ export function QualityUpdatesTab() {
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                     {c.createdBy ? `${c.createdBy} · ${formatDate(c.createdAt)}` : `Intune · ${formatDate(c.createdAt)}`}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       onClick={() => setPendingDelete([c])}
@@ -320,6 +325,34 @@ export function QualityUpdatesTab() {
       )}
 
       <NewExpediteQualityUpdateModal open={createOpen} onClose={() => setCreateOpen(false)} tenantId={activeTenantId} />
+
+      <SlideOver
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail?.displayName ?? ""}
+        subtitle={detail ? <SourceBadge source={detail.source} /> : undefined}
+      >
+        {detail && (
+          <dl>
+            <DetailRow label="Policy type">
+              <PolicyTypeBadge policyType={detail.policyType} />
+            </DetailRow>
+            <DetailRow label="Release">{detail.releaseLabel ?? "—"}</DetailRow>
+            <DetailRow label="Reboot grace">
+              {detail.daysUntilForcedReboot != null ? `${detail.daysUntilForcedReboot}d` : "—"}
+            </DetailRow>
+            <DetailRow label="Assigned to">
+              <AssignmentSummary assignments={detail.assignments} />
+            </DetailRow>
+            <DetailRow label="Created">
+              {detail.createdBy ? `${detail.createdBy} · ${formatDate(detail.createdAt)}` : `Intune · ${formatDate(detail.createdAt)}`}
+            </DetailRow>
+            <DetailRow label="Intune profile ID">
+              <span className="break-all font-mono text-xs">{detail.intuneProfileId}</span>
+            </DetailRow>
+          </dl>
+        )}
+      </SlideOver>
 
       {pendingDelete && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
