@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.15.0] - 2026-09-11
+
 - New Settings > Server Health page: live CPU/Memory/Disk graphs, PostgreSQL/Redis
   reachability tiles, BullMQ queue depth + worker liveness, and per-schedule
   healthy/stuck status for every enabled recurring schedule. Admins can restart
