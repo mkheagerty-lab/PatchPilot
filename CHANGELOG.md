@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.14.0] - 2026-09-11
+
 - Catalog coverage (`GET /api/catalog/coverage` and
   `/api/chocolatey-catalog/coverage`) no longer scans the full,
   unfiltered `vulnerabilities` table on every request: `loadVulns()` now
