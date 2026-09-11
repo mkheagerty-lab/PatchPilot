@@ -93,7 +93,7 @@ const SLA_FILTERS: { value: SlaFilter; label: string }[] = [
 /** A small "N CVEs (Total)" pill — the headline noise-reduction number on a roll-up. */
 function WeaknessPill({ count }: { count: number }) {
   return (
-    <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+    <span className="inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
       {count} {count === 1 ? "CVE" : "CVEs"} (Total)
     </span>
   );
@@ -207,7 +207,7 @@ function ThreatCell({ rec }: { rec: Recommendation }) {
   if (rec.activeAlert) {
     return (
       <span
-        className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700"
+        className="inline-flex items-center rounded-full bg-rose-100 dark:bg-rose-500/15 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-400"
         title={rec.associatedThreats.join(", ") || "Active alert on an exposed device"}
       >
         Active alert
@@ -217,7 +217,7 @@ function ThreatCell({ rec }: { rec: Recommendation }) {
   if (rec.associatedThreats.length > 0) {
     return (
       <span
-        className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700"
+        className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400"
         title={rec.associatedThreats.join(", ")}
       >
         {rec.associatedThreats.length}{" "}
@@ -225,7 +225,7 @@ function ThreatCell({ rec }: { rec: Recommendation }) {
       </span>
     );
   }
-  return <span className="text-slate-400">—</span>;
+  return <span className="text-slate-400 dark:text-slate-500">—</span>;
 }
 
 /** A recommendation augmented with the per-severity breakdown of its rolled-up
@@ -692,14 +692,14 @@ export function Recommendations() {
       primary: true,
       cell: (r) => (
         <>
-          <div className="flex items-center gap-2 font-medium text-slate-800">
+          <div className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-100">
             <span className="max-w-[26rem] truncate" title={r.recommendationName}>
               {r.recommendationName}
             </span>
             {r.publicExploit && <ExploitChip />}
             {r.exception && <ExceptionChip />}
           </div>
-          {r.vendor && <div className="text-xs text-slate-400">{r.vendor}</div>}
+          {r.vendor && <div className="text-xs text-slate-400 dark:text-slate-500">{r.vendor}</div>}
         </>
       ),
     },
@@ -823,11 +823,11 @@ export function Recommendations() {
             e.stopPropagation();
             setExposedFor(r);
           }}
-          className="rounded text-slate-700 underline-offset-2 hover:text-indigo-600 hover:underline"
+          className="rounded text-slate-700 dark:text-slate-200 underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline"
           title="View exposed devices"
         >
           {r.exposedMachinesCount}
-          <span className="text-slate-400">
+          <span className="text-slate-400 dark:text-slate-500">
             {" / "}
             {r.totalMachineCount}
           </span>
@@ -864,7 +864,7 @@ export function Recommendations() {
             mobileLabel: "Context",
             cell: (r: RecWithBreakdown) =>
               isOsFinding(r.productName) ? (
-                <span className="text-slate-400">—</span>
+                <span className="text-slate-400 dark:text-slate-500">—</span>
               ) : (
                 <div className="flex items-center gap-1">
                   <ScopeChip scope={r.installScope} />
@@ -943,7 +943,7 @@ export function Recommendations() {
                   e.stopPropagation();
                   navigate("/vulnerabilities?view=os");
                 }}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                 title="Windows Update patches ship via the Missing KBs workflow, not a package update"
               >
                 Missing KBs →
@@ -978,7 +978,7 @@ export function Recommendations() {
                 label: r.recommendationName,
               });
             }}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
             title={
               r.exception
                 ? "An exception already covers this recommendation"
@@ -1009,14 +1009,14 @@ export function Recommendations() {
               type="button"
               onClick={exportCsv}
               disabled={sortedRecs.length === 0}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               Export CSV
             </button>
             <button
               type="button"
               onClick={openExceptionsPanel}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Exceptions
             </button>
@@ -1025,7 +1025,7 @@ export function Recommendations() {
       />
 
       {/* ---- Defender's two recommendation tables ---- */}
-      <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 p-1">
+      <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
         {REC_KINDS.map((k) => (
           <button
             key={k.value}
@@ -1034,12 +1034,12 @@ export function Recommendations() {
             aria-pressed={kind === k.value}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               kind === k.value
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-800"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
             }`}
           >
             {k.label}
-            <span className="ml-1.5 text-xs text-slate-400">
+            <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500">
               {kindCounts[k.value]}
             </span>
           </button>
@@ -1055,7 +1055,7 @@ export function Recommendations() {
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
               >
                 <path
                   fillRule="evenodd"
@@ -1068,14 +1068,14 @@ export function Recommendations() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search recommendations, software or vendor…"
-                className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
               />
             </div>
 
             <select
               value={publisherFilter}
               onChange={(e) => setPublisherFilter(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+              className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
             >
               <option value="all">All vendors</option>
               {publishers.map((p) => (
@@ -1087,15 +1087,15 @@ export function Recommendations() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+            <div className="flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
               {SEVERITY_FILTERS.map((f) => (
                 <button
                   key={f}
                   onClick={() => setParam("severity", f)}
                   className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                     severityFilter === f
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                   }`}
                 >
                   {f}
@@ -1104,15 +1104,15 @@ export function Recommendations() {
             </div>
             {/* Misconfigurations have no patch clock, so no SLA filter. */}
             {kind === "vulnerability" && (
-              <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+              <div className="flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
                 {SLA_FILTERS.map((f) => (
                   <button
                     key={f.value}
                     onClick={() => setParam("sla", f.value)}
                     className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                       slaFilter === f.value
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-800"
+                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                     }`}
                   >
                     {f.label}
@@ -1127,7 +1127,7 @@ export function Recommendations() {
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 showExceptions
                   ? "bg-slate-900 text-white"
-                  : "bg-slate-100 text-slate-500 hover:text-slate-800"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
               }`}
             >
               {showExceptions ? "Hide exceptions" : "Show exceptions"}
@@ -1135,12 +1135,12 @@ export function Recommendations() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="text-slate-500">
+            <span className="text-slate-500 dark:text-slate-400">
               {resultCount} {resultCount === 1 ? "recommendation" : "recommendations"}
               {resultCount !== totalCount && ` of ${totalCount}`}
             </span>
             {outsideSla > 0 && (
-              <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 font-medium text-rose-700">
+              <span className="inline-flex items-center rounded-full bg-rose-100 dark:bg-rose-500/15 px-2.5 py-0.5 font-medium text-rose-700 dark:text-rose-400">
                 {outsideSla} outside SLA
               </span>
             )}
@@ -1150,7 +1150,7 @@ export function Recommendations() {
 
       {recsLoading ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </Card>
       ) : (
         <ResponsiveTable
@@ -1184,7 +1184,7 @@ export function Recommendations() {
                   <>
                     <SeverityChip severity={selectedRec.severity} />
                     {selectedRec.severityScore != null && (
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
                         Score {selectedRec.severityScore.toFixed(1)}
                       </span>
                     )}
@@ -1196,7 +1196,7 @@ export function Recommendations() {
                 {selectedRec.publicExploit && <ExploitChip />}
                 {selectedRec.exception && <ExceptionChip />}
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                 {selectedRec.kind === "misconfiguration" ? (
                   <>
                     A device-configuration finding. Defender scores it against your
@@ -1259,7 +1259,7 @@ export function Recommendations() {
                         label: selectedRec.recommendationName,
                       })
                     }
-                    className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                    className="inline-flex items-center rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                     title="Record a local exception"
                   >
                     Create exception
@@ -1270,7 +1270,7 @@ export function Recommendations() {
 
             {/* Recommendation detail */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Recommendation
               </h4>
               <dl>
@@ -1334,7 +1334,7 @@ export function Recommendations() {
                     </DetailRow>
                     <DetailRow label="Public exploit">
                       {selectedRec.publicExploit ? (
-                        <span className="text-rose-600">Yes</span>
+                        <span className="text-rose-600 dark:text-rose-400">Yes</span>
                       ) : (
                         "None reported"
                       )}
@@ -1364,18 +1364,18 @@ export function Recommendations() {
 
             {/* Exposure */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Exposure
               </h4>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3">
                 <dl className="space-y-1.5 text-sm">
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">Exposed devices</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">Exposed devices</dt>
+                    <dd className="font-medium text-slate-800 dark:text-slate-100">
                       <button
                         type="button"
                         onClick={() => setExposedFor(selectedRec)}
-                        className="rounded font-medium text-indigo-600 underline-offset-2 hover:underline"
+                        className="rounded font-medium text-indigo-600 dark:text-indigo-400 underline-offset-2 hover:underline"
                         title="View exposed devices"
                       >
                         {selectedRec.exposedMachinesCount} of{" "}
@@ -1384,8 +1384,8 @@ export function Recommendations() {
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">First detected</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">First detected</dt>
+                    <dd className="font-medium text-slate-800 dark:text-slate-100">
                       {formatDate(selectedRec.detectedAt)} (
                       {daysAgo(selectedRec.detectedAt)}d ago)
                     </dd>
@@ -1399,11 +1399,11 @@ export function Recommendations() {
                 have no CVEs behind them, so the section is skipped entirely. */}
             {selectedRec.kind === "vulnerability" && (
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Underlying CVEs
               </h4>
               {selectedRecCves.length === 0 ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   No matching per-CVE findings are ingested for this product.
                   Defender rolls up{" "}
                   {selectedRec.weaknessCount > 0
@@ -1413,10 +1413,10 @@ export function Recommendations() {
                   individual findings.
                 </p>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-slate-200">
+                <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         <CveSortableTh label="CVE" sortKey="cve" activeKey={cveSortKey} dir={cveSortDir} onSort={toggleCveSort} />
                         <CveSortableTh label="Severity" sortKey="severity" activeKey={cveSortKey} dir={cveSortDir} onSort={toggleCveSort} />
                         <CveSortableTh label="SLA" sortKey="sla" activeKey={cveSortKey} dir={cveSortDir} onSort={toggleCveSort} />
@@ -1430,13 +1430,13 @@ export function Recommendations() {
                             setSelectedRec(null);
                             setSelected(v);
                           }}
-                          className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                          className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
                           <td className="px-4 py-2.5">
-                            <div className="font-medium text-slate-800">
+                            <div className="font-medium text-slate-800 dark:text-slate-100">
                               {v.cveId ?? "—"}
                             </div>
-                            <div className="max-w-[220px] truncate text-xs text-slate-500">
+                            <div className="max-w-[220px] truncate text-xs text-slate-500 dark:text-slate-400">
                               {v.title}
                             </div>
                           </td>
@@ -1457,27 +1457,27 @@ export function Recommendations() {
 
             {/* SLA detail — vulnerabilities only; misconfigurations have no patch clock. */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 {selectedRec.sla ? "SLA" : "Status"}
               </h4>
               <dl className="space-y-1.5 text-sm">
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Status</dt>
-                  <dd className="font-medium text-slate-800 capitalize">
+                  <dt className="text-slate-500 dark:text-slate-400">Status</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100 capitalize">
                     {selectedRec.status}
                   </dd>
                 </div>
                 {selectedRec.sla && (
                   <>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Due</dt>
-                      <dd className="font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Due</dt>
+                      <dd className="font-medium text-slate-800 dark:text-slate-100">
                         {new Date(selectedRec.sla.dueDate).toLocaleDateString()}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Days remaining</dt>
-                      <dd className="font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Days remaining</dt>
+                      <dd className="font-medium text-slate-800 dark:text-slate-100">
                         {selectedRec.sla.overdue
                           ? `${Math.abs(selectedRec.sla.daysRemaining)} overdue`
                           : selectedRec.sla.daysRemaining}
@@ -1532,20 +1532,20 @@ export function Recommendations() {
       >
         {exposedFor && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               {exposedFor.exposedMachinesCount} of {exposedFor.totalMachineCount}{" "}
               devices affected by this recommendation.
             </p>
             {exposedLoading ? (
-              <div className="text-sm text-slate-500">Loading devices…</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">Loading devices…</div>
             ) : exposedDevices.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                 No exposed device details available.
               </div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     <th className="py-2 pr-3 font-medium">Device</th>
                     <th className="py-2 pr-3 font-medium">Owner</th>
                     <th className="py-2 pr-3 font-medium">Last seen</th>
@@ -1568,17 +1568,17 @@ export function Recommendations() {
                               )}`,
                             )
                           }
-                          className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                          className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                           title="Open in Devices"
                         >
-                          <td className="py-2 pr-3 font-medium text-indigo-600">
+                          <td className="py-2 pr-3 font-medium text-indigo-600 dark:text-indigo-400">
                             {d.deviceName}
                           </td>
-                          <td className="py-2 pr-3 text-slate-600">{d.owner ?? "—"}</td>
-                          <td className="py-2 pr-3 text-slate-600">
+                          <td className="py-2 pr-3 text-slate-600 dark:text-slate-300">{d.owner ?? "—"}</td>
+                          <td className="py-2 pr-3 text-slate-600 dark:text-slate-300">
                             {formatDate(d.lastSeen)}
                           </td>
-                          <td className="py-2 text-slate-600">
+                          <td className="py-2 text-slate-600 dark:text-slate-300">
                             <div className="flex items-center justify-between gap-2">
                               <span>
                                 {d.pendingReboot === null
@@ -1594,7 +1594,7 @@ export function Recommendations() {
                                     e.stopPropagation();
                                     setExpandedExposedId(expanded ? null : rowId);
                                   }}
-                                  className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                                  className="shrink-0 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
                                 >
                                   {expanded ? "Hide detection" : "How detected"}
                                 </button>
@@ -1603,7 +1603,7 @@ export function Recommendations() {
                           </td>
                         </tr>
                         {expanded && (
-                          <tr className="border-b border-slate-100 last:border-0 bg-slate-50">
+                          <tr className="border-b border-slate-100 dark:border-slate-800 last:border-0 bg-slate-50 dark:bg-slate-800">
                             <td colSpan={4} className="px-3 py-3">
                               <DetectionEvidence
                                 installedVersions={d.installedVersion ? [d.installedVersion] : []}
@@ -1696,31 +1696,31 @@ function ExceptionsPanel({
   });
 
   const statusTone: Record<RecommendationException["derivedStatus"], string> = {
-    active: "bg-emerald-100 text-emerald-700",
-    expired: "bg-slate-200 text-slate-600",
-    cancelled: "bg-slate-200 text-slate-500",
+    active: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+    expired: "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300",
+    cancelled: "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
   };
 
   return (
     <SlideOver open={open} onClose={onClose} title="Exceptions" subtitle="Local-only records — not written to Defender">
       {!tenantId ? (
-        <p className="text-sm text-slate-500">Select a single tenant to view its exceptions.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Select a single tenant to view its exceptions.</p>
       ) : isLoading ? (
-        <div className="text-sm text-slate-500">Loading…</div>
+        <div className="text-sm text-slate-500 dark:text-slate-400">Loading…</div>
       ) : exceptions.length === 0 ? (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+        <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
           No exceptions recorded for this tenant.
         </div>
       ) : (
         <div className="space-y-3">
           {exceptions.map((e) => (
-            <div key={e.id} className="rounded-lg border border-slate-200 p-3">
+            <div key={e.id} className="rounded-lg border border-slate-200 dark:border-slate-800 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-slate-800">
+                  <div className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                     {e.recommendationId ?? e.cveId}
                   </div>
-                  <div className="mt-0.5 text-xs text-slate-500">
+                  <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                     {e.justification.replace(/-/g, " ")} · {e.scope === "global" ? "Global" : `${e.deviceGroupIds.length} device group${e.deviceGroupIds.length === 1 ? "" : "s"}`}
                   </div>
                 </div>
@@ -1728,8 +1728,8 @@ function ExceptionsPanel({
                   {e.derivedStatus}
                 </span>
               </div>
-              {e.notes && <p className="mt-2 text-xs leading-relaxed text-slate-600">{e.notes}</p>}
-              <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+              {e.notes && <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{e.notes}</p>}
+              <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
                 <span>
                   by {e.createdBy} on {formatDate(e.createdAt)}
                 </span>
@@ -1740,7 +1740,7 @@ function ExceptionsPanel({
                   type="button"
                   onClick={() => cancel.mutate(e.id)}
                   disabled={cancel.isPending}
-                  className="mt-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                  className="mt-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
                 >
                   Cancel exception
                 </button>

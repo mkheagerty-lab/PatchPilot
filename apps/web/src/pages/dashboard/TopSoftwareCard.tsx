@@ -51,16 +51,16 @@ export function TopSoftwareCard({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <SeverityChip severity={selected.severity} />
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+              <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
                 {selected.affectedDeviceCount} affected devices
               </span>
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+              <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
                 {selected.cveCount} {selected.cveCount === 1 ? "CVE" : "CVEs"}
               </span>
             </div>
             <Link
               to={toGroupedVulnerabilities()}
-              className="block text-center text-xs font-medium text-indigo-600 hover:text-indigo-700"
+              className="block text-center text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
             >
               View full detail →
             </Link>

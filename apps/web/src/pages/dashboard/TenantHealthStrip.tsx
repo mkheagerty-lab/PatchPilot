@@ -49,8 +49,8 @@ export function TenantHealthStrip({
       to="/settings/tenants"
       className={`mb-4 flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
         stale
-          ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+          ? "border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/15"
+          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
       }`}
     >
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${stale ? "bg-rose-500" : "bg-emerald-500"}`} />

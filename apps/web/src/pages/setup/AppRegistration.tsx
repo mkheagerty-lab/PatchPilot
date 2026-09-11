@@ -18,11 +18,11 @@ import { useCan } from "../../lib/auth";
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
         {label}
       </div>
       <div className="mt-1 flex items-center gap-2">
-        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">
+        <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-xs text-slate-700 dark:text-slate-200">
           {value}
         </code>
         <CopyButton value={value} />
@@ -57,14 +57,14 @@ function Step({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <div className="text-sm font-medium text-slate-800">{title}</div>
+          <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{title}</div>
           {done && (
-            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+            <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
               Completed
             </span>
           )}
         </div>
-        <div className="mt-1.5 text-sm text-slate-500">{children}</div>
+        <div className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">{children}</div>
       </div>
     </li>
   );
@@ -99,8 +99,8 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
   const canWrite = useCan("settings:write");
   return (
     <Card className="border-slate-900/10 bg-gradient-to-br from-slate-50 to-white">
-      <h2 className="mb-1 text-sm font-semibold text-slate-800">Get started</h2>
-      <p className="mb-4 text-sm text-slate-500">
+      <h2 className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">Get started</h2>
+      <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
         Four steps connect PatchPilot to your MSP tenant — the first two are
         normally already done for you by the time pairing finishes.
       </p>
@@ -136,26 +136,26 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
               >
                 Download PowerShell Script
               </a>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-400 dark:text-slate-500">
                 Pre-fills the pairing token — this instance restarts
                 automatically once it runs.
               </span>
             </div>
-            <p className="mt-1.5 text-xs text-slate-500">
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
               Downloads a personalized copy with the pairing token already
               filled in — run it on a local machine, or upload it into Cloud
               Shell for Option 1 below.
             </p>
           </div>
 
-          <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50/50 p-3">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+          <div className="mt-3 rounded-lg border border-sky-200 dark:border-sky-900/50 bg-sky-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
               Option 1: Azure Cloud Shell
-              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+              <span className="inline-flex items-center rounded-full bg-sky-100 dark:bg-sky-500/15 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
                 Recommended
               </span>
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Drag the downloaded file into an open Cloud Shell window (or
               its ↑ upload icon), then run:
             </p>
@@ -168,37 +168,37 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
               Open Azure Cloud Shell ↗
             </a>
             <div className="mt-2.5 flex items-center gap-2">
-              <code className="flex-1 truncate rounded bg-white px-2 py-1 font-mono text-[11px] text-slate-600">
+              <code className="flex-1 truncate rounded bg-white dark:bg-slate-900 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                 ./Deploy-PatchPilot.ps1
               </code>
               <CopyButton value="./Deploy-PatchPilot.ps1" />
             </div>
           </div>
 
-          <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+          <div className="mt-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
               Option 2: PowerShell
-              <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              <span className="inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-700 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                 Manual
               </span>
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Run the downloaded script on a local machine. Prefer to run it
               unmodified and hand-edit{" "}
               <code className="font-mono text-xs">.env</code> yourself? Copy
               this into an elevated PowerShell from the repo root instead:
             </p>
             <div className="mt-1.5 flex items-center gap-2">
-              <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+              <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                 {deployCmd}
               </code>
               <CopyButton value={deployCmd} />
             </div>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               No PowerShell 7 installed? Use Windows PowerShell instead:
             </p>
             <div className="mt-1.5 flex items-center gap-2">
-              <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+              <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                 {deployCmdWindows}
               </code>
               <CopyButton value={deployCmdWindows} />
@@ -216,7 +216,7 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
           programmatically in that same run. Only use the button below if that
           run warned it couldn&apos;t auto-consent, or you need to (re-)approve
           by hand. This is what lets the first discovery succeed — without it,
-          tenant reads come back <span className="font-medium text-amber-700">403</span>.
+          tenant reads come back <span className="font-medium text-amber-700 dark:text-amber-400">403</span>.
           Must be approved by a Global Administrator account.
           <div className="mt-2.5">
             <a
@@ -229,7 +229,7 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
               <span aria-hidden>↗</span>
             </a>
           </div>
-          <p className="mt-1.5 text-xs text-slate-400">
+          <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
             Opens the Microsoft admin-consent prompt for tenant{" "}
             <code className="font-mono">{report.tenantId}</code> in a new tab.
           </p>
@@ -244,24 +244,24 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
           </p>
           <p className="mt-1.5">
             Check{" "}
-            <span className="font-medium text-slate-600">
+            <span className="font-medium text-slate-600 dark:text-slate-300">
               Include remediation write scopes
             </span>
             , click{" "}
-            <span className="font-medium text-slate-600">Add API Permissions</span>
+            <span className="font-medium text-slate-600 dark:text-slate-300">Add API Permissions</span>
             , and approve as a Global Administrator. Then run{" "}
-            <span className="font-medium text-slate-600">Test Connection</span>{" "}
+            <span className="font-medium text-slate-600 dark:text-slate-300">Test Connection</span>{" "}
             to confirm each permission below is actually live.
           </p>
 
-          <div className="mt-2.5 rounded-lg border border-sky-200 bg-sky-50/50 p-3">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+          <div className="mt-2.5 rounded-lg border border-sky-200 dark:border-sky-900/50 bg-sky-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
               Option 1: Browser
-              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+              <span className="inline-flex items-center rounded-full bg-sky-100 dark:bg-sky-500/15 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
                 Recommended
               </span>
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Click below and approve as a Global Administrator — a one-time
               Microsoft sign-in updates this app registration&apos;s
               permissions directly, no script needed:
@@ -271,35 +271,35 @@ function GettingStarted({ report }: { report: OnboardingReport }) {
             </div>
           </div>
 
-          <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+          <div className="mt-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
               Option 2: PowerShell
-              <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              <span className="inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-700 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                 Manual
               </span>
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Same effect as the button above — additive/idempotent against
               this same app registration, so re-running it is always safe.
               Run the downloaded script from Step 1 on a local machine
               instead:
             </p>
             <div className="mt-1.5 flex items-center gap-2">
-              <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+              <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                 {writeScopesCmd}
               </code>
               <CopyButton value={writeScopesCmd} />
             </div>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               No PowerShell 7 installed? Use Windows PowerShell instead:
             </p>
             <div className="mt-1.5 flex items-center gap-2">
-              <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+              <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                 {writeScopesCmdWindows}
               </code>
               <CopyButton value={writeScopesCmdWindows} />
             </div>
-            <p className="mt-1.5 text-[11px] text-slate-400">
+            <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
               Omit the flag to re-sync read-only permissions only — same
               command as Step 1&apos;s Option 2.
             </p>
@@ -356,7 +356,7 @@ function AddApiPermissionsAction({ canWrite }: { canWrite: boolean }) {
       </button>
 
       {!canWrite && (
-        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Your role doesn&apos;t include settings write access.
         </div>
       )}
@@ -368,11 +368,11 @@ function AddApiPermissionsAction({ canWrite }: { canWrite: boolean }) {
             onClick={() => setConfirming(false)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Add app registration permissions?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               You&apos;ll be sent to a Microsoft sign-in to approve two one-time,
               elevated permissions (
               <code className="font-mono text-xs">Application.ReadWrite.All</code>,{" "}
@@ -384,7 +384,7 @@ function AddApiPermissionsAction({ canWrite }: { canWrite: boolean }) {
               day-to-day access is unchanged. Must be approved by a Global
               Administrator.
             </p>
-            <label className="mt-4 flex items-start gap-2 text-sm text-slate-700">
+            <label className="mt-4 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
               <input
                 type="checkbox"
                 checked={includeWriteScopes}
@@ -393,7 +393,7 @@ function AddApiPermissionsAction({ canWrite }: { canWrite: boolean }) {
               />
               <span>
                 Include remediation write scopes
-                <span className="block text-xs text-slate-400">
+                <span className="block text-xs text-slate-400 dark:text-slate-500">
                   Adds the Intune/Windows Update write permissions used for
                   in-app remediation dispatch. Leave unchecked to stay
                   read-only.
@@ -404,7 +404,7 @@ function AddApiPermissionsAction({ canWrite }: { canWrite: boolean }) {
               <button
                 type="button"
                 onClick={() => setConfirming(false)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
@@ -553,25 +553,25 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
       : [];
 
   return (
-    <div className={scopesSyncNeeded ? "rounded-lg border border-amber-300 p-3" : undefined}>
+    <div className={scopesSyncNeeded ? "rounded-lg border border-amber-300 dark:border-amber-700 p-3" : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             {scopesSyncNeeded && (
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+              <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                 Sync needed
               </span>
             )}
           </div>
           {scopesSyncNeeded && (
-            <p className="mt-1.5 text-xs text-amber-700">
+            <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
               PatchPilot now requests different permissions than this app
               registration was last synced to — likely a recent upgrade. Run
               Add API Permissions to bring it up to date.
             </p>
           )}
           {report.scopeStatus && (
-            <p className="mt-1.5 text-xs text-slate-400">
+            <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
               Last tested {new Date(report.scopeStatus.checkedAt).toLocaleString()}.
             </p>
           )}
@@ -594,7 +594,7 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
               });
             }}
             title="Read-only — checks each permission's live status without changing anything."
-            className="rounded-md border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70"
+            className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
           >
             {testingConnection ? "Testing…" : "Test Connection"}
           </button>
@@ -604,7 +604,7 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
       {failedBanners.map((b) => (
         <div
           key={b.key}
-          className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+          className="mt-3 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400"
         >
           <span className="font-medium">{b.label}:</span> {b.scopes.length} permission
           {b.scopes.length === 1 ? "" : "s"} not found on the resource — {b.scopes.join(", ")}.
@@ -613,7 +613,7 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
       ))}
 
       {missingCapabilities.length > 0 && (
-        <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
           <span className="font-medium">Not licensed:</span> this tenant&apos;s{" "}
           <code className="font-mono text-[11px]">/organization</code> record shows no{" "}
           {missingCapabilities.join(" and ")} entitlement. The matching permissions above can
@@ -651,8 +651,8 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
 }
 
 const DOMAIN_STATUS_STYLES: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-700",
-  active: "bg-emerald-100 text-emerald-700",
+  pending: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  active: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
 };
 
 /**
@@ -672,13 +672,13 @@ function RegistrationCommand({ domainId }: { domainId: string }) {
   return (
     <div className="mt-2 space-y-1.5">
       <div className="flex items-center gap-2">
-        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+        <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
           {data.command}
         </code>
         <CopyButton value={data.command} />
       </div>
       <div className="flex items-center gap-2">
-        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+        <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
           {windowsCommand}
         </code>
         <CopyButton value={windowsCommand} />
@@ -806,8 +806,8 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
 
   return (
     <Card>
-      <h2 className="text-sm font-semibold text-slate-700">Custom domains</h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Custom domains</h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Add a PatchPilot subdomain or your own hostname as an additional OAuth
         login origin. Both the existing origin and every active domain below
         stay valid at once — nothing is replaced.
@@ -817,8 +817,8 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
         <div
           className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
             message.tone === "ok"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-rose-200 bg-rose-50 text-rose-700"
+              ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              : "border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400"
           }`}
         >
           {message.text}
@@ -826,13 +826,13 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
       )}
 
       {!canWrite && (
-        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Your role doesn&apos;t include settings write access.
         </div>
       )}
 
       {report && !cnameTargetUsable && (
-        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           This instance&apos;s public hostname (<code className="font-mono">{report.cnameTarget}</code>) isn&apos;t a
           real DNS name, so a CNAME can&apos;t point at it yet. Set <code className="font-mono">PUBLIC_URL</code> (or{" "}
           <code className="font-mono">CUSTOM_DOMAIN_CNAME_TARGET</code>) to the instance&apos;s actual public
@@ -840,8 +840,8 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
         </div>
       )}
 
-      <div className="mt-4 rounded-lg border border-slate-200 p-4">
-        <div className="flex flex-wrap gap-4 text-sm text-slate-700">
+      <div className="mt-4 rounded-lg border border-slate-200 dark:border-slate-800 p-4">
+        <div className="flex flex-wrap gap-4 text-sm text-slate-700 dark:text-slate-200">
           <label className="flex items-center gap-1.5">
             <input
               type="radio"
@@ -869,7 +869,7 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
         <div className="mt-3 flex flex-wrap items-end gap-3">
           {type === "subdomain" ? (
             <div className="flex-1">
-              <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Label
               </label>
               <div className="mt-1 flex items-center gap-2">
@@ -880,14 +880,14 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
                     setCheckResult(null);
                   }}
                   placeholder="acme"
-                  className="w-40 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  className="w-40 rounded-md border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                 />
-                <span className="font-mono text-xs text-slate-400">.{report?.platformBaseDomain ?? "patchpilot365.com"}</span>
+                <span className="font-mono text-xs text-slate-400 dark:text-slate-500">.{report?.platformBaseDomain ?? "patchpilot365.com"}</span>
               </div>
             </div>
           ) : (
             <div className="flex-1">
-              <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Hostname
               </label>
               <input
@@ -897,7 +897,7 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
                   setCheckResult(null);
                 }}
                 placeholder="patching.acme.com"
-                className="mt-1 w-full max-w-xs rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                className="mt-1 w-full max-w-xs rounded-md border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
               />
             </div>
           )}
@@ -913,7 +913,7 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
               setMessage(null);
               checkDomain.mutate({ type, value: type === "subdomain" ? label.trim() : hostname.trim() });
             }}
-            className="shrink-0 rounded-md border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="shrink-0 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {checkDomain.isPending ? "Checking…" : "Check"}
           </button>
@@ -936,11 +936,11 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
           </button>
         </div>
         {checkResult && (
-          <p className={`mt-2 text-xs font-medium lowercase ${checkResult.available ? "text-emerald-600" : "text-rose-600"}`}>
+          <p className={`mt-2 text-xs font-medium lowercase ${checkResult.available ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
             {checkResult.available ? "available" : `not available (${checkResult.reason ?? "already in use"})`}
           </p>
         )}
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
           Will resolve as{" "}
           <code className="font-mono">{previewHostname}</code>, pointed at{" "}
           <code className="font-mono">{previewCnameTarget || "…"}</code> via CNAME.
@@ -950,11 +950,11 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
       {domains.length > 0 && (
         <ul className="mt-4 space-y-3">
           {domains.map((d) => (
-            <li key={d.id} className="rounded-lg border border-slate-200 p-4">
+            <li key={d.id} className="rounded-lg border border-slate-200 dark:border-slate-800 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate font-mono text-sm text-slate-800">{d.hostname}</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="truncate font-mono text-sm text-slate-800 dark:text-slate-100">{d.hostname}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500">
                     {d.type === "subdomain" ? "PatchPilot subdomain" : "Custom domain"} · added by {d.createdBy}
                   </div>
                 </div>
@@ -974,10 +974,10 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
                 </div>
               ) : (
                 <div className="mt-3 flex items-start gap-2">
-                  <p className="flex-1 text-xs text-slate-500">{d.instructions.summary}</p>
+                  <p className="flex-1 text-xs text-slate-500 dark:text-slate-400">{d.instructions.summary}</p>
                   <a
                     href={d.instructions.supportMailto}
-                    className="shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                    className="shrink-0 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     Email support
                   </a>
@@ -985,7 +985,7 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
               )}
 
               {d.lastCheckError && d.status === "pending" && (
-                <p className="mt-2 text-xs text-amber-700">Last check: {d.lastCheckError}</p>
+                <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">Last check: {d.lastCheckError}</p>
               )}
 
               <div className="mt-3 flex items-center gap-2">
@@ -1006,7 +1006,7 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
                   type="button"
                   disabled={!canWrite}
                   onClick={() => setPendingDeleteId(d.id)}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Delete
                 </button>
@@ -1024,9 +1024,9 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
             onClick={() => setPendingDeleteId(null)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">Remove this domain?</h2>
-            <p className="mt-2 text-sm text-slate-600">
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Remove this domain?</h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               <code className="font-mono text-xs">{pendingDeleteDomain.hostname}</code>{" "}
               {pendingDeleteDomain.status === "active"
                 ? "is an active login origin — removing it restarts this instance, and logins through that hostname will stop working."
@@ -1036,7 +1036,7 @@ function CustomDomainsCard({ demoMode }: { demoMode: boolean }) {
               <button
                 type="button"
                 onClick={() => setPendingDeleteId(null)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
@@ -1077,16 +1077,16 @@ function RegistrationCommands({ demoMode }: { demoMode: boolean }) {
   if (active.length === 0) return null;
 
   return (
-    <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <div className="sm:col-span-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 p-4">
       <div className="flex items-center gap-2">
-        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+        <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
           Registration command
         </div>
-        <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+        <span className="inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-700 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
           Manual
         </span>
       </div>
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
         Same effect as &quot;Sync redirect URIs&quot; above, run by hand
         instead — for an elevated PowerShell on a machine that isn&apos;t
         hosted in Azure. Additive/idempotent, so re-running an
@@ -1095,7 +1095,7 @@ function RegistrationCommands({ demoMode }: { demoMode: boolean }) {
       <div className="mt-2 space-y-2">
         {active.map((d) => (
           <div key={d.id}>
-            <div className="font-mono text-xs text-slate-500">{d.hostname}</div>
+            <div className="font-mono text-xs text-slate-500 dark:text-slate-400">{d.hostname}</div>
             <RegistrationCommand domainId={d.id} />
           </div>
         ))}
@@ -1122,46 +1122,46 @@ function RotateClientSecretSection({ demoMode }: { demoMode: boolean }) {
   const rotateSecretCmdWindows = `${deployCmdWindows} -RotateClientSecret`;
 
   return (
-    <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+    <div className="sm:col-span-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 p-4">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
         Client secret expired or leaked?
       </div>
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
         Add <code className="font-mono text-xs">-RotateClientSecret</code> to
         reuse this same app registration and only replace the secret — no new
         consent needed, and re-pairing restarts this instance the same way as
         a first-time install:
       </p>
 
-      <p className="mt-2.5 text-xs font-semibold text-slate-600">
+      <p className="mt-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
         Option 1: Azure Cloud Shell
       </p>
-      <p className="mt-1 text-xs text-slate-500">
-        Use <span className="font-medium text-slate-600">Download PowerShell Script</span> in
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Use <span className="font-medium text-slate-600 dark:text-slate-300">Download PowerShell Script</span> in
         Get Started &gt; Step 1 above, drag the file into an open Cloud Shell
         window (or its ↑ upload icon), then run:
       </p>
       <div className="mt-1.5 flex items-center gap-2">
-        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+        <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
           ./Deploy-PatchPilot.ps1 -RotateClientSecret
         </code>
         <CopyButton value="./Deploy-PatchPilot.ps1 -RotateClientSecret" />
       </div>
 
-      <p className="mt-3 text-xs font-semibold text-slate-600">
+      <p className="mt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
         Option 2: PowerShell
       </p>
       <div className="mt-1 flex items-center gap-2">
-        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+        <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
           {rotateSecretCmd}
         </code>
         <CopyButton value={rotateSecretCmd} />
       </div>
-      <p className="mt-2 text-xs text-slate-500">
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
         No PowerShell 7 installed? Use Windows PowerShell instead:
       </p>
       <div className="mt-1 flex items-center gap-2">
-        <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+        <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
           {rotateSecretCmdWindows}
         </code>
         <CopyButton value={rotateSecretCmdWindows} />
@@ -1220,8 +1220,8 @@ export function AppRegistration() {
       />
 
       {report?.demoMode && (
-        <Card className="mb-5 border-dashed border-amber-300 bg-amber-50">
-          <p className="text-sm text-amber-800">
+        <Card className="mb-5 border-dashed border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-500/10">
+          <p className="text-sm text-amber-800 dark:text-amber-400">
             <span className="font-semibold">Demo mode.</span> These identifiers
             and consent links are generated from demo fixtures and won&apos;t
             authorize anything. Deploy with{" "}
@@ -1233,7 +1233,7 @@ export function AppRegistration() {
 
       {isLoading || !report ? (
         <Card>
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </Card>
       ) : (
         <div className="space-y-5">
@@ -1242,7 +1242,7 @@ export function AppRegistration() {
           <CustomDomainsCard demoMode={report.demoMode} />
 
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-slate-700">
+            <h2 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">
               Application identity
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1250,11 +1250,11 @@ export function AppRegistration() {
               <Field label="Home tenant ID" value={report.tenantId} />
               <div className="sm:col-span-2">
                 <div className="flex items-center gap-2">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     Redirect URIs
                   </div>
                   {report.liveRedirectUris && (
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
                       Verified live in Entra
                     </span>
                   )}
@@ -1269,7 +1269,7 @@ export function AppRegistration() {
                       <div className="mt-1 space-y-1.5">
                         {shown.map((uri) => (
                           <div key={uri} className="flex items-center gap-2">
-                            <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">
+                            <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-xs text-slate-700 dark:text-slate-200">
                               {uri}
                             </code>
                             <CopyButton value={uri} />
@@ -1278,12 +1278,12 @@ export function AppRegistration() {
                       </div>
                       {live ? (
                         <>
-                          <p className="mt-1.5 text-xs text-slate-400">
+                          <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
                             Read directly from the Entra app registration by the last
                             &quot;Sync redirect URIs&quot; run, {new Date(live.checkedAt).toLocaleString()}.
                           </p>
                           {pending.length > 0 && (
-                            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                            <div className="mt-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                               This instance also expects{" "}
                               {pending.map((uri) => (
                                 <code key={uri} className="mx-0.5 font-mono">
@@ -1295,14 +1295,14 @@ export function AppRegistration() {
                             </div>
                           )}
                           {orphaned.length > 0 && (
-                            <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
-                              <p className="text-xs font-medium text-rose-700">
+                            <div className="mt-2 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2">
+                              <p className="text-xs font-medium text-rose-700 dark:text-rose-400">
                                 Live in Entra but not expected by this instance — check any that are stale
                                 to delete them from the app registration on the next sync:
                               </p>
                               <div className="mt-1.5 space-y-1">
                                 {orphaned.map((uri) => (
-                                  <label key={uri} className="flex items-center gap-2 text-xs text-rose-700">
+                                  <label key={uri} className="flex items-center gap-2 text-xs text-rose-700 dark:text-rose-400">
                                     <input
                                       type="checkbox"
                                       checked={selectedRemovals.has(uri)}
@@ -1317,7 +1317,7 @@ export function AppRegistration() {
                           )}
                         </>
                       ) : (
-                        <p className="mt-1.5 text-xs text-slate-400">
+                        <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
                           This server&apos;s own computed allowlist — the primary origin plus any active
                           custom domain below. Not yet verified against the real Entra app registration; run
                           Sync redirect URIs below to check and push it in.
@@ -1328,8 +1328,8 @@ export function AppRegistration() {
                 })()}
               </div>
               {!report.demoMode && (
-                <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">
+                <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 p-3">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Reads the real redirect URIs from the Entra app registration, then additively pushes
                     in anything this instance expects that&apos;s missing. Already-registered URIs are left
                     untouched unless you&apos;ve checked one above as an orphaned URI to remove.
@@ -1356,7 +1356,7 @@ export function AppRegistration() {
 
           {report.demoMode && (
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-slate-700">
+              <h2 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Requested API permissions
               </h2>
               <RequestedPermissionsStep report={report} />
@@ -1372,11 +1372,11 @@ export function AppRegistration() {
             onClick={() => setConfirmingSync(false)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Remove {selectedRemovals.size} redirect {selectedRemovals.size === 1 ? "URI" : "URIs"}?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               This deletes the following directly from the live Entra app registration, in the same
               step as the sync. This can&apos;t be undone from here — only by adding it back manually
               in Azure Portal or here.
@@ -1385,7 +1385,7 @@ export function AppRegistration() {
               {Array.from(selectedRemovals).map((uri) => (
                 <code
                   key={uri}
-                  className="block truncate rounded bg-rose-50 px-2 py-1 font-mono text-xs text-rose-700"
+                  className="block truncate rounded bg-rose-50 dark:bg-rose-500/10 px-2 py-1 font-mono text-xs text-rose-700 dark:text-rose-400"
                 >
                   {uri}
                 </code>
@@ -1395,7 +1395,7 @@ export function AppRegistration() {
               <button
                 type="button"
                 onClick={() => setConfirmingSync(false)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>

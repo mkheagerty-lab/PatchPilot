@@ -7,7 +7,7 @@ import { WizardShell } from "./WizardShell";
 import { EntraGroupPicker, type EntraGroupPick } from "./EntraGroupPicker";
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 dark:focus:border-slate-600 focus:outline-none";
 
 // Unique labels in ascending build order — same dedup convention as the
 // per-tenant Feature Updates settings page (settings/FeatureUpdates.tsx),
@@ -108,7 +108,7 @@ export function NewFeatureUpdateCampaignModal({
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Campaign name</label>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Campaign name</label>
           <input
             className={INPUT_CLASS}
             value={displayName}
@@ -119,7 +119,7 @@ export function NewFeatureUpdateCampaignModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Target version</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Target version</label>
             <select
               className={INPUT_CLASS}
               value={targetVersionLabel}
@@ -133,7 +133,7 @@ export function NewFeatureUpdateCampaignModal({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Included group</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Included group</label>
             <EntraGroupPicker
               tenantId={tenantId}
               value={group}
@@ -144,7 +144,7 @@ export function NewFeatureUpdateCampaignModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
             Excluded group (optional)
           </label>
           <EntraGroupPicker
@@ -157,7 +157,7 @@ export function NewFeatureUpdateCampaignModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Offer starts</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Offer starts</label>
             <input
               type="datetime-local"
               className={INPUT_CLASS}
@@ -166,7 +166,7 @@ export function NewFeatureUpdateCampaignModal({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Offer ends</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Offer ends</label>
             <input
               type="datetime-local"
               className={INPUT_CLASS}
@@ -178,7 +178,7 @@ export function NewFeatureUpdateCampaignModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
+            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
               Rollout interval (days)
             </label>
             <input
@@ -188,17 +188,17 @@ export function NewFeatureUpdateCampaignModal({
               value={intervalDays}
               onChange={(e) => setIntervalDays(Math.max(1, Number(e.target.value) || 1))}
             />
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
               How often Intune offers the update to another slice of the group within the window.
             </p>
           </div>
           <div className="flex items-end pb-2">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
               <input
                 type="checkbox"
                 checked={optional}
                 onChange={(e) => setOptional(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded border-slate-300 dark:border-slate-700"
               />
               Optional (not enforced at deadline)
             </label>
@@ -206,13 +206,13 @@ export function NewFeatureUpdateCampaignModal({
         </div>
 
         {!canWrite && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
             Your role doesn't include remediation write access.
           </div>
         )}
 
         {create.isError && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
             {create.error.message}
           </div>
         )}

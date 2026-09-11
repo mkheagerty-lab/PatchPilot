@@ -50,14 +50,14 @@ export function Heatmap({
       {columns.map((c) => (
         <div
           key={c.key}
-          className="flex items-end justify-center pb-1 text-center text-[11px] font-medium text-slate-500"
+          className="flex items-end justify-center pb-1 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400"
         >
           {c.label}
         </div>
       ))}
       {rows.map((r) => (
         <Fragment key={r.key}>
-          <div className="flex items-center justify-end pr-2 text-[11px] font-medium text-slate-500">
+          <div className="flex items-center justify-end pr-2 text-[11px] font-medium text-slate-500 dark:text-slate-400">
             {r.label}
           </div>
           {columns.map((c) => {
@@ -66,7 +66,7 @@ export function Heatmap({
             const title = formatTitle?.(r.key, c.key, value) ?? `${r.label} · ${c.label}: ${value}`;
             const className = `flex min-h-[32px] items-center justify-center rounded text-xs font-semibold tabular-nums transition-transform ${
               onSelect ? "cursor-pointer hover:scale-[1.04]" : ""
-            } ${value === 0 ? "text-slate-400" : "text-slate-900"}`;
+            } ${value === 0 ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-slate-100"}`;
             const style = {
               backgroundColor: value === 0 ? CHART_NEUTRALS.cursor : `${c.color}${alphaHex(intensity)}`,
             };

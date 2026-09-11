@@ -105,14 +105,14 @@ export function Dashboard() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 print:hidden"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 print:hidden"
               >
                 Export PDF
               </button>
             </div>
           }
         />
-        <div className="mt-1 inline-flex shrink-0 rounded-lg border border-slate-200 bg-white p-1 print:hidden">
+        <div className="mt-1 inline-flex shrink-0 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 print:hidden">
           {WINDOW_OPTIONS.map((opt) => (
             <button
               key={opt.days}
@@ -121,7 +121,7 @@ export function Dashboard() {
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 windowDays === opt.days
                   ? "bg-[var(--pp-primary)] text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             >
               {opt.label}

@@ -50,11 +50,11 @@ export function WingetPicker({
 
   if (value) {
     return (
-      <div className="mt-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-2 py-1">
+      <div className="mt-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 py-1">
         <div className="min-w-0">
-          <div className="truncate font-mono text-xs text-slate-700">{value}</div>
+          <div className="truncate font-mono text-xs text-slate-700 dark:text-slate-200">{value}</div>
           {pickedName && (
-            <div className="truncate text-[11px] text-slate-500">{pickedName}</div>
+            <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">{pickedName}</div>
           )}
         </div>
         <button
@@ -63,7 +63,7 @@ export function WingetPicker({
             setPickedName(null);
             onChange("");
           }}
-          className="shrink-0 text-[11px] font-medium text-slate-500 hover:text-slate-800"
+          className="shrink-0 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
         >
           Change
         </button>
@@ -78,12 +78,12 @@ export function WingetPicker({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search the winget catalog…"
-        className="w-full rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+        className="w-full rounded border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
       />
       {isLoading ? (
-        <div className="mt-1 text-[11px] text-slate-400">Searching…</div>
+        <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Searching…</div>
       ) : results.length > 0 ? (
-        <ul className="mt-1 max-h-32 overflow-y-auto rounded border border-slate-200 bg-white">
+        <ul className="mt-1 max-h-32 overflow-y-auto rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           {results.map((p) => (
             <li key={p.packageId}>
               <button
@@ -94,18 +94,18 @@ export function WingetPicker({
                   setSearch("");
                   onChange(p.packageId);
                 }}
-                className="flex w-full items-center justify-between gap-2 border-b border-slate-100 px-2 py-1 text-left last:border-0 hover:bg-slate-50"
+                className="flex w-full items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 px-2 py-1 text-left last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-xs font-medium text-slate-800">
+                  <span className="block truncate text-xs font-medium text-slate-800 dark:text-slate-100">
                     {p.packageId}
                   </span>
-                  <span className="block truncate text-[11px] text-slate-500">
+                  <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
                     {p.name}
                   </span>
                 </span>
                 {p.latestVersion && (
-                  <span className="shrink-0 text-[10px] text-slate-400">
+                  <span className="shrink-0 text-[10px] text-slate-400 dark:text-slate-500">
                     v{p.latestVersion}
                   </span>
                 )}
@@ -114,7 +114,7 @@ export function WingetPicker({
           ))}
         </ul>
       ) : search.length >= 2 ? (
-        <div className="mt-1 text-[11px] text-slate-400">No catalog match.</div>
+        <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">No catalog match.</div>
       ) : null}
     </div>
   );
@@ -305,7 +305,7 @@ export function FixAllModal({
     >
       <div className="space-y-5">
         <div>
-          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             1. When
           </span>
           <div className="grid grid-cols-2 gap-2">
@@ -317,7 +317,7 @@ export function FixAllModal({
                 className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   whenMode === mode.id
                     ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 {mode.label}
@@ -332,7 +332,7 @@ export function FixAllModal({
         </div>
 
         <div>
-          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             2. Trigger method
           </span>
           <div className="space-y-1.5">
@@ -348,24 +348,24 @@ export function FixAllModal({
                   className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                     active
                       ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">{s.label}</span>
-                    <span className={active ? "text-slate-300" : "text-slate-400"}>
+                    <span className={active ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"}>
                       {s.latency}
                     </span>
                   </div>
                   {userScopeNote ? (
-                    <p className={`mt-0.5 text-xs ${active ? "text-slate-300" : "text-amber-600"}`}>
+                    <p className={`mt-0.5 text-xs ${active ? "text-slate-300 dark:text-slate-600" : "text-amber-600 dark:text-amber-400"}`}>
                       Selected app(s) include per-user installs — Live Response reaches those via
                       a short-lived scheduled task running as the signed-in user (requires someone
                       signed in on the device).
                     </p>
                   ) : (
                     TRIGGER_CAPTIONS[c] && (
-                      <p className={`mt-0.5 text-xs ${active ? "text-slate-300" : "text-slate-500"}`}>
+                      <p className={`mt-0.5 text-xs ${active ? "text-slate-300 dark:text-slate-600" : "text-slate-500 dark:text-slate-400"}`}>
                         {TRIGGER_CAPTIONS[c]}
                       </p>
                     )
@@ -375,13 +375,13 @@ export function FixAllModal({
             })}
           </div>
           {channelOverride !== null && channelOverride !== autoChannel && (
-            <p className="mt-1 text-xs text-amber-600">
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
               Overriding the default trigger method.
             </p>
           )}
           {channel === "win32-app" && (
-            <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
-              <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <div className="mt-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-3">
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Win32 app deploy options
               </div>
               <Win32DeployOptionsPanel
@@ -397,7 +397,7 @@ export function FixAllModal({
 
         <div>
           <div className="mb-1 flex items-center justify-between gap-2">
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               3. Affected software ({selectedCount} of {targets.length} selected)
             </span>
             {targets.length > 0 && (
@@ -410,7 +410,7 @@ export function FixAllModal({
                     className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
                       scopeFilter === f.value
                         ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
                     }`}
                   >
                     {f.label}
@@ -420,11 +420,11 @@ export function FixAllModal({
             )}
           </div>
           {targets.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               No winget-remediable software found on this device.
             </p>
           ) : (
-            <ul className="overflow-hidden rounded-lg border border-slate-200">
+            <ul className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
               {targets
                 .filter((t) => scopeFilter === "all" || t.installScope === scopeFilter)
                 .map((t) => {
@@ -434,19 +434,19 @@ export function FixAllModal({
                 return (
                   <li
                     key={t.software}
-                    className="border-b border-slate-100 px-3 py-2.5 last:border-0"
+                    className="border-b border-slate-100 dark:border-slate-800 px-3 py-2.5 last:border-0"
                   >
                     <div className="flex items-start gap-2.5">
                       <input
                         type="checkbox"
-                        className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300"
+                        className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 dark:border-slate-700"
                         checked={checked}
                         disabled={disabled}
                         onChange={() => toggle(t.software)}
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="truncate text-sm font-medium text-slate-800">
+                          <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                             {t.displayName}
                           </span>
                           <div className="flex shrink-0 items-center gap-1">
@@ -455,7 +455,7 @@ export function FixAllModal({
                             <SeverityChip severity={t.severity} />
                           </div>
                         </div>
-                        <div className="text-xs text-slate-400">
+                        <div className="text-xs text-slate-400 dark:text-slate-500">
                           {t.cveCount} {t.cveCount === 1 ? "CVE" : "CVEs"}
                         </div>
                         {reason ? (
@@ -471,7 +471,7 @@ export function FixAllModal({
                             }
                           />
                         ) : !t.wingetPackageId ? (
-                          <p className="mt-1 text-xs text-amber-600">
+                          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                             No winget package mapped — will be skipped unless one is entered.
                           </p>
                         ) : null}
@@ -485,28 +485,28 @@ export function FixAllModal({
         </div>
 
         {tenantReadOnly && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 p-3 text-sm text-amber-800">
             This tenant is read-only — remediation dispatch is disabled.
           </div>
         )}
 
         {!canWrite && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 p-3 text-sm text-amber-800">
             Your role doesn't include remediation write access.
           </div>
         )}
 
         {error && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 p-3 text-sm text-rose-800">
             {error}
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             Cancel
           </button>

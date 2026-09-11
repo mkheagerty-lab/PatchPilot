@@ -63,7 +63,7 @@ function runSilentAddReadonly(targetUserId: string, onSettled: (ok: boolean) => 
 }
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 focus:outline-none";
 
 // Least-privilege default for the add form — an admin grant should always be
 // a deliberate role change afterwards, never the form's resting state.
@@ -142,14 +142,14 @@ function SortableLabel({
 }
 
 const STATUS_STYLE: Record<UserStatus, string> = {
-  active: "bg-emerald-100 text-emerald-700",
-  disabled: "bg-slate-200 text-slate-600",
+  active: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  disabled: "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300",
 };
 
 const ACCESS_STYLE: Record<AreaAccess, string> = {
-  readwrite: "bg-emerald-100 text-emerald-700",
-  readonly: "bg-sky-100 text-sky-700",
-  none: "bg-slate-100 text-slate-500",
+  readwrite: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  readonly: "bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  none: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
 };
 
 /** The specific 409 codes the server invariants (§3.7 of the plan) return,
@@ -707,34 +707,34 @@ export function Users() {
       />
 
       <Card className="mb-5 border-dashed">
-        <p className="text-sm text-slate-500">Three things decide what a person can do:</p>
-        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Three things decide what a person can do:</p>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-500 dark:text-slate-400">
           <li>
-            <span className="font-medium text-slate-600">Role</span> — what they can do inside
+            <span className="font-medium text-slate-600 dark:text-slate-300">Role</span> — what they can do inside
             PatchPilot itself: dispatch remediations, manage catalogs, change settings. Their
             GDAP roles in Entra separately control which customer tenants they can reach at all.
           </li>
           <li>
-            <span className="font-medium text-slate-600">Read-only group (home tenant)</span> —
+            <span className="font-medium text-slate-600 dark:text-slate-300">Read-only group (home tenant)</span> —
             every new user is added automatically. It gives PatchPilot's background sync and
             read-only pages something to run as in your own tenant.
           </li>
           <li>
-            <span className="font-medium text-slate-600">Write access (home tenant)</span> — an
+            <span className="font-medium text-slate-600 dark:text-slate-300">Write access (home tenant)</span> — an
             explicit toggle below. It grants a person real Microsoft write privilege in the home
             tenant itself; granting or revoking it always needs confirmation from a Global
             Administrator or Privileged Role Administrator.
           </li>
         </ul>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
           Signing out no longer revokes a person's background-access session — it's designed to
           keep hourly auto-sync and their schedules running even while they're signed out. Use{" "}
-          <span className="font-medium text-slate-600">Revoke access</span> below (or disable/
+          <span className="font-medium text-slate-600 dark:text-slate-300">Revoke access</span> below (or disable/
           remove the account) to actually cut that off.
         </p>
       </Card>
 
-      <div className="mb-5 flex gap-1 border-b border-slate-200">
+      <div className="mb-5 flex gap-1 border-b border-slate-200 dark:border-slate-800">
         {(
           [
             { key: "people", label: "People" },
@@ -747,8 +747,8 @@ export function Users() {
             onClick={() => setTab(t.key)}
             className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
               tab === t.key
-                ? "border-slate-900 text-slate-900"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? "border-slate-900 text-slate-900 dark:text-slate-100"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             }`}
           >
             {t.label}
@@ -761,8 +761,8 @@ export function Users() {
           <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
             {ROLES.map((r) => (
               <Card key={r}>
-                <div className="mb-1 text-sm font-semibold text-slate-800">{ROLE_LABELS[r]}</div>
-                <p className="text-sm text-slate-500">{ROLE_DESCRIPTIONS[r]}</p>
+                <div className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{ROLE_LABELS[r]}</div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{ROLE_DESCRIPTIONS[r]}</p>
               </Card>
             ))}
           </div>
@@ -770,7 +770,7 @@ export function Users() {
           <Card className="p-0">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   <th className="px-4 py-2.5 font-medium">Area</th>
                   {ROLES.map((r) => (
                     <th key={r} className="px-4 py-2.5 text-center font-medium">
@@ -781,10 +781,10 @@ export function Users() {
               </thead>
               <tbody>
                 {PERMISSION_AREAS.map((area) => (
-                  <tr key={area.key} className="border-b border-slate-100 last:border-0">
+                  <tr key={area.key} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-slate-800">{area.label}</div>
-                      <div className="mt-0.5 text-xs text-slate-500">{area.description}</div>
+                      <div className="font-medium text-slate-800 dark:text-slate-100">{area.label}</div>
+                      <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{area.description}</div>
                     </td>
                     {ROLES.map((r) => {
                       const access = accessFor(r, area);
@@ -807,17 +807,17 @@ export function Users() {
       ) : (
         <>
       {actionError && (
-        <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="mb-4 rounded-md border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-4 py-2 text-sm text-rose-700 dark:text-rose-400">
           {actionError}
         </div>
       )}
 
       {addOpen && (
         <Card className="mb-4">
-          <div className="mb-3 text-sm font-medium text-slate-700">Add a user</div>
+          <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-200">Add a user</div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
                 User principal name
               </label>
               <input
@@ -826,12 +826,12 @@ export function Users() {
                 onChange={(e) => setUpn(e.target.value)}
                 placeholder="name@tenant.com"
               />
-              <p className="mt-1 text-[11px] text-slate-400">
+              <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
                 Must match their Entra sign-in UPN exactly.
               </p>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Display name</label>
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Display name</label>
               <input
                 className={INPUT_CLASS}
                 value={displayName}
@@ -840,7 +840,7 @@ export function Users() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Role</label>
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Role</label>
               <select
                 className={INPUT_CLASS}
                 value={newRole}
@@ -856,10 +856,10 @@ export function Users() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-[11px] text-slate-400">{ROLE_DESCRIPTIONS[newRole]}</p>
+              <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{ROLE_DESCRIPTIONS[newRole]}</p>
             </div>
           </div>
-          <label className="mt-4 flex items-center gap-2 text-sm text-slate-600">
+          <label className="mt-4 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <input
               type="checkbox"
               checked={receiveJobAlerts}
@@ -867,10 +867,10 @@ export function Users() {
                 setAlertsTouched(true);
                 setReceiveJobAlerts(e.target.checked);
               }}
-              className="rounded border-slate-300"
+              className="rounded border-slate-300 dark:border-slate-700"
             />
             Send this person job/sync failure alert emails (requires SMTP relay configured under{" "}
-            <span className="font-medium text-slate-700">Settings &gt; Notifications</span>)
+            <span className="font-medium text-slate-700 dark:text-slate-200">Settings &gt; Notifications</span>)
           </label>
           <div className="mt-4 flex items-center gap-3">
             <button
@@ -882,7 +882,7 @@ export function Users() {
               {create.isPending ? "Adding…" : "Add user"}
             </button>
             {create.isError && (
-              <span className="text-xs text-rose-600">
+              <span className="text-xs text-rose-600 dark:text-rose-400">
                 {errorMessage(create.error, "Could not add that user.")}
               </span>
             )}
@@ -892,9 +892,9 @@ export function Users() {
 
       <Card className="p-0">
         {isLoading ? (
-          <div className="p-5 text-sm text-slate-500">Loading…</div>
+          <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Loading…</div>
         ) : users.length === 0 ? (
-          <div className="p-5 text-sm text-slate-500">
+          <div className="p-5 text-sm text-slate-500 dark:text-slate-400">
             No users yet. Add yourself and your team above.
           </div>
         ) : (
@@ -909,7 +909,7 @@ export function Users() {
               />
             </div>
             {visible.length === 0 ? (
-              <div className="p-5 text-sm text-slate-500">No users match "{search}".</div>
+              <div className="p-5 text-sm text-slate-500 dark:text-slate-400">No users match "{search}".</div>
             ) : null}
           </>
         )}
@@ -928,11 +928,11 @@ export function Users() {
             onClick={() => setPendingDelete(null)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Remove {pendingDelete.displayName}?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               They will no longer be able to sign in to PatchPilot. Their past attribution (jobs,
               audit entries) is unaffected — this only removes the account.
             </p>
@@ -940,7 +940,7 @@ export function Users() {
               <button
                 type="button"
                 onClick={() => setPendingDelete(null)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
@@ -964,17 +964,17 @@ export function Users() {
             onClick={() => setPendingWriteAccess(null)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
             {pendingWriteAccess.writeAccessEnabled ? (
               <>
-                <h2 className="text-base font-semibold text-slate-900">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                   Revoke write access for {pendingWriteAccess.displayName}?
                 </h2>
-                <p className="mt-2 text-sm text-slate-600">
-                  This removes <span className="font-medium text-slate-700">{pendingWriteAccess.upn}</span>{" "}
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  This removes <span className="font-medium text-slate-700 dark:text-slate-200">{pendingWriteAccess.upn}</span>{" "}
                   from <strong>{WRITE_GROUP_NAME}</strong> in the home tenant, revoking:
                 </p>
-                <ul className="mt-2 list-inside list-disc text-sm text-slate-600">
+                <ul className="mt-2 list-inside list-disc text-sm text-slate-600 dark:text-slate-300">
                   {WRITE_GROUP_ROLES.map((role) => (
                     <li key={role}>
                       <strong>{role}</strong>
@@ -984,21 +984,21 @@ export function Users() {
               </>
             ) : (
               <>
-                <h2 className="text-base font-semibold text-slate-900">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                   Grant write access to {pendingWriteAccess.displayName}?
                 </h2>
-                <p className="mt-2 text-sm text-slate-600">
-                  This adds <span className="font-medium text-slate-700">{pendingWriteAccess.upn}</span> to{" "}
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  This adds <span className="font-medium text-slate-700 dark:text-slate-200">{pendingWriteAccess.upn}</span> to{" "}
                   <strong>{WRITE_GROUP_NAME}</strong> in the home tenant, granting:
                 </p>
-                <ul className="mt-2 list-inside list-disc text-sm text-slate-600">
+                <ul className="mt-2 list-inside list-disc text-sm text-slate-600 dark:text-slate-300">
                   {WRITE_GROUP_ROLES.map((role) => (
                     <li key={role}>
                       <strong>{role}</strong>
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 text-xs text-slate-500">
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                   You'll be taken to Microsoft to confirm — this requires your account to be a
                   Global Administrator or Privileged Role Administrator in the home tenant.
                 </p>
@@ -1008,7 +1008,7 @@ export function Users() {
               <button
                 type="button"
                 onClick={() => setPendingWriteAccess(null)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>

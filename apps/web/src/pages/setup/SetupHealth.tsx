@@ -28,15 +28,15 @@ export function SetupHealth() {
         subtitle="Is PatchPilot wired up to operate — at the MSP level, for this tenant, and for one specific remediation."
       />
 
-      <div className="mb-6 flex gap-1 border-b border-slate-200">
+      <div className="mb-6 flex gap-1 border-b border-slate-200 dark:border-slate-800">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setSearchParams({ tab: t.id }, { replace: true })}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               tab === t.id
-                ? "border-slate-900 text-slate-900"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? "border-slate-900 text-slate-900 dark:text-slate-100"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             }`}
           >
             {t.label}

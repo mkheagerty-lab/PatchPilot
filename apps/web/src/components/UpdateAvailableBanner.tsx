@@ -47,21 +47,21 @@ export function UpdateAvailableBanner() {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 print:hidden">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-4 py-2.5 text-sm text-amber-800 print:hidden">
       <p>
         PatchPilot v{data.latestVersion} is available (you're on v{data.currentVersion}).
       </p>
       <div className="flex shrink-0 items-center gap-3">
         <Link
           to="/settings/updates"
-          className="rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100"
+          className="rounded-md border border-amber-300 bg-white dark:bg-slate-900 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100 dark:hover:bg-amber-500/15"
         >
           View details
         </Link>
         <button
           onClick={dismiss}
           aria-label="Dismiss"
-          className="text-amber-500 hover:text-amber-700"
+          className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-400"
         >
           ×
         </button>

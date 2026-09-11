@@ -46,18 +46,18 @@ export function SetupPairing() {
   }, [data?.entraConfigured, queryClient]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10">
-      <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-800 px-6 py-10">
+      <div className="w-full max-w-xl rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm">
         <div className="mb-5 flex items-center gap-3">
           <img
             src={DEFAULT_LOGO_URL}
             alt={PRODUCT_NAME}
             className="h-10 w-10 rounded-xl object-contain"
           />
-          <span className="text-base font-semibold text-slate-900">{PRODUCT_NAME}</span>
+          <span className="text-base font-semibold text-slate-900 dark:text-slate-100">{PRODUCT_NAME}</span>
         </div>
-        <h1 className="text-lg font-semibold text-slate-900">Pair this instance</h1>
-        <p className="mt-2 text-sm text-slate-500">
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Pair this instance</h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
           This PatchPilot instance hasn&apos;t been connected to a Microsoft 365
           tenant yet. Run the installer once as a Global Administrator — it
           creates the Entra app, configures read-only permissions, grants
@@ -65,19 +65,19 @@ export function SetupPairing() {
           in one run. Choose whichever matches how you&apos;re set up:
         </p>
 
-        <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50/50 p-3">
-          <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+        <div className="mt-4 rounded-lg border border-sky-200 dark:border-sky-900/50 bg-sky-50/50 p-3">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
             Option 1: Azure Cloud Shell
-            <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+            <span className="inline-flex items-center rounded-full bg-sky-100 dark:bg-sky-500/15 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
               Recommended
             </span>
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             No local PowerShell needed, and your tenant ID is detected
             automatically from the signed-in session. Paste this:
           </p>
           <div className="mt-1.5 flex items-start gap-2">
-            <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-[11px] text-slate-600">
+            <code className="flex-1 whitespace-pre-wrap break-all rounded bg-slate-100 dark:bg-slate-800 px-2 py-1.5 font-mono text-[11px] text-slate-600 dark:text-slate-300">
               {cloudShellCommand}
             </code>
             <CopyButton value={cloudShellCommand} />
@@ -92,14 +92,14 @@ export function SetupPairing() {
           </a>
         </div>
 
-        <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-          <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+        <div className="mt-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 p-3">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
             Option 2: PowerShell
-            <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+            <span className="inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-700 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
               Manual
             </span>
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             For local machines or instances that aren&apos;t hosted in Azure.
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -110,20 +110,20 @@ export function SetupPairing() {
             >
               Download PowerShell Script
             </a>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-400 dark:text-slate-500">
               Pre-fills the pairing token — this instance restarts
               automatically once it runs.
             </span>
           </div>
         </div>
 
-        <p className="mt-4 text-xs text-slate-400">
+        <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
           This page updates automatically once pairing completes — no need to
           reload.
         </p>
 
-        <div className="mt-6 border-t border-slate-200 pt-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+        <div className="mt-6 border-t border-slate-200 dark:border-slate-800 pt-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
             Or, to explore without connecting a tenant
           </p>
           <div className="mt-2.5">
@@ -172,7 +172,7 @@ function EnableDemoModeAction() {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="rounded-md border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+        className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
       >
         Enable Demo Mode
       </button>
@@ -184,11 +184,11 @@ function EnableDemoModeAction() {
             onClick={() => !submitting && setConfirming(false)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Enable demo mode?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               This instance will restart in a few seconds, filled with
               fictional sample tenants, devices, and vulnerabilities — no
               Microsoft 365 tenant is connected, and no real data is ever
@@ -196,7 +196,7 @@ function EnableDemoModeAction() {
               in-app way to switch back afterward.
             </p>
             {error && (
-              <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+              <p className="mt-3 rounded-md bg-red-50 dark:bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">
                 {error}
               </p>
             )}
@@ -205,7 +205,7 @@ function EnableDemoModeAction() {
                 type="button"
                 disabled={submitting}
                 onClick={() => setConfirming(false)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>

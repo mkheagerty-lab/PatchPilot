@@ -37,7 +37,7 @@ const METHOD_LABELS: Record<ChocolateyMatch["method"], string> = {
 };
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 focus:outline-none";
 
 type SortKey = "software" | "severity" | "status" | "devices" | "cves";
 
@@ -64,7 +64,7 @@ function formatRefreshed(iso: string | null): string {
 function ConfidenceBadge({ match }: { match: ChocolateyMatch | null }) {
   if (!match) {
     return (
-      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">
+      <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">
         No match
       </span>
     );
@@ -72,10 +72,10 @@ function ConfidenceBadge({ match }: { match: ChocolateyMatch | null }) {
   const pct = Math.round(match.confidence * 100);
   const tone =
     match.confidence >= 0.9
-      ? "bg-emerald-100 text-emerald-700"
+      ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
       : match.confidence >= 0.7
-        ? "bg-sky-100 text-sky-700"
-        : "bg-amber-100 text-amber-700";
+        ? "bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300"
+        : "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400";
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}
@@ -90,7 +90,7 @@ function ConfidenceBadge({ match }: { match: ChocolateyMatch | null }) {
 function StatusBadge({ status }: { status: CoverageStatus }) {
   if (status === "covered") {
     return (
-      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+      <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
         Chocolatey
       </span>
     );
@@ -98,7 +98,7 @@ function StatusBadge({ status }: { status: CoverageStatus }) {
   if (status === "not-supported") {
     return (
       <span
-        className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700"
+        className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400"
         title="No Chocolatey package — try winget, or pin a mapping"
       >
         Not supported
@@ -107,7 +107,7 @@ function StatusBadge({ status }: { status: CoverageStatus }) {
   }
   return (
     <span
-      className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"
+      className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300"
       title="OS finding — patched via Windows Update, out of Chocolatey scope by nature"
     >
       Windows Update
@@ -135,10 +135,10 @@ function SortableTh({
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-700"
+        className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-700 dark:hover:text-slate-200"
       >
         {label}
-        <span className={active ? "text-slate-700" : "text-slate-300"}>
+        <span className={active ? "text-slate-700 dark:text-slate-200" : "text-slate-300 dark:text-slate-600"}>
           {active ? (dir === "asc" ? "▲" : "▼") : "↕"}
         </span>
       </button>
@@ -265,23 +265,23 @@ export function ChocolateyCatalog() {
       />
 
       <Card className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="text-sm text-slate-600">
-          <span className="font-medium text-slate-800">{status?.total ?? catalog.length}</span>{" "}
+        <div className="text-sm text-slate-600 dark:text-slate-300">
+          <span className="font-medium text-slate-800 dark:text-slate-100">{status?.total ?? catalog.length}</span>{" "}
           packages
           {status && !isDemo && (
             <>
               {" · "}
-              <span className="font-medium text-slate-800">{status.mirror}</span> from the
+              <span className="font-medium text-slate-800 dark:text-slate-100">{status.mirror}</span> from the
               Chocolatey feed
               {status.curated > 0 && (
                 <>
                   {" · "}
-                  <span className="font-medium text-slate-800">{status.curated}</span> curated
+                  <span className="font-medium text-slate-800 dark:text-slate-100">{status.curated}</span> curated
                 </>
               )}
             </>
           )}
-          <div className="mt-0.5 text-xs text-slate-400">
+          <div className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
             {isDemo
               ? "Demo fixtures — catalog refresh is disabled."
               : `Last refreshed ${formatRefreshed(status?.lastRefreshedAt ?? null)}`}
@@ -296,15 +296,15 @@ export function ChocolateyCatalog() {
             {refresh.isPending || status?.refreshing ? "Refreshing…" : "Refresh catalog"}
           </button>
           {!isDemo && !canWrite && (
-            <span className="text-xs text-amber-600">
+            <span className="text-xs text-amber-600 dark:text-amber-400">
               Your role doesn't include catalog write access.
             </span>
           )}
           {refresh.isError && (
-            <span className="text-xs text-rose-600">{refresh.error.message}</span>
+            <span className="text-xs text-rose-600 dark:text-rose-400">{refresh.error.message}</span>
           )}
           {refresh.isSuccess && !refresh.isPending && (
-            <span className="text-xs text-emerald-600">
+            <span className="text-xs text-emerald-600 dark:text-emerald-400">
               Pulled {refresh.data.packages.toLocaleString()} packages
               {refresh.data.truncated ? " (truncated — repository paging limit reached)" : ""}
             </span>
@@ -339,7 +339,7 @@ export function ChocolateyCatalog() {
 
       <div className="mb-6">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-slate-700">Coverage for this tenant</h2>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Coverage for this tenant</h2>
           <div className="flex flex-wrap items-center gap-2">
             <input
               className={`${INPUT_CLASS} w-56`}
@@ -373,9 +373,9 @@ export function ChocolateyCatalog() {
         </div>
         <Card className="p-0">
           {coverageLoading ? (
-            <div className="p-5 text-sm text-slate-500">Loading…</div>
+            <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Loading…</div>
           ) : rows.length === 0 ? (
-            <div className="p-5 text-sm text-slate-500">
+            <div className="p-5 text-sm text-slate-500 dark:text-slate-400">
               {coverage?.rows?.length
                 ? "No products match the current filters."
                 : "No findings for this tenant."}
@@ -383,7 +383,7 @@ export function ChocolateyCatalog() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs text-slate-500 dark:text-slate-400">
                   <SortableTh
                     label="Product"
                     sortKey="software"
@@ -433,12 +433,12 @@ export function ChocolateyCatalog() {
                 {rows.map((r) => (
                   <tr
                     key={`${r.tenantId}:${r.software}`}
-                    className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                    className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                     onClick={() => setDetailRow(r)}
                   >
                     <td className="px-5 py-3">
-                      <div className="font-medium text-slate-800">{r.displayName ?? r.software}</div>
-                      {r.publisher && <div className="text-xs text-slate-400">{r.publisher}</div>}
+                      <div className="font-medium text-slate-800 dark:text-slate-100">{r.displayName ?? r.software}</div>
+                      {r.publisher && <div className="text-xs text-slate-400 dark:text-slate-500">{r.publisher}</div>}
                       <ManualRemediationTag software={r.software} className="mt-1" />
                     </td>
                     <td className="px-5 py-3">
@@ -447,20 +447,20 @@ export function ChocolateyCatalog() {
                     <td className="px-5 py-3">
                       <StatusBadge status={r.status} />
                     </td>
-                    <td className="px-5 py-3 font-mono text-xs text-slate-600">
+                    <td className="px-5 py-3 font-mono text-xs text-slate-600 dark:text-slate-300">
                       {r.match ? (
                         <div className="flex flex-col gap-1">
                           <span>{r.match.packageId}</span>
                           <ConfidenceBadge match={r.match} />
                         </div>
                       ) : (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-slate-400 dark:text-slate-500">—</span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-right tabular-nums text-slate-600">
+                    <td className="px-5 py-3 text-right tabular-nums text-slate-600 dark:text-slate-300">
                       {r.affectedDeviceCount}
                     </td>
-                    <td className="px-5 py-3 text-right tabular-nums text-slate-600">
+                    <td className="px-5 py-3 text-right tabular-nums text-slate-600 dark:text-slate-300">
                       {r.cveCount}
                     </td>
                     <td className="px-5 py-3 text-right">
@@ -470,7 +470,7 @@ export function ChocolateyCatalog() {
                             e.stopPropagation();
                             setDetailRow(r);
                           }}
-                          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                          className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
                           Map package
                         </button>
@@ -495,27 +495,27 @@ export function ChocolateyCatalog() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">
+        <h2 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
           Package catalog
           {search.trim() && (
-            <span className="ml-2 font-normal text-slate-400">
+            <span className="ml-2 font-normal text-slate-400 dark:text-slate-500">
               {filteredCatalog.length.toLocaleString()} matching "{search.trim()}"
             </span>
           )}
         </h2>
         <Card className="p-0">
           {catalogLoading ? (
-            <div className="p-5 text-sm text-slate-500">Loading…</div>
+            <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Loading…</div>
           ) : catalog.length === 0 ? (
-            <div className="p-5 text-sm text-slate-500">Catalog is empty.</div>
+            <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Catalog is empty.</div>
           ) : filteredCatalog.length === 0 ? (
-            <div className="p-5 text-sm text-slate-500">
+            <div className="p-5 text-sm text-slate-500 dark:text-slate-400">
               No packages match "{search.trim()}".
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   <th className="px-5 py-3 font-medium">Package ID</th>
                   <th className="px-5 py-3 font-medium">Name</th>
                   <th className="px-5 py-3 font-medium">Publisher</th>
@@ -525,12 +525,12 @@ export function ChocolateyCatalog() {
               </thead>
               <tbody>
                 {filteredCatalog.map((c) => (
-                  <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                    <td className="px-5 py-3 font-mono text-xs text-slate-700">{c.packageId}</td>
-                    <td className="px-5 py-3 text-slate-800">{c.name}</td>
-                    <td className="px-5 py-3 text-slate-500">{c.publisher}</td>
-                    <td className="px-5 py-3 text-slate-500">{c.latestVersion ?? "—"}</td>
-                    <td className="px-5 py-3 text-slate-500">{c.softwareTitle ?? "—"}</td>
+                  <tr key={c.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <td className="px-5 py-3 font-mono text-xs text-slate-700 dark:text-slate-200">{c.packageId}</td>
+                    <td className="px-5 py-3 text-slate-800 dark:text-slate-100">{c.name}</td>
+                    <td className="px-5 py-3 text-slate-500 dark:text-slate-400">{c.publisher}</td>
+                    <td className="px-5 py-3 text-slate-500 dark:text-slate-400">{c.latestVersion ?? "—"}</td>
+                    <td className="px-5 py-3 text-slate-500 dark:text-slate-400">{c.softwareTitle ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -643,7 +643,7 @@ function CoverageDetail({
                 {row.affectedDeviceCount > 0 ? (
                   <button
                     onClick={() => setShowDevices(true)}
-                    className="font-medium text-indigo-600 underline-offset-2 hover:underline"
+                    className="font-medium text-indigo-600 dark:text-indigo-400 underline-offset-2 hover:underline"
                     title="Show exposed devices"
                   >
                     {row.affectedDeviceCount}
@@ -666,14 +666,14 @@ function CoverageDetail({
             </dl>
 
             <div>
-              <div className="mb-1.5 text-xs font-medium text-slate-600">
+              <div className="mb-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
                 Rolled-up CVEs ({row.cveCount})
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {row.cveIds.map((c) => (
                   <span
                     key={c}
-                    className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600"
+                    className="rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-600 dark:text-slate-300"
                   >
                     {c}
                   </span>
@@ -682,7 +682,7 @@ function CoverageDetail({
             </div>
 
             {row.status === "os" && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
                 This is an OS finding — patched via Windows Update / an expedited quality update,
                 not Chocolatey.
               </div>
@@ -690,7 +690,7 @@ function CoverageDetail({
 
             {row.status === "not-supported" && (
               <div className="space-y-2">
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                   No Chocolatey package matched this product. Pin a package ID below if one
                   exists, or try the Winget Catalog instead.
                 </div>
@@ -713,11 +713,11 @@ function CoverageDetail({
                       {addMapping.isPending ? "Saving…" : "Save mapping"}
                     </button>
                     {addMapping.isError && (
-                      <span className="text-xs text-rose-600">{addMapping.error.message}</span>
+                      <span className="text-xs text-rose-600 dark:text-rose-400">{addMapping.error.message}</span>
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400">{mapDeniedReason}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">{mapDeniedReason}</p>
                 )}
               </div>
             )}
@@ -742,20 +742,20 @@ function CoverageDetail({
       >
         {row && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Devices exposed to {row.displayName ?? row.software} across its {row.cveCount}{" "}
               rolled-up {row.cveCount === 1 ? "CVE" : "CVEs"}.
             </p>
             {exposedLoading ? (
-              <div className="text-sm text-slate-500">Loading devices…</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">Loading devices…</div>
             ) : exposedDevices.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                 No exposed device details available.
               </div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     <th className="py-2 pr-3 font-medium">Device</th>
                     <th className="py-2 pr-3 font-medium">Owner</th>
                     <th className="py-2 font-medium">Last seen</th>
@@ -772,12 +772,12 @@ function CoverageDetail({
                           )}`,
                         )
                       }
-                      className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                      className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                       title="Open in Devices"
                     >
-                      <td className="py-2 pr-3 font-medium text-indigo-600">{d.deviceName}</td>
-                      <td className="py-2 pr-3 text-slate-600">{d.owner ?? "—"}</td>
-                      <td className="py-2 text-slate-600">{formatDate(d.lastSeen)}</td>
+                      <td className="py-2 pr-3 font-medium text-indigo-600 dark:text-indigo-400">{d.deviceName}</td>
+                      <td className="py-2 pr-3 text-slate-600 dark:text-slate-300">{d.owner ?? "—"}</td>
+                      <td className="py-2 text-slate-600 dark:text-slate-300">{formatDate(d.lastSeen)}</td>
                     </tr>
                   ))}
                 </tbody>

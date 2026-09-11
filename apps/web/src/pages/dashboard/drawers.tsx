@@ -30,7 +30,7 @@ export function VulnDrawer({ vulnId, onClose }: { vulnId: string | null; onClose
   return (
     <SlideOver open={vulnId !== null} onClose={onClose} title={vuln?.cveId ?? ""} subtitle="Vulnerability">
       {vulnId && !vuln ? (
-        <div className="py-8 text-center text-sm text-slate-400">Loading…</div>
+        <div className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">Loading…</div>
       ) : vuln ? (
         <div className="space-y-4">
           <CveDetailBody
@@ -39,7 +39,7 @@ export function VulnDrawer({ vulnId, onClose }: { vulnId: string | null; onClose
           />
           <Link
             to={toVulnerabilities()}
-            className="block text-center text-xs font-medium text-indigo-600 hover:text-indigo-700"
+            className="block text-center text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
           >
             View full detail →
           </Link>
@@ -65,17 +65,17 @@ export function DeviceDrawer({ deviceId, onClose }: { deviceId: string | null; o
   return (
     <SlideOver open={deviceId !== null} onClose={onClose} title={device?.hostname ?? ""} subtitle="Device">
       {deviceId && !device ? (
-        <div className="py-8 text-center text-sm text-slate-400">Loading…</div>
+        <div className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">Loading…</div>
       ) : device ? (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center gap-2">
             <ComplianceChip compliance={device.compliance} />
-            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+            <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
               {device.vulnerabilityCount} {device.vulnerabilityCount === 1 ? "vuln" : "vulns"}
             </span>
           </div>
           <section>
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Overview</h4>
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Overview</h4>
             <dl>
               {isAllTenants && (
                 <DetailRow label="Customer tenant">
@@ -91,7 +91,7 @@ export function DeviceDrawer({ deviceId, onClose }: { deviceId: string | null; o
           </section>
           <Link
             to={toDevice(device.id)}
-            className="block text-center text-xs font-medium text-indigo-600 hover:text-indigo-700"
+            className="block text-center text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
           >
             View full detail →
           </Link>

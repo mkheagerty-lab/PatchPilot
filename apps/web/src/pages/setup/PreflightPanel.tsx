@@ -22,9 +22,9 @@ const CHANNELS: { id: string; label: string; hint: string }[] = [
 ];
 
 const STATUS_STYLES: Record<PreflightStatus, string> = {
-  pass: "bg-emerald-100 text-emerald-700",
-  warn: "bg-amber-100 text-amber-700",
-  fail: "bg-rose-100 text-rose-700",
+  pass: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  warn: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  fail: "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400",
 };
 
 const STATUS_LABELS: Record<PreflightStatus, string> = {
@@ -44,7 +44,7 @@ function StatusChip({ status }: { status: PreflightStatus }) {
 }
 
 const SELECT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 dark:focus:border-slate-600 focus:outline-none";
 
 export function PreflightPanel() {
   const { activeTenantId } = useTenant();
@@ -87,7 +87,7 @@ export function PreflightPanel() {
 
   return (
     <div>
-      <p className="mb-4 text-sm text-slate-500">
+      <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
         Dry-run the last safety gate before a write action: licensing,
         consent, read-only posture, channel fit and device reachability for
         one specific fix. No changes are made.
@@ -97,7 +97,7 @@ export function PreflightPanel() {
         <Card>
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
                 Finding
               </label>
               <select
@@ -115,7 +115,7 @@ export function PreflightPanel() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
                 Device
               </label>
               <select
@@ -133,7 +133,7 @@ export function PreflightPanel() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
                 Channel
               </label>
               <select
@@ -161,14 +161,14 @@ export function PreflightPanel() {
 
         <div>
           {run.isError && (
-            <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div className="mb-4 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
               {run.error.message}
             </div>
           )}
 
           {!report ? (
             <Card className="border-dashed">
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Pick a finding, device and channel, then run the pre-flight to
                 see whether this remediation could proceed.
               </p>
@@ -178,8 +178,8 @@ export function PreflightPanel() {
               <div
                 className={`mb-4 rounded-lg border px-4 py-3 text-sm font-medium ${
                   report.canProceed
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-rose-200 bg-rose-50 text-rose-700"
+                    ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    : "border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400"
                 }`}
               >
                 {report.canProceed
@@ -192,13 +192,13 @@ export function PreflightPanel() {
                   {report.checks.map((c) => (
                     <li
                       key={c.id}
-                      className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 last:border-0"
+                      className="flex items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 px-5 py-4 last:border-0"
                     >
                       <div>
-                        <div className="text-sm font-medium text-slate-800">
+                        <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
                           {c.label}
                         </div>
-                        <div className="mt-0.5 text-xs text-slate-500">
+                        <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                           {c.detail}
                         </div>
                       </div>

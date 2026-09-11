@@ -139,7 +139,7 @@ export function MissingKbFixAllModal({
           <>
             {!isGroupMode && (
               <div>
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   1. When
                 </span>
                 <div className="grid grid-cols-2 gap-2">
@@ -151,7 +151,7 @@ export function MissingKbFixAllModal({
                       className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                         whenMode === mode.id
                           ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                          : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                       }`}
                     >
                       {mode.label}
@@ -167,7 +167,7 @@ export function MissingKbFixAllModal({
             )}
 
             <div>
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 {isGroupMode ? "1. Trigger method" : "2. Trigger method"}
               </span>
               <div className="space-y-1.5">
@@ -182,12 +182,12 @@ export function MissingKbFixAllModal({
                       className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                         active
                           ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                          : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{s.label}</span>
-                        <span className={active ? "text-slate-300" : "text-slate-400"}>
+                        <span className={active ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"}>
                           {s.latency}
                         </span>
                       </div>
@@ -197,8 +197,8 @@ export function MissingKbFixAllModal({
               </div>
 
               {isQualityUpdate && (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
-                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <div className="mt-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-3">
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Expedited quality update options
                   </div>
                   <QualityUpdateOptionsPanel
@@ -215,27 +215,27 @@ export function MissingKbFixAllModal({
 
             {!isGroupMode && (
               <div>
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   3. Devices ({selectedCount} of {devices.length} selected)
                 </span>
                 {devices.length === 0 ? (
-                  <p className="text-sm text-slate-500">Nothing to fix.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Nothing to fix.</p>
                 ) : (
-                  <ul className="max-h-80 overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200">
+                  <ul className="max-h-80 overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                     {devices.map((d) => {
                       const checked = selected.has(d.deviceId);
                       return (
                         <li
                           key={d.deviceId}
-                          className="flex items-center gap-2.5 border-b border-slate-100 px-3 py-2.5 last:border-0"
+                          className="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800 px-3 py-2.5 last:border-0"
                         >
                           <input
                             type="checkbox"
-                            className="h-4 w-4 shrink-0 rounded border-slate-300"
+                            className="h-4 w-4 shrink-0 rounded border-slate-300 dark:border-slate-700"
                             checked={checked}
                             onChange={() => toggle(d.deviceId)}
                           />
-                          <span className="truncate text-sm font-medium text-slate-800">
+                          <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                             {d.hostname}
                           </span>
                         </li>
@@ -247,7 +247,7 @@ export function MissingKbFixAllModal({
             )}
 
             {isGroupMode && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
                 Group mode targets every device in "{quOptions.groupName}" directly through
                 Intune — the device checklist above and the When/schedule options don't apply here.
               </div>
@@ -256,19 +256,19 @@ export function MissingKbFixAllModal({
         )}
 
         {!canWrite && !isSuccess && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
             Your role doesn't include remediation write access.
           </div>
         )}
 
         {isError && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
             {(isGroupMode ? campaign.error : fixAll.error)?.message}
           </div>
         )}
 
         {campaign.isSuccess && (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-emerald-800">
             <p className="text-sm font-medium">
               Campaign "{campaign.data.displayName}" created and assigned to "{quOptions.groupName}".
               Intune now owns delivery to the group.
@@ -285,7 +285,7 @@ export function MissingKbFixAllModal({
 
         {fixAll.isSuccess && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-emerald-800">
               <p className="text-sm font-medium">
                 {fixAll.data.jobsCreated === 0
                   ? "No jobs created — every device was skipped."
@@ -305,15 +305,15 @@ export function MissingKbFixAllModal({
             </div>
             {fixAll.data.skipped.length > 0 && (
               <div>
-                <div className="mb-1 text-xs font-medium text-slate-600">Skipped</div>
-                <ul className="rounded-lg border border-slate-200">
+                <div className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">Skipped</div>
+                <ul className="rounded-lg border border-slate-200 dark:border-slate-800">
                   {fixAll.data.skipped.map((s, i) => (
                     <li
                       key={`${s.label}-${i}`}
-                      className="border-b border-slate-100 px-3 py-2 text-xs last:border-0"
+                      className="border-b border-slate-100 dark:border-slate-800 px-3 py-2 text-xs last:border-0"
                     >
-                      <span className="font-medium text-slate-700">{s.label}</span>
-                      <span className="text-slate-500">: {s.reason}</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-200">{s.label}</span>
+                      <span className="text-slate-500 dark:text-slate-400">: {s.reason}</span>
                     </li>
                   ))}
                 </ul>
@@ -327,7 +327,7 @@ export function MissingKbFixAllModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Cancel
             </button>

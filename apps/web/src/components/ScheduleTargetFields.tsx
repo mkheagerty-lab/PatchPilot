@@ -27,7 +27,7 @@ const PATCH_TYPES: { id: "" | "app" | "os"; label: string }[] = [
 ];
 
 export const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 dark:focus:border-slate-600 focus:outline-none";
 
 /** The `target` jsonb this UI reads/writes — mirrors ScheduleTarget in packages/shared. */
 export interface Target {
@@ -76,7 +76,7 @@ export function ScheduleTargetFields({
   return (
     <div className="space-y-3">
       {target.software && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+        <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
           Locked to <span className="font-medium">"{target.software}"</span> — this
           schedule was created from a Fix Now dialog and only ever targets
           that software. The scope below narrows devices, patch type, and
@@ -84,7 +84,7 @@ export function ScheduleTargetFields({
         </div>
       )}
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600">Device group</label>
+        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Device group</label>
         <select
           className={INPUT_CLASS}
           value={target.deviceGroupId ?? ""}
@@ -101,16 +101,16 @@ export function ScheduleTargetFields({
 
       {target.deviceGroupId && members.length > 0 && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
             Exclude from this schedule
           </label>
-          <div className="max-h-32 overflow-y-auto rounded-lg border border-slate-300 bg-white">
+          <div className="max-h-32 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
             {members.map((m) => {
               const excluded = target.excludedManagedDeviceIds?.includes(m.managedDeviceId) ?? false;
               return (
                 <label
                   key={m.id}
-                  className="flex items-center gap-2 border-b border-slate-100 px-3 py-1.5 text-xs text-slate-700 last:border-0"
+                  className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 last:border-0"
                 >
                   <input
                     type="checkbox"
@@ -132,7 +132,7 @@ export function ScheduleTargetFields({
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600">Minimum severity level</label>
+        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Minimum severity level</label>
         <select
           className={INPUT_CLASS}
           value={target.severity ?? ""}
@@ -147,7 +147,7 @@ export function ScheduleTargetFields({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600">Patch type</label>
+        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Patch type</label>
         <select
           className={INPUT_CLASS}
           value={target.patchType ?? ""}

@@ -21,7 +21,7 @@ export function SortableTh<K extends string>({
         type="button"
         onClick={() => onSort(sortKey)}
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700"
+        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-200"
       >
         {label}
         <SortIcon active={active} dir={dir} />

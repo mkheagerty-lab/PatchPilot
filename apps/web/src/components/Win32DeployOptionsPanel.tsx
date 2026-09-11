@@ -59,7 +59,7 @@ const ASSIGNMENT_OPTIONS: { id: IntuneAssignmentMode; label: string }[] = [
 const USER_ASSIGNMENT_MODES: IntuneAssignmentMode[] = ["none", "all-users", "group"];
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-500 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none";
 
 /**
  * Controlled fields for configuring an inline Win32 app deploy-or-reuse —
@@ -109,7 +109,7 @@ export function Win32DeployOptionsPanel({
       {showNameFields && (
         <>
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Application Name
             </label>
             <input
@@ -121,7 +121,7 @@ export function Win32DeployOptionsPanel({
           </div>
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Description
             </label>
             <textarea
@@ -133,7 +133,7 @@ export function Win32DeployOptionsPanel({
           </div>
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Publisher
             </label>
             <input
@@ -148,7 +148,7 @@ export function Win32DeployOptionsPanel({
       )}
 
       <div>
-        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Install As
         </label>
         <select
@@ -172,7 +172,7 @@ export function Win32DeployOptionsPanel({
 
       {source === "chocolatey" && (
         <div>
-          <label className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <label className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             <input
               type="checkbox"
               checked={value.installChoco}
@@ -193,7 +193,7 @@ export function Win32DeployOptionsPanel({
 
       {source !== "script" && (
         <div>
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Custom install arguments (optional)
           </label>
           <input
@@ -207,7 +207,7 @@ export function Win32DeployOptionsPanel({
       )}
 
       <div>
-        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Assignment
         </label>
         <select
@@ -234,12 +234,12 @@ export function Win32DeployOptionsPanel({
               disabled={disabled}
               placeholder="Search Entra groups to include…"
             />
-            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-700">
+            <div className="mt-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
               Requires the Group.Read.All scope. Tenants onboarded before this feature shipped need
               re-consent before group assignment works here.
             </div>
             {value.runAsAccount === "user" && (
-              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-700">
+              <div className="mt-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
                 Install As: User assignments must target a group whose members are users, not devices
                 — a device-only group will fail Intune's "Install Scope" applicability check.
               </div>
@@ -249,7 +249,7 @@ export function Win32DeployOptionsPanel({
 
         {value.assignmentMode !== "none" && (
           <div className="mt-3">
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Excluded Group (optional)
             </label>
             <EntraGroupPicker

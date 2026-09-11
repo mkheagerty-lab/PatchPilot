@@ -18,11 +18,11 @@ function formatDate(iso: string): string {
 
 function SourceBadge({ source }: { source: QualityUpdateCampaign["source"] }) {
   return source === "patchpilot" ? (
-    <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+    <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
       PatchPilot
     </span>
   ) : (
-    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+    <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
       Intune
     </span>
   );
@@ -30,12 +30,12 @@ function SourceBadge({ source }: { source: QualityUpdateCampaign["source"] }) {
 
 function PolicyTypeBadge({ policyType }: { policyType: QualityUpdateCampaign["policyType"] }) {
   return policyType === "expedite" ? (
-    <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+    <span className="inline-flex items-center rounded-full bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
       Expedite
     </span>
   ) : (
     <span
-      className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
+      className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300"
       title="Read-only — no PatchPilot write path exists for this policy type"
     >
       Quality update
@@ -166,7 +166,7 @@ export function QualityUpdatesTab() {
   return (
     <div>
       {isAllTenants && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Select a single tenant from the switcher above to view, create, or delete quality-update policies.
         </div>
       )}
@@ -174,7 +174,7 @@ export function QualityUpdatesTab() {
       {message && (
         <div
           className={`mb-4 rounded-lg border px-3 py-2 text-xs ${
-            message.tone === "ok" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"
+            message.tone === "ok" ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400"
           }`}
         >
           {message.text}
@@ -187,13 +187,13 @@ export function QualityUpdatesTab() {
           value={table.search}
           onChange={(e) => table.setSearch(e.target.value)}
           placeholder="Search name, release, source, type…"
-          className="w-72 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+          className="w-72 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm"
         />
         <button
           type="button"
           onClick={exportCsv}
           disabled={table.sorted.length === 0}
-          className="ml-auto rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+          className="ml-auto rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
         >
           {table.selected.size > 0 ? `Export selected (${table.selected.size})` : "Export CSV"}
         </button>
@@ -211,22 +211,22 @@ export function QualityUpdatesTab() {
       </div>
 
       {table.selected.size > 0 && (
-        <div className="mb-3 flex items-center gap-3 rounded-md border border-slate-300 bg-slate-50 px-4 py-2 text-sm">
-          <span className="font-medium text-slate-700">
+        <div className="mb-3 flex items-center gap-3 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">
             {table.selected.size} polic{table.selected.size === 1 ? "y" : "ies"} selected
           </span>
           <button
             type="button"
             onClick={() => setPendingDelete(table.selectedRows)}
             disabled={busy || !canWrite}
-            className="rounded-md border border-rose-300 px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+            className="rounded-md border border-rose-300 dark:border-rose-700 px-3 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 disabled:opacity-50"
           >
             Delete selected
           </button>
           <button
             type="button"
             onClick={table.clearSelection}
-            className="text-xs font-medium text-slate-500 hover:text-slate-700"
+            className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             Clear selection
           </button>
@@ -235,30 +235,30 @@ export function QualityUpdatesTab() {
 
       {isLoading ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">Loading policies…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading policies…</p>
         </Card>
       ) : campaigns.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             No quality-update policies yet for this tenant. Click "Create" to push an expedited
             release to an Entra group, or "Sync now" to pull in policies created directly in Intune.
           </p>
         </Card>
       ) : table.sorted.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">No policies match "{table.search.trim()}".</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">No policies match "{table.search.trim()}".</p>
         </Card>
       ) : (
         <Card className="p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 <th className="px-4 py-2.5 font-medium">
                   <input
                     type="checkbox"
                     checked={table.allVisibleSelected}
                     onChange={table.toggleSelectAll}
-                    className="rounded border-slate-300"
+                    className="rounded border-slate-300 dark:border-slate-700"
                     aria-label="Select all policies"
                   />
                 </th>
@@ -274,31 +274,31 @@ export function QualityUpdatesTab() {
             </thead>
             <tbody>
               {table.sorted.map((c) => (
-                <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                <tr key={c.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={table.selected.has(c.id)}
                       onChange={() => table.toggleSelect(c.id)}
-                      className="rounded border-slate-300"
+                      className="rounded border-slate-300 dark:border-slate-700"
                       aria-label={`Select ${c.displayName}`}
                     />
                   </td>
-                  <td className="px-4 py-3 font-medium text-slate-800">{c.displayName}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{c.displayName}</td>
                   <td className="px-4 py-3">
                     <PolicyTypeBadge policyType={c.policyType} />
                   </td>
                   <td className="px-4 py-3">
                     <SourceBadge source={c.source} />
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{c.releaseLabel ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{c.releaseLabel ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                     {c.daysUntilForcedReboot != null ? `${c.daysUntilForcedReboot}d` : "—"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                     <AssignmentSummary assignments={c.assignments} />
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                     {c.createdBy ? `${c.createdBy} · ${formatDate(c.createdAt)}` : `Intune · ${formatDate(c.createdAt)}`}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -307,7 +307,7 @@ export function QualityUpdatesTab() {
                       onClick={() => setPendingDelete([c])}
                       disabled={busy || !canWrite || c.policyType !== "expedite"}
                       title={c.policyType !== "expedite" ? "Read-only — no PatchPilot write path for this policy type" : undefined}
-                      className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-40"
+                      className="text-xs font-medium text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-40"
                     >
                       Delete
                     </button>
@@ -324,13 +324,13 @@ export function QualityUpdatesTab() {
       {pendingDelete && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40" onClick={() => setPendingDelete(null)} aria-hidden />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               {pendingDelete.length === 1
                 ? `Delete "${pendingDelete[0]!.displayName}"?`
                 : `Delete ${pendingDelete.length} policies?`}
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               This removes the quality-update profile from Intune itself, not just PatchPilot's view of
               it.{" "}
               {pendingDelete.length > 1 && pendingDelete.some((c) => c.policyType !== "expedite") && (
@@ -342,7 +342,7 @@ export function QualityUpdatesTab() {
               <button
                 type="button"
                 onClick={() => setPendingDelete(null)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>

@@ -14,7 +14,7 @@ import {
 } from "../lib/scripts";
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 focus:outline-none";
 
 /** Refuse pathologically large files rather than posting megabytes of JSON. */
 const MAX_UPLOAD_BYTES = 1_000_000;
@@ -98,7 +98,7 @@ function SortableTh({
         type="button"
         onClick={() => onSort(sortKey)}
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700"
+        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-200"
       >
         {label}
         <SortIcon active={active} dir={dir} />
@@ -109,7 +109,7 @@ function SortableTh({
 
 function TypeBadge({ type }: { type: ScriptType }) {
   return (
-    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+    <span className="rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-300">
       {SCRIPT_TYPE_LABELS[type]}
     </span>
   );
@@ -396,14 +396,14 @@ export function ScriptCatalog() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search name, description, type, engineer…"
-                className="w-72 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                className="w-72 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm"
               />
-              <label className="flex items-center gap-2 text-sm text-slate-600">
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={showArchived}
                   onChange={(e) => setShowArchived(e.target.checked)}
-                  className="rounded border-slate-300"
+                  className="rounded border-slate-300 dark:border-slate-700"
                 />
                 Show archived
               </label>
@@ -411,7 +411,7 @@ export function ScriptCatalog() {
                 type="button"
                 onClick={exportCsv}
                 disabled={sorted.length === 0}
-                className="ml-auto rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                className="ml-auto rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
               >
                 {selected.size > 0 ? `Export selected (${selected.size})` : "Export CSV"}
               </button>
@@ -428,8 +428,8 @@ export function ScriptCatalog() {
             </div>
 
             {selected.size > 0 && (
-              <div className="mb-3 flex items-center gap-3 rounded-md border border-slate-300 bg-slate-50 px-4 py-2 text-sm">
-                <span className="font-medium text-slate-700">
+              <div className="mb-3 flex items-center gap-3 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">
                   {selected.size} script{selected.size === 1 ? "" : "s"} selected
                 </span>
                 <button
@@ -438,7 +438,7 @@ export function ScriptCatalog() {
                     bulkArchive.mutate({ ids: [...selected], archived: !allSelectedArchived })
                   }
                   disabled={busy || !canWrite}
-                  className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                  className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
                 >
                   {allSelectedArchived ? "Restore selected" : "Archive selected"}
                 </button>
@@ -446,14 +446,14 @@ export function ScriptCatalog() {
                   type="button"
                   onClick={() => setPendingDelete(selectedScripts)}
                   disabled={busy || !canWrite}
-                  className="rounded-md border border-rose-300 px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                  className="rounded-md border border-rose-300 dark:border-rose-700 px-3 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 disabled:opacity-50"
                 >
                   Delete selected
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelected(new Set())}
-                  className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                  className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 >
                   Clear selection
                 </button>
@@ -461,18 +461,18 @@ export function ScriptCatalog() {
             )}
 
             {actionError && (
-              <div className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+              <div className="mb-3 rounded-md border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-4 py-2 text-sm text-rose-700 dark:text-rose-400">
                 {actionError}
               </div>
             )}
 
             {uploadOpen && (
               <Card className="mb-4">
-                <div className="mb-3 text-sm font-medium text-slate-700">Upload a script</div>
+                <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-200">Upload a script</div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-3">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">Name</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Name</label>
                       <input
                         className={INPUT_CLASS}
                         value={name}
@@ -481,7 +481,7 @@ export function ScriptCatalog() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
                         Description
                       </label>
                       <input
@@ -492,7 +492,7 @@ export function ScriptCatalog() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
                         Script type
                       </label>
                       <select
@@ -507,13 +507,13 @@ export function ScriptCatalog() {
                         ))}
                       </select>
                       {scriptType !== "powershell" && (
-                        <div className="mt-1 text-[11px] text-amber-600">
+                        <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
                           Catalog-only — Intune remediation scripts must be PowerShell, so this
                           can't be dispatched from Run Now.
                         </div>
                       )}
                     </div>
-                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                    <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                       <input
                         type="checkbox"
                         checked={global}
@@ -525,13 +525,13 @@ export function ScriptCatalog() {
 
                   <div className="flex flex-col">
                     <div className="mb-1 flex items-center justify-between">
-                      <label className="block text-xs font-medium text-slate-600">
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
                         Script content
                       </label>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="text-xs font-medium text-indigo-600 hover:underline"
+                        className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                       >
                         Upload from file
                       </button>
@@ -549,7 +549,7 @@ export function ScriptCatalog() {
                       onChange={(e) => setScriptContent(e.target.value)}
                       placeholder={activePlaceholder}
                     />
-                    {fileError && <div className="mt-1 text-xs text-rose-600">{fileError}</div>}
+                    {fileError && <div className="mt-1 text-xs text-rose-600 dark:text-rose-400">{fileError}</div>}
                     <button
                       onClick={() => upload.mutate()}
                       disabled={!canSubmit}
@@ -558,18 +558,18 @@ export function ScriptCatalog() {
                       {upload.isPending ? "Uploading…" : "Upload script"}
                     </button>
                     {tenantReadOnly && (
-                      <div className="mt-2 text-xs text-slate-500">
+                      <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                         This tenant is read-only — enable write actions in Settings → Tenants to
                         upload.
                       </div>
                     )}
                     {!canWriteRole && (
-                      <div className="mt-2 text-xs text-amber-600">
+                      <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                         Your role doesn't include catalog write access.
                       </div>
                     )}
                     {upload.isError && (
-                      <div className="mt-2 text-xs text-rose-600">{upload.error.message}</div>
+                      <div className="mt-2 text-xs text-rose-600 dark:text-rose-400">{upload.error.message}</div>
                     )}
                   </div>
                 </div>
@@ -577,34 +577,34 @@ export function ScriptCatalog() {
             )}
 
             <Card className="p-0">
-              <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium text-slate-700">
+              <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-200">
                 Uploaded scripts
                 {search.trim() && !isLoading && (
-                  <span className="ml-2 text-xs font-normal text-slate-400">
+                  <span className="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">
                     {filtered.length} of {scripts.length} match
                   </span>
                 )}
               </div>
               {isLoading ? (
-                <div className="py-6 text-center text-sm text-slate-400">Loading…</div>
+                <div className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">Loading…</div>
               ) : scripts.length === 0 ? (
-                <div className="py-6 text-center text-sm text-slate-400">
+                <div className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">
                   No scripts uploaded yet.
                 </div>
               ) : sorted.length === 0 ? (
-                <div className="py-6 text-center text-sm text-slate-400">
+                <div className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">
                   No scripts match "{search.trim()}".
                 </div>
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       <th className="px-4 py-2.5 font-medium">
                         <input
                           type="checkbox"
                           checked={allVisibleSelected}
                           onChange={toggleSelectAll}
-                          className="rounded border-slate-300"
+                          className="rounded border-slate-300 dark:border-slate-700"
                           aria-label="Select all scripts"
                         />
                       </th>
@@ -655,28 +655,28 @@ export function ScriptCatalog() {
                       return (
                         <Fragment key={entry.id}>
                           <tr
-                            className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 ${isArchived ? "opacity-60" : ""}`}
+                            className={`border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800 ${isArchived ? "opacity-60" : ""}`}
                           >
                             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={selected.has(entry.id)}
                                 onChange={() => toggleSelect(entry.id)}
-                                className="rounded border-slate-300"
+                                className="rounded border-slate-300 dark:border-slate-700"
                                 aria-label={`Select ${entry.name}`}
                               />
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-slate-800">{entry.name}</span>
+                                <span className="font-medium text-slate-800 dark:text-slate-100">{entry.name}</span>
                                 {isArchived && (
-                                  <span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600">
+                                  <span className="rounded-md bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">
                                     Archived
                                   </span>
                                 )}
                               </div>
                               {entry.description && (
-                                <div className="mt-0.5 text-xs text-slate-500">
+                                <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                                   {entry.description}
                                 </div>
                               )}
@@ -684,11 +684,11 @@ export function ScriptCatalog() {
                             <td className="px-4 py-3">
                               <TypeBadge type={entry.scriptType} />
                             </td>
-                            <td className="px-4 py-3 text-slate-600">
+                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                               {entry.tenantId ? "This tenant" : "Global"}
                             </td>
-                            <td className="px-4 py-3 text-slate-600">{entry.createdBy}</td>
-                            <td className="px-4 py-3 text-slate-600">
+                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{entry.createdBy}</td>
+                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                               {formatDate(entry.createdAt)}
                             </td>
                             <td className="px-4 py-3">
@@ -696,14 +696,14 @@ export function ScriptCatalog() {
                                 <button
                                   type="button"
                                   onClick={() => setExpanded(isOpen ? null : entry.id)}
-                                  className="text-xs font-medium text-indigo-600 hover:underline"
+                                  className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                                 >
                                   {isOpen ? "Hide" : "View"}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => download(entry)}
-                                  className="text-xs font-medium text-slate-600 hover:underline"
+                                  className="text-xs font-medium text-slate-600 dark:text-slate-300 hover:underline"
                                 >
                                   Download
                                 </button>
@@ -713,7 +713,7 @@ export function ScriptCatalog() {
                                     archive.mutate({ id: entry.id, archived: !isArchived })
                                   }
                                   disabled={busy || !canWrite}
-                                  className="text-xs font-medium text-slate-600 hover:underline disabled:opacity-50"
+                                  className="text-xs font-medium text-slate-600 dark:text-slate-300 hover:underline disabled:opacity-50"
                                 >
                                   {isArchived ? "Restore" : "Archive"}
                                 </button>
@@ -721,7 +721,7 @@ export function ScriptCatalog() {
                                   type="button"
                                   onClick={() => setPendingDelete([entry])}
                                   disabled={busy || !canWrite}
-                                  className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50"
+                                  className="text-xs font-medium text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-50"
                                 >
                                   Delete
                                 </button>
@@ -729,7 +729,7 @@ export function ScriptCatalog() {
                             </td>
                           </tr>
                           {isOpen && (
-                            <tr className="border-b border-slate-100 last:border-0">
+                            <tr className="border-b border-slate-100 dark:border-slate-800 last:border-0">
                               <td colSpan={7} className="px-4 pb-3">
                                 <pre className="max-h-64 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
                                   {entry.scriptContent}
@@ -756,13 +756,13 @@ export function ScriptCatalog() {
             onClick={() => setPendingDelete(null)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               {pendingDelete.length === 1
                 ? `Delete "${pendingDelete[0]!.name}"?`
                 : `Delete ${pendingDelete.length} scripts?`}
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               This permanently removes the script content. Archive instead if you only want it out
               of the way. The change is audited.
             </p>
@@ -770,7 +770,7 @@ export function ScriptCatalog() {
               <button
                 type="button"
                 onClick={() => setPendingDelete(null)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>

@@ -48,7 +48,7 @@ const MAX_CUSTOM_MS = 366 * 24 * 60 * 60 * 1000;
 const ACTIVE_WITHIN_MS = 7 * 24 * 60 * 60 * 1000;
 
 const REMINDER = (
-  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800">
+  <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-800">
     <span className="font-semibold">Defender can't be updated via API.</span>{" "}
     Microsoft only supports device exclusion through the Defender portal — this
     record is local to PatchPilot only. You must still exclude the device
@@ -140,7 +140,7 @@ export function DeviceExclusionModal({
     >
       {create.data ? (
         <div className="space-y-4">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs leading-relaxed text-emerald-700">
+          <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-xs leading-relaxed text-emerald-700 dark:text-emerald-400">
             {create.data.exclusions.length === 1
               ? "Device excluded"
               : `${create.data.exclusions.length} devices excluded`}{" "}
@@ -149,7 +149,7 @@ export function DeviceExclusionModal({
             scheduled remediation until the exclusion is stopped.
           </div>
           {create.data.skipped > 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
               {create.data.skipped}{" "}
               {create.data.skipped === 1 ? "device was" : "devices were"} skipped
               — no longer present in this tenant's fleet.
@@ -169,7 +169,7 @@ export function DeviceExclusionModal({
           {REMINDER}
 
           {activeDevices.length > 0 && (
-            <div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2.5 text-xs leading-relaxed text-orange-800">
+            <div className="rounded-lg border border-orange-200 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-500/10 px-3 py-2.5 text-xs leading-relaxed text-orange-800 dark:text-orange-400">
               <span className="font-semibold">
                 {isBulk
                   ? `${activeDevices.length} of these devices ${
@@ -184,23 +184,23 @@ export function DeviceExclusionModal({
           )}
 
           {isBulk && (
-            <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               {devices.map((d) => (
                 <div
                   key={d.id}
-                  className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 last:border-0"
+                  className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 px-3 py-2 last:border-0"
                 >
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-800">
+                  <span className="min-w-0 flex-1 truncate text-sm text-slate-800 dark:text-slate-100">
                     {d.hostname}
                   </span>
-                  <span className="shrink-0 text-xs text-slate-400">{d.os}</span>
+                  <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{d.os}</span>
                 </div>
               ))}
             </div>
           )}
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Justification
             </label>
             <select
@@ -208,7 +208,7 @@ export function DeviceExclusionModal({
               onChange={(e) =>
                 setJustification(e.target.value as DeviceExclusionJustification)
               }
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
             >
               {DEVICE_EXCLUSION_JUSTIFICATIONS.map((j) => (
                 <option key={j} value={j}>
@@ -219,7 +219,7 @@ export function DeviceExclusionModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Notes
             </label>
             <textarea
@@ -227,12 +227,12 @@ export function DeviceExclusionModal({
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="Optional context for other engineers (ticket reference, decommission date, etc.)"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Review date
             </label>
             <div className="grid grid-cols-5 gap-2">
@@ -244,14 +244,14 @@ export function DeviceExclusionModal({
                   className={`rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
                     duration === d.value
                       ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   {d.label}
                 </button>
               ))}
             </div>
-            <p className="mt-1.5 text-[11px] leading-tight text-slate-500">
+            <p className="mt-1.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
               {duration === "never"
                 ? "Defender's exclusions never expire. Set a review date if you want this one to lapse automatically."
                 : "The exclusion lapses on this date and the device reappears everywhere."}
@@ -263,7 +263,7 @@ export function DeviceExclusionModal({
                   onChange={setCustomDate}
                   maxDate={maxCustomDate}
                 />
-                <p className="mt-1.5 text-[11px] leading-tight text-slate-500">
+                <p className="mt-1.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
                   Custom review dates are capped at 1 year.
                 </p>
               </div>
@@ -271,13 +271,13 @@ export function DeviceExclusionModal({
           </div>
 
           {!canWrite && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
               Your role doesn't include write access.
             </div>
           )}
 
           {create.isError && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
               {create.error.message}
             </div>
           )}
@@ -286,7 +286,7 @@ export function DeviceExclusionModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Cancel
             </button>

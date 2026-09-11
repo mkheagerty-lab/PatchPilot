@@ -5,7 +5,7 @@ import { useCan } from "../../lib/auth";
 import { Card, PageHeader } from "../../components/ui";
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 dark:focus:border-slate-600 focus:outline-none";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -114,20 +114,20 @@ export function License() {
       />
 
       {!canWrite && (
-        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mb-5 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Your role doesn't include settings write access.
         </div>
       )}
 
       {isLoading ? (
         <Card>
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </Card>
       ) : (
         <>
           <Card className="mb-5 max-w-lg">
-            <div className="mb-1 text-sm font-medium text-slate-700">License key</div>
-            <p className="mb-3 text-xs text-slate-500">
+            <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">License key</div>
+            <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
               Paste the license key PatchPilot Support issued for this instance. The stored key is
               never shown again — only the decoded summary below.
             </p>
@@ -139,7 +139,7 @@ export function License() {
               placeholder="eyJhbGciOi..."
             />
             {mutation.isError && (
-              <p className="mt-2 text-xs text-rose-600">
+              <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">
                 {mutation.error instanceof ApiError
                   ? mutation.error.message
                   : "Could not save this license key."}
@@ -148,59 +148,59 @@ export function License() {
           </Card>
 
           <Card className="mb-5 max-w-lg">
-            <div className="mb-3 text-sm font-medium text-slate-700">Current plan</div>
+            <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-200">Current plan</div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">Tier</span>
-                <span className="font-medium text-slate-700">
+                <span className="text-slate-500 dark:text-slate-400">Tier</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200">
                   {tierLabel(data?.tier ?? "free", data?.trialActive ?? false)}
                 </span>
               </div>
               {data?.hasEntitlement && (
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Status</span>
-                  <span className={data.valid ? "font-medium text-emerald-600" : "font-medium text-rose-600"}>
+                  <span className="text-slate-500 dark:text-slate-400">Status</span>
+                  <span className={data.valid ? "font-medium text-emerald-600 dark:text-emerald-400" : "font-medium text-rose-600 dark:text-rose-400"}>
                     {data.valid ? "Valid" : (data.invalidReason ?? "Invalid")}
                   </span>
                 </div>
               )}
               {data?.hasEntitlement && (
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Instance ID</span>
-                  <span className="font-mono text-xs text-slate-700">{data.instanceId ?? "—"}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Instance ID</span>
+                  <span className="font-mono text-xs text-slate-700 dark:text-slate-200">{data.instanceId ?? "—"}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-slate-500">Writes enabled</span>
-                <span className="text-slate-700">{data?.writeEnabled ? "Yes" : "No"}</span>
+                <span className="text-slate-500 dark:text-slate-400">Writes enabled</span>
+                <span className="text-slate-700 dark:text-slate-200">{data?.writeEnabled ? "Yes" : "No"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Tenant limit</span>
-                <span className="text-slate-700">
+                <span className="text-slate-500 dark:text-slate-400">Tenant limit</span>
+                <span className="text-slate-700 dark:text-slate-200">
                   {data?.unlimited ? "Unlimited" : (data?.tenantLimit ?? 0)} (consented: {data?.consentedTenantCount ?? 0})
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Live Response device pool</span>
-                <span className="text-slate-700">
+                <span className="text-slate-500 dark:text-slate-400">Live Response device pool</span>
+                <span className="text-slate-700 dark:text-slate-200">
                   {data?.deviceLicenseAllocated ?? 0} / {data?.unlimited ? "Unlimited" : (data?.deviceLicensePool ?? 0)} allocated
                 </span>
               </div>
               {data?.hasEntitlement && (
                 <>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Issued</span>
-                    <span className="text-slate-700">{formatDate(data.issuedAt)}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Issued</span>
+                    <span className="text-slate-700 dark:text-slate-200">{formatDate(data.issuedAt)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Expires</span>
-                    <span className="text-slate-700">{formatDate(data.expiresAt)}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Expires</span>
+                    <span className="text-slate-700 dark:text-slate-200">{formatDate(data.expiresAt)}</span>
                   </div>
                 </>
               )}
             </div>
             {data?.tier === "free" && (
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                 Discovering and consenting tenants is always unlimited on the free tier — this
                 limit only applies to writes and syncing tenant data.
               </p>
@@ -209,9 +209,9 @@ export function License() {
 
           {data?.tier === "free" && (
             <Card className="mb-5 max-w-lg">
-              <div className="mb-1 text-sm font-medium text-slate-700">Free trial</div>
+              <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Free trial</div>
               {data.trialActive && data.trialExpiresAt ? (
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   Trial active — {daysRemaining(data.trialExpiresAt)} day
                   {daysRemaining(data.trialExpiresAt) === 1 ? "" : "s"} remaining. Writes and up
                   to {data.deviceLicensePool ?? 30} pooled Live Response devices are enabled for
@@ -220,7 +220,7 @@ export function License() {
                 </p>
               ) : data.trialAvailable ? (
                 <>
-                  <p className="mb-3 text-sm text-slate-500">
+                  <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
                     Try full write access and a 30-device Live Response pool, free for 30 days
                     across your first 5 tenants. No license key required.
                   </p>
@@ -233,7 +233,7 @@ export function License() {
                     {trialMutation.isPending ? "Starting…" : "Start 30-day trial"}
                   </button>
                   {trialMutation.isError && (
-                    <p className="mt-2 text-xs text-rose-600">
+                    <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">
                       {trialMutation.error instanceof ApiError
                         ? trialMutation.error.message
                         : "Could not start the trial."}
@@ -241,7 +241,7 @@ export function License() {
                   )}
                 </>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   Your free trial has ended — this instance is read-only until a license key is
                   uploaded below.
                 </p>
@@ -252,7 +252,7 @@ export function License() {
           {data && (data.valid || data.trialActive) && data.perTenantDeviceUsage.length > 0 && (
             <Card className="max-w-lg">
               <div className="mb-1 flex items-start justify-between gap-3">
-                <div className="text-sm font-medium text-slate-700">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
                   Live Response device usage by tenant
                 </div>
                 {!data.unlimited && (data.deviceLicensePool ?? 0) > 0 && (
@@ -264,34 +264,34 @@ export function License() {
                         ? "Your role doesn't include settings write access."
                         : "Evenly splits the pool across every write-enabled tenant and sets read-only tenants to 0. Overwrites any manual per-tenant allocation set on Settings → Tenants."
                     }
-                    className="shrink-0 rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                    className="shrink-0 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
                   >
                     {autoAssignMutation.isPending ? "Assigning…" : "Auto-assign"}
                   </button>
                 )}
               </div>
-              <p className="mb-3 text-xs text-slate-500">
+              <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
                 Each tenant's allocation is your own split of the pool above — adjust one tenant at
-                a time under <span className="font-medium text-slate-600">Settings → Tenants</span>,
-                or use <span className="font-medium text-slate-600">Auto-assign</span> to split the
+                a time under <span className="font-medium text-slate-600 dark:text-slate-300">Settings → Tenants</span>,
+                or use <span className="font-medium text-slate-600 dark:text-slate-300">Auto-assign</span> to split the
                 whole pool evenly across every write-enabled tenant (read-only tenants are set to 0
                 — they have no Live Response dispatch path to use a device on).
               </p>
               {autoAssignMutation.isError && (
-                <p className="mb-3 text-xs text-rose-600">
+                <p className="mb-3 text-xs text-rose-600 dark:text-rose-400">
                   {autoAssignMutation.error instanceof ApiError
                     ? autoAssignMutation.error.message
                     : "Could not auto-assign device licenses."}
                 </p>
               )}
               {devicesAssigned && (
-                <p className="mb-3 text-xs text-emerald-600">Devices re-assigned ✓</p>
+                <p className="mb-3 text-xs text-emerald-600 dark:text-emerald-400">Devices re-assigned ✓</p>
               )}
               <div className="space-y-2">
                 {data.perTenantDeviceUsage.map((t) => (
                   <div key={t.tenantId} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600">{t.displayName}</span>
-                    <span className={t.used >= t.limit ? "font-medium text-rose-600" : "text-slate-700"}>
+                    <span className="text-slate-600 dark:text-slate-300">{t.displayName}</span>
+                    <span className={t.used >= t.limit ? "font-medium text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-200"}>
                       {t.used} / {t.limit}
                     </span>
                   </div>

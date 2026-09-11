@@ -47,16 +47,16 @@ export function Help() {
 
       <div className="space-y-6">
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">Remediation channels</h2>
-          <p className="mb-4 text-sm text-slate-500">
+          <h2 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Remediation channels</h2>
+          <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
             PatchPilot routes each fix to the fastest channel the tenant is licensed for.
-            A channel or catalog pick with a <span className="font-medium text-amber-700">Preview</span>{" "}
+            A channel or catalog pick with a <span className="font-medium text-amber-700 dark:text-amber-400">Preview</span>{" "}
             badge is modeled end-to-end but does not actually dispatch — see the FAQ below.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   <th className="py-2 pr-4">Channel</th>
                   <th className="py-2 pr-4">Latency</th>
                   <th className="py-2">Use</th>
@@ -64,10 +64,10 @@ export function Help() {
               </thead>
               <tbody>
                 {CHANNELS.map((c) => (
-                  <tr key={c.name} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 font-medium text-slate-700">{c.name}</td>
-                    <td className="py-2 pr-4 text-slate-500">{c.latency}</td>
-                    <td className="py-2 text-slate-500">{c.use}</td>
+                  <tr key={c.name} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
+                    <td className="py-2 pr-4 font-medium text-slate-700 dark:text-slate-200">{c.name}</td>
+                    <td className="py-2 pr-4 text-slate-500 dark:text-slate-400">{c.latency}</td>
+                    <td className="py-2 text-slate-500 dark:text-slate-400">{c.use}</td>
                   </tr>
                 ))}
               </tbody>
@@ -76,22 +76,22 @@ export function Help() {
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">Frequently asked</h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Frequently asked</h2>
           <div className="divide-y divide-slate-100">
             {FAQS.map((f) => (
               <div key={f.q} className="py-3 first:pt-0 last:pb-0">
-                <div className="text-sm font-medium text-slate-800">{f.q}</div>
-                <div className="mt-1 text-sm text-slate-500">{f.a}</div>
+                <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{f.q}</div>
+                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">{f.a}</div>
               </div>
             ))}
           </div>
         </Card>
 
         <Card>
-          <h2 className="mb-2 text-sm font-semibold text-slate-900">Support</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Support</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             For anything not covered here, contact PatchPilot Support at{" "}
-            <a href="mailto:support@patchpilot365.com" className="text-sky-700 hover:underline">
+            <a href="mailto:support@patchpilot365.com" className="text-sky-700 dark:text-sky-300 hover:underline">
               support@patchpilot365.com
             </a>
             .

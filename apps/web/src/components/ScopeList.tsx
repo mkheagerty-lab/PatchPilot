@@ -15,9 +15,9 @@ export type ScopeStatus = "ok" | "skipped" | "failed";
 // on the resource's own service principal at all). Untested scopes (no
 // status lookup hit) fall back to the original neutral slate pill.
 export const SCOPE_STATUS_STYLES: Record<ScopeStatus, string> = {
-  ok: "border border-emerald-200 bg-emerald-50 text-emerald-700",
-  skipped: "border border-amber-200 bg-amber-50 text-amber-700",
-  failed: "border border-rose-200 bg-rose-50 text-rose-700",
+  ok: "border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  skipped: "border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  failed: "border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400",
 };
 export const SCOPE_STATUS_LABELS: Record<ScopeStatus, string> = {
   ok: "OK — granted and live",
@@ -47,12 +47,12 @@ export function ScopeList({
   return (
     <div>
       <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
           {title}
         </span>
         <span
           title="PatchPilot only ever requests Delegated (signed-in user) permissions, never Application (app-only) ones — GDAP doesn't support app-only access to customer tenants, and it keeps every action attributable to an engineer. If this same permission name shows a different 'Application' type in the Entra portal, that grant isn't the one PatchPilot's delegated tokens actually use."
-          className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500"
+          className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400"
         >
           Delegated
         </span>
@@ -66,14 +66,14 @@ export function ScopeList({
               key={s}
               title={status ? SCOPE_STATUS_LABELS[status] : "Not yet tested"}
               className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[11px] ${
-                status ? SCOPE_STATUS_STYLES[status] : "bg-slate-100 text-slate-600"
+                status ? SCOPE_STATUS_STYLES[status] : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
               }`}
             >
               {s}
               {isWriteGated && (
                 <span
                   title="Only published and consented when 'Include remediation write scopes' is checked while running Add API Permissions — it's listed here either way since this panel always shows every scope PatchPilot could ever request."
-                  className="rounded-full bg-blue-100 px-1.5 font-sans text-[9px] font-medium text-blue-700"
+                  className="rounded-full bg-blue-100 dark:bg-blue-500/15 px-1.5 font-sans text-[9px] font-medium text-blue-700 dark:text-blue-300"
                 >
                   write
                 </span>

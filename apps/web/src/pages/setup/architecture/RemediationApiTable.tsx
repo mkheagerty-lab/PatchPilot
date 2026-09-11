@@ -57,7 +57,7 @@ export function RemediationApiTable() {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+          <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
             <th className="px-5 py-3 font-medium">What it does</th>
             <th className="px-5 py-3 font-medium">API</th>
             <th className="px-5 py-3 font-medium">Endpoint</th>
@@ -65,10 +65,10 @@ export function RemediationApiTable() {
         </thead>
         <tbody>
           {ROWS.map((row) => (
-            <tr key={row.endpoint} className="border-b border-slate-100 last:border-0">
-              <td className="px-5 py-3 text-slate-700">{row.purpose}</td>
-              <td className="px-5 py-3 whitespace-nowrap text-slate-600">{row.api}</td>
-              <td className="px-5 py-3 font-mono text-xs text-slate-500">{row.endpoint}</td>
+            <tr key={row.endpoint} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
+              <td className="px-5 py-3 text-slate-700 dark:text-slate-200">{row.purpose}</td>
+              <td className="px-5 py-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{row.api}</td>
+              <td className="px-5 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">{row.endpoint}</td>
             </tr>
           ))}
         </tbody>
