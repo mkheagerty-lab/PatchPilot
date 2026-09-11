@@ -33,7 +33,6 @@ const GROUPS: NavGroup[] = [
       { label: "Schedules", to: "/schedules" },
       { label: "Security Recommendations", to: "/recommendations" },
       { label: "Vulnerabilities", to: "/vulnerabilities" },
-      { label: "Windows Updates", to: "/windows-updates" },
     ],
   },
   {
@@ -70,10 +69,10 @@ const GROUPS: NavGroup[] = [
       { label: "Compliance SLA", to: "/settings/sla" },
       { label: "License", to: "/settings/license" },
       { label: "Notifications", to: "/settings/notifications" },
-      { label: "Target Build", to: "/settings/feature-updates" },
       { label: "Tenants", to: "/settings/tenants" },
       { label: "Updates", to: "/settings/updates" },
       { label: "Users", to: "/settings/users", permission: "users:manage" },
+      { label: "Windows Update Policies", to: "/settings/windows-updates" },
     ],
   },
 ];

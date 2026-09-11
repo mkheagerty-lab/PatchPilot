@@ -4,7 +4,7 @@ import { CLIENT_BUILDS, latestClientBuild } from "@patchpilot/shared";
 import { api } from "../../lib/api";
 import { useCan } from "../../lib/auth";
 import { useTenant } from "../../lib/tenant";
-import { Card, PageHeader } from "../../components/ui";
+import { Card } from "../../components/ui";
 
 /** Sentinel <select> value for "use the default" — maps to null on save. */
 const DEFAULT_VALUE = "__default__";
@@ -27,7 +27,7 @@ const LABEL_OPTIONS = (() => {
 
 const DEFAULT_LABEL = CLIENT_BUILDS[latestClientBuild()];
 
-export function FeatureUpdates() {
+export function TargetBuildTab() {
   const qc = useQueryClient();
   const canWrite = useCan("settings:write");
   const { activeTenant, activeTenantId, isAllTenants } = useTenant();
@@ -53,23 +53,8 @@ export function FeatureUpdates() {
 
   return (
     <div>
-      <PageHeader
-        title="Target Build"
-        subtitle="The Windows feature-update version this tenant's fleet should be on. Devices behind this build show as “Behind” on the Devices page. Not the same as the Windows Updates page's Feature Updates tab, which manages actual Intune rollout policies."
-        actions={
-          <button
-            onClick={() => mutation.mutate(selected === DEFAULT_VALUE ? null : selected)}
-            disabled={!canWrite || !activeTenant || !dirty || mutation.isPending}
-            title={!canWrite ? "Your role doesn't include settings write access." : undefined}
-            className="rounded-md bg-[var(--pp-primary)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-90 disabled:opacity-50"
-          >
-            {mutation.isPending ? "Saving…" : saved ? "Saved ✓" : "Save"}
-          </button>
-        }
-      />
-
       {!canWrite && (
-        <div className="mb-5 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+        <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Your role doesn't include settings write access.
         </div>
       )}
@@ -104,6 +89,17 @@ export function FeatureUpdates() {
                 A device is flagged “Behind” once its installed build is older than this target.
                 Leave on default to always track the latest known release.
               </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => mutation.mutate(selected === DEFAULT_VALUE ? null : selected)}
+                disabled={!canWrite || !activeTenant || !dirty || mutation.isPending}
+                title={!canWrite ? "Your role doesn't include settings write access." : undefined}
+                className="rounded-md bg-[var(--pp-primary)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-90 disabled:opacity-50"
+              >
+                {mutation.isPending ? "Saving…" : saved ? "Saved ✓" : "Save"}
+              </button>
             </div>
           </div>
         </Card>
