@@ -12,6 +12,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- App Registration and Architecture now document that Defender for
+  Endpoint's Live Response and its unsigned-script execution are gated
+  behind two "Advanced features" toggles in the Microsoft 365 Defender
+  portal that no API permission or PowerShell cmdlet can set — a Global
+  Administrator has to enable them by hand, once per tenant, with basic
+  steps included on both pages.
 - Rename "Windows Updates" to "Windows Update Policies" and move it out of
   Operations into Settings — every tab on it (Feature Updates, Quality
   Updates, Update Rings, Driver Updates) manages Intune policy objects, not

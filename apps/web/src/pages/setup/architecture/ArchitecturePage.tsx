@@ -375,6 +375,7 @@ const PREREQUISITES_AT_A_GLANCE: string[] = [
   "Microsoft Defender for Business, or Defender for Endpoint Plan 1+ — for Live Response (bundled in Microsoft 365 Business Premium or Microsoft 365 E3/E5)",
   "A GDAP relationship via Microsoft Partner Center — before PatchPilot can reach a customer tenant at all",
   "Membership in the home tenant's AdminAgents group — to discover existing GDAP relationships during onboarding",
+  "Live Response and Unsigned Scripts enabled manually, per tenant, in the Microsoft 365 Defender portal — no API or PowerShell cmdlet can set these",
 ];
 
 const HOME_TENANT_PREREQUISITES: { title: string; body: ReactNode }[] = [
@@ -408,6 +409,46 @@ const CUSTOMER_TENANT_PREREQUISITES: { title: string; body: ReactNode }[] = [
   {
     title: "AdminAgents membership, to discover relationships during onboarding",
     body: "Enumerating existing GDAP relationships — what Deploy-PatchPilot.ps1 does to find customer tenants to onboard — has a Partner Center-specific legacy requirement: the connected account must be a member of the home tenant's AdminAgents security group, in addition to holding Global Administrator directly. Without it, the Graph call returns a genuine success with an empty list rather than an error, so a true Global Administrator can look like they have zero GDAP customers until added to AdminAgents.",
+  },
+  {
+    title: "Live Response and Unsigned Scripts, enabled manually per tenant",
+    body: (
+      <>
+        <p>
+          Granting the write API permissions on the App Registration page
+          lets PatchPilot <em>call</em> Live Response — it doesn&apos;t turn
+          Live Response on. Microsoft gates the feature itself, and its
+          ability to run PatchPilot&apos;s own unsigned scripts, behind two
+          &quot;Advanced features&quot; toggles in the Microsoft 365
+          Defender portal that no Graph/Defender API permission or
+          PowerShell cmdlet can set. A Global Administrator or Security
+          Administrator has to enable them by hand, once per tenant, before
+          Live Response will work there — PatchPilot has no way to detect a
+          tenant that hasn&apos;t done this beyond a failed job&apos;s
+          access-denied error.
+        </p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5">
+          <li>
+            Sign in to{" "}
+            <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 font-mono text-xs">
+              security.microsoft.com
+            </code>{" "}
+            for that tenant.
+          </li>
+          <li>Settings (gear icon) → Endpoints → Advanced features.</li>
+          <li>Turn on Live response.</li>
+          <li>Turn on Live response for servers, if any managed devices are Windows Server.</li>
+          <li>
+            Turn on Live response unsigned script execution — required for
+            PatchPilot&apos;s scripts, which aren&apos;t Microsoft-signed.
+          </li>
+        </ol>
+        <p className="mt-2">
+          See App Registration&apos;s own Get Started panel for the same
+          steps alongside the write-permission grant that pairs with them.
+        </p>
+      </>
+    ),
   },
 ];
 
