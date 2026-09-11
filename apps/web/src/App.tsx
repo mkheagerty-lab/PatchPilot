@@ -21,6 +21,7 @@ import { WindowsUpdatePolicies } from "./pages/settings/WindowsUpdatePolicies";
 import { Tenants } from "./pages/settings/Tenants";
 import { License } from "./pages/settings/License";
 import { Updates } from "./pages/settings/Updates";
+import { ServerHealth } from "./pages/settings/ServerHealth";
 import { SetupHealth } from "./pages/setup/SetupHealth";
 import { AppRegistration } from "./pages/setup/AppRegistration";
 import { ArchitecturePage } from "./pages/setup/architecture/ArchitecturePage";
@@ -208,6 +209,7 @@ export default function App() {
           <Route path="settings/tenants" element={<Tenants />} />
           <Route path="settings/license" element={<License />} />
           <Route path="settings/updates" element={<Updates />} />
+          <Route path="settings/server-health" element={<ServerHealth />} />
           <Route path="help" element={<Help />} />
           <Route
             path="settings/users"

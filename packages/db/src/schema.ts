@@ -1137,6 +1137,41 @@ export const updateRuns = pgTable(
   ],
 );
 
+// ---- server control requests (Settings -> Server Health -> Containers) ----
+// Same rationale as update_runs above: the updater sidecar needs
+// FOR UPDATE SKIP LOCKED row-claiming semantics, so this is a dedicated
+// table rather than a settings blob. Covers Phase 2 of the Server Health
+// page — restarting an individual infra container, or the whole compose
+// stack — both of which need the updater's Docker socket access.
+export const serverControlActionEnum = pgEnum("server_control_action", [
+  "restart-container",
+  "restart-stack",
+]);
+
+export const serverControlRequests = pgTable(
+  "server_control_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    action: serverControlActionEnum("action").notNull(),
+    // Container name for restart-container; null for restart-stack (whole
+    // compose stack) — same nullable-for-the-whole-stack convention as
+    // deviceId columns elsewhere going null for a tenant-wide row.
+    target: text("target"),
+    status: jobStatusEnum("status").notNull().default("queued"),
+    // Captured docker compose stdout+stderr from the updater sidecar,
+    // bounded there before it's written back — same convention as
+    // updateRuns.output.
+    output: text("output"),
+    // Engineer (UPN) who triggered this run. No FK — same soft-attribution
+    // style as jobs.engineer/auditLog.engineer/updateRuns.triggeredBy.
+    requestedBy: text("requested_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (t) => [index("server_control_requests_status_idx").on(t.status)],
+);
+
 // ---- custom domains (Setup -> App Registration "Custom domain" section) ----
 // One row per additional hostname this instance should accept logins/OAuth
 // callbacks on, on top of the deploy-time PUBLIC_URL. "subdomain" rows are a

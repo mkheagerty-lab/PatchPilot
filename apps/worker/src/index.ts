@@ -3,7 +3,14 @@ import { Worker } from "bullmq";
 import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
 import { auditSafe, env } from "@patchpilot/graph";
-import { CHANNEL_SPECS, CREDENTIALS_ROTATED_CHANNEL, SYSTEM_ACTORS, sanitizeDbTextBounded } from "@patchpilot/shared";
+import {
+  CHANNEL_SPECS,
+  CREDENTIALS_ROTATED_CHANNEL,
+  STALE_TIMEOUT_MS,
+  SYSTEM_ACTORS,
+  WORKER_RESTART_CHANNEL,
+  sanitizeDbTextBounded,
+} from "@patchpilot/shared";
 import { sendAlertEmail } from "@patchpilot/shared/alerting";
 import { registerAlertingResolver } from "./alerting-config.js";
 import { REMEDIATION_QUEUE, connection, RemediationJob } from "./queue.js";
@@ -296,8 +303,11 @@ worker.on("error", (err) => {
  * from an earlier session are still "running" with no `finishedAt`). This
  * sweep marks any job over 2 hours old as failed so the rest of the queue
  * (and anyone waiting on it in the UI) isn't stuck behind a dead run.
+ *
+ * STALE_TIMEOUT_MS itself now lives in @patchpilot/shared's
+ * health-thresholds.ts, shared with apps/api's Server Health "stuck jobs"
+ * tile so both agree on the same cutoff.
  */
-const STALE_TIMEOUT_MS = 2 * 60 * 60_000;
 const SWEEP_INTERVAL_MS = 5 * 60_000;
 
 async function sweepStaleJobs(): Promise<void> {
@@ -394,6 +404,22 @@ if (!env.DEMO_MODE) {
   credentialsSubscriber.on("message", (channel) => {
     if (channel !== CREDENTIALS_ROTATED_CHANNEL) return;
     log.info("credentials rotated — exiting so the process manager restarts us with them");
+    process.exit(0);
+  });
+}
+
+// Restart on demand: POST /api/server-health/restart-worker (an admin action,
+// confirmed in the UI) publishes here. Deliberately a separate channel from
+// CREDENTIALS_ROTATED_CHANNEL above — that one is also subscribed to by
+// apps/api, so reusing it would restart the api too. A dedicated
+// duplicate() connection, same reasoning as the credentials subscriber.
+{
+  const workerRestartSubscriber = connection.duplicate();
+  workerRestartSubscriber.on("error", (err) => log.error({ err }, "worker restart subscriber error"));
+  await workerRestartSubscriber.subscribe(WORKER_RESTART_CHANNEL);
+  workerRestartSubscriber.on("message", (channel) => {
+    if (channel !== WORKER_RESTART_CHANNEL) return;
+    log.info("restart requested via Server Health — exiting so the process manager restarts us");
     process.exit(0);
   });
 }

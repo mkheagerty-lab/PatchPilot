@@ -35,6 +35,20 @@ export async function pingSessionRedis(): Promise<boolean> {
   }
 }
 
+/** Same probe as pingSessionRedis(), but returns latency for the Server
+ *  Health "Services" tab — that page wants a millisecond number to show
+ *  alongside the pass/fail pill, which the plain boolean above doesn't carry.
+ *  /api/health stays on pingSessionRedis() unchanged; this is additive. */
+export async function pingSessionRedisTimed(): Promise<{ ok: boolean; latencyMs: number | null }> {
+  const startedAt = Date.now();
+  try {
+    await connection.ping();
+    return { ok: true, latencyMs: Date.now() - startedAt };
+  } catch {
+    return { ok: false, latencyMs: null };
+  }
+}
+
 export const redisSessionStore = {
   set(sessionId: string, session: Session, callback: (err?: unknown) => void) {
     connection

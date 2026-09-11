@@ -137,6 +137,14 @@ export const AUDIT_RESOURCE_TYPES = [
   // "setting" (resourceId "updates") instead, same split as every other
   // settings-blob page.
   "update-run",
+  // The api or worker process itself (Settings > Server Health) — there's no
+  // DB row backing a restart, so resourceId is just "api" or "worker".
+  "server-process",
+  // A queued server_control_requests row (Settings > Server Health >
+  // Containers, Phase 2) — covers both an individual container restart
+  // (resourceId is the container name) and a whole-stack restart
+  // (resourceId is the literal "stack").
+  "server-control-request",
 ] as const;
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
 
@@ -373,6 +381,18 @@ export const AUDIT_ACTIONS = [
   // Targets a version that previously succeeded on this instance — same
   // hand-off as update:run-now, just going backward.
   "update:rollback",
+  // server health (Settings > Server Health — process restarts)
+  // Self-restart: the api process exits itself (restart-after-reply.ts) and
+  // Compose's restart policy respawns it.
+  "server:restart-api",
+  // Cross-process: publishes WORKER_RESTART_CHANNEL; the worker exits itself
+  // on receipt and Compose respawns it. Written by the api, not the worker,
+  // since the api is the one that received the confirmed request.
+  "server:restart-worker",
+  // Queued, not immediate: inserts a server_control_requests row the
+  // updater sidecar polls and executes out-of-band (see infra/updater/run.sh).
+  "server:restart-container",
+  "server:restart-stack",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -516,6 +536,11 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "update:schedule": "Update scheduled",
   "update:cancel": "Scheduled update cancelled",
   "update:rollback": "Rolled back",
+
+  "server:restart-api": "API restarted",
+  "server:restart-worker": "Worker restarted",
+  "server:restart-container": "Container restart requested",
+  "server:restart-stack": "Full stack restart requested",
 };
 
 /**
@@ -706,6 +731,15 @@ export const AUDIT_ACTION_GROUPS: ReadonlyArray<{
   {
     label: "Updates",
     actions: ["update:check", "update:run-now", "update:schedule", "update:cancel", "update:rollback"],
+  },
+  {
+    label: "Server Health",
+    actions: [
+      "server:restart-api",
+      "server:restart-worker",
+      "server:restart-container",
+      "server:restart-stack",
+    ],
   },
 ];
 
