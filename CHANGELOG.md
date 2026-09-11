@@ -12,6 +12,21 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Windows Update Policies: existing Quality Update, Feature Update, Update
+  Ring, and Driver Update rows across all four tabs are now clickable,
+  opening a detail drawer with the full policy settings (assignments,
+  deferral/reboot windows, deployment options, Intune profile ID, etc.) —
+  previously nothing was visible beyond the table's own columns. The "New
+  feature-update campaign" modal now matches Intune's own Feature Update
+  profile layout more closely: the Optional checkbox sits next to Target
+  version, Included/Excluded group pickers moved to the bottom, and the
+  removed "Offer starts"/"Offer ends" date pickers are replaced with a
+  "Deployment options" section showing (a locked, always-selected) "Make
+  update available as soon as possible" — the offer window the backend
+  still requires is now computed automatically (now → +365 days) rather
+  than picked, since the rollout interval is what actually paces the
+  offer.
+
 ## [0.14.0] - 2026-09-11
 
 - Catalog coverage (`GET /api/catalog/coverage` and
