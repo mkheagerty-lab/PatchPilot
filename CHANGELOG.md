@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.13.0] - 2026-09-11
+
 - Fix the Jobs page's "Delete selected" (and per-row "Delete") doing nothing.
   Both were gated on a native `window.confirm()`, which silently returns
   false — with no dialog and no feedback — whenever the browser suppresses
