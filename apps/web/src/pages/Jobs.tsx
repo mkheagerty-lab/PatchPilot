@@ -18,10 +18,10 @@ import { Card, PageHeader } from "../components/ui";
 import { downloadCsv } from "../lib/csv";
 
 const STATUS_STYLES: Record<JobStatus, string> = {
-  queued: "bg-slate-100 text-slate-600",
-  running: "bg-sky-100 text-sky-700",
-  succeeded: "bg-emerald-100 text-emerald-700",
-  failed: "bg-rose-100 text-rose-700",
+  queued: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
+  running: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  succeeded: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  failed: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
 };
 
 function StatusChip({ status }: { status: JobStatus }) {
@@ -76,6 +76,13 @@ type SortKey = "queuedAt" | "finishedAt" | "status";
 
 type GroupBy = "batch" | "schedule" | "cve" | "software" | "device" | "none";
 
+/** A pending bulk/single delete awaiting the in-app confirm modal. */
+interface PendingDelete {
+  ids: string[];
+  /** What the modal calls the target(s) — a single job id or "N jobs". */
+  label: string;
+}
+
 export function Jobs() {
   const { activeTenantId } = useTenant();
   const canWrite = useCan("operations:write");
@@ -105,6 +112,12 @@ export function Jobs() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkError, setBulkError] = useState<string | null>(null);
+  // Native window.confirm silently no-ops with zero feedback in plenty of
+  // ordinary situations (Chrome's "prevent this page from creating additional
+  // dialogs" toggle, browser automation, an iframe without modal permission) —
+  // this bit us before, see the rationale in settings/Tenants.tsx. Deletes go
+  // through an in-app modal instead.
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const queryClient = useQueryClient();
 
   const queryKey = ["jobs", activeTenantId, showArchived];
@@ -306,9 +319,14 @@ export function Jobs() {
   // Job Name only populates for scheduled/automated jobs — a manual "Fix
   // now" job has no name of its own, so its cell stays blank.
   function renderScheduleCell(scheduleId: string | "Multiple" | null) {
-    if (scheduleId === "Multiple") return <span className="text-slate-600">Multiple</span>;
-    if (!scheduleId) return <span className="text-slate-400">—</span>;
-    return <span>{scheduleNameById.get(scheduleId) ?? "Recurring schedule"}</span>;
+    if (scheduleId === "Multiple")
+      return <span className="font-semibold text-slate-600 dark:text-slate-300">Multiple</span>;
+    if (!scheduleId) return <span className="text-slate-400 dark:text-slate-500">—</span>;
+    return (
+      <span className="font-semibold text-slate-800 dark:text-slate-100">
+        {scheduleNameById.get(scheduleId) ?? "Recurring schedule"}
+      </span>
+    );
   }
 
   // Unlike uniformOrMultiple, treats null (manual) as its own distinct value
@@ -383,6 +401,16 @@ export function Jobs() {
     },
     onError: (err: Error) => setBulkError(err.message),
   });
+
+  // Runs whichever delete the confirm modal was opened for: a single-row
+  // delete (one id, hard DELETE) or a multi-select bulk delete.
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    const { ids } = pendingDelete;
+    if (ids.length === 1) deleteMutation.mutate(ids[0]!);
+    else bulkDeleteMutation.mutate(ids);
+    setPendingDelete(null);
+  }
 
   // Selection is scoped to ids that still exist so a completed mutation, tenant
   // switch, or the archived-jobs toggle can't leave phantom rows "selected".
@@ -472,8 +500,9 @@ export function Jobs() {
   }
 
   // Shared by standalone rows and by the nested rows inside an expanded batch
-  // — `nested` only tweaks styling (indent + a faint tint) so batch members
-  // read as a sub-list rather than a second set of top-level rows.
+  // — `nested` only tweaks styling (indent + sitting on the plain card
+  // background) so batch members read as a sub-list under the darker group
+  // header row rather than a second set of top-level rows.
   function renderJobRow(job: Job, nested = false) {
     const isOpen = expanded === job.id;
     const isArchived = !!job.archivedAt;
@@ -483,31 +512,31 @@ export function Jobs() {
       <Fragment key={job.id}>
         <tr
           onClick={() => setExpanded(isOpen ? null : job.id)}
-          className={`cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50 ${isArchived ? "opacity-60" : ""} ${nested ? "bg-slate-50/40" : ""}`}
+          className={`cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 ${isArchived ? "opacity-60" : ""} ${nested ? "bg-white dark:bg-slate-900" : ""}`}
         >
           <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
             <input
               type="checkbox"
               checked={selected.has(job.id)}
               onChange={() => toggleSelect(job.id)}
-              className="rounded border-slate-300"
+              className="rounded border-slate-300 dark:border-slate-600"
               aria-label={`Select job ${job.id}`}
             />
           </td>
           <td className="px-5 py-3">{renderScheduleCell(job.scheduleId)}</td>
-          <td className={`px-5 py-3 font-medium text-slate-800 ${nested ? "pl-9" : ""}`}>
+          <td className={`px-5 py-3 font-medium text-slate-800 dark:text-slate-200 ${nested ? "pl-9" : ""}`}>
             {job.cveId ?? "—"}
             {job.coveredCveIds && job.coveredCveIds.length > 0 ? (
               <span
-                className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-normal text-slate-500"
+                className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-normal text-slate-500 dark:bg-slate-700 dark:text-slate-300"
                 title={`Same fix also closes: ${job.coveredCveIds.join(", ")}`}
               >
                 +{job.coveredCveIds.length}
               </span>
             ) : null}
           </td>
-          <td className="px-5 py-3 text-slate-600">{software ?? "—"}</td>
-          <td className="px-5 py-3 text-slate-600">
+          <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{software ?? "—"}</td>
+          <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
             {job.deviceId ? (
               <button
                 type="button"
@@ -515,7 +544,7 @@ export function Jobs() {
                   e.stopPropagation();
                   navigate(`/devices?device=${encodeURIComponent(job.deviceId!)}`);
                 }}
-                className="text-sky-700 underline-offset-2 hover:underline"
+                className="text-sky-700 underline-offset-2 hover:underline dark:text-sky-400"
                 title="View device details"
               >
                 {hostname ?? "—"}
@@ -524,17 +553,17 @@ export function Jobs() {
               (hostname ?? "—")
             )}
           </td>
-          <td className="px-5 py-3 text-slate-600">
+          <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
             {CHANNEL_LABELS[job.channel] ?? job.channel}
           </td>
           <td className="px-5 py-3">
             <StatusChip status={job.status} />
           </td>
-          <td className="px-5 py-3 text-slate-600">{job.engineer}</td>
-          <td className="px-5 py-3 text-slate-500">
+          <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{job.engineer}</td>
+          <td className="px-5 py-3 text-slate-500 dark:text-slate-400">
             {fmt(job.queuedAt)}
           </td>
-          <td className="px-5 py-3 text-slate-500">
+          <td className="px-5 py-3 text-slate-500 dark:text-slate-400">
             {fmt(job.finishedAt)}
           </td>
           <td className="px-5 py-3">
@@ -551,7 +580,7 @@ export function Jobs() {
                         ? "This job predates retry support and can't be resubmitted automatically."
                         : undefined
                   }
-                  className="text-xs font-medium text-sky-600 hover:text-sky-800 disabled:cursor-not-allowed disabled:text-slate-300"
+                  className="text-xs font-medium text-sky-600 hover:text-sky-800 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-sky-400 dark:hover:text-sky-300 dark:disabled:text-slate-600"
                 >
                   Retry
                 </button>
@@ -563,38 +592,36 @@ export function Jobs() {
                 }
                 disabled={!canWrite}
                 title={!canWrite ? "Your role doesn't include remediation write access." : undefined}
-                className="text-xs font-medium text-slate-500 hover:text-slate-800 disabled:cursor-not-allowed disabled:text-slate-300"
+                className="text-xs font-medium text-slate-500 hover:text-slate-800 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-slate-400 dark:hover:text-slate-100 dark:disabled:text-slate-600"
               >
                 {isArchived ? "Restore" : "Archive"}
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm(`Delete job ${job.id}? This cannot be undone.`)) {
-                    deleteMutation.mutate(job.id);
-                  }
-                }}
+                onClick={() =>
+                  setPendingDelete({ ids: [job.id], label: `job ${job.id}` })
+                }
                 disabled={!canWrite}
                 title={!canWrite ? "Your role doesn't include remediation write access." : undefined}
-                className="text-xs font-medium text-rose-500 hover:text-rose-700 disabled:cursor-not-allowed disabled:text-slate-300"
+                className="text-xs font-medium text-rose-500 hover:text-rose-700 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-rose-400 dark:hover:text-rose-300 dark:disabled:text-slate-600"
               >
                 Delete
               </button>
             </div>
             {notice[job.id] && (
-              <p className="mt-1 text-xs text-rose-600">{notice[job.id]}</p>
+              <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{notice[job.id]}</p>
             )}
           </td>
         </tr>
         {isOpen && (
-          <tr key={`${job.id}-detail`} className="bg-slate-50">
+          <tr key={`${job.id}-detail`} className="bg-slate-50 dark:bg-slate-800/50">
             <td colSpan={11} className="px-5 py-4">
-              <div className="mb-2 text-xs text-slate-500">
+              <div className="mb-2 text-xs text-slate-500 dark:text-slate-400">
                 Job {job.id} · exit code{" "}
                 {job.exitCode === null ? "—" : job.exitCode} · started{" "}
                 {fmt(job.startedAt)}
               </div>
-              <pre className="overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100">
+              <pre className="overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 dark:bg-slate-950">
                 {job.output ?? "(no output yet)"}
               </pre>
             </td>
@@ -624,7 +651,7 @@ export function Jobs() {
       <Fragment key={`group-${groupKey}`}>
         <tr
           onClick={() => setExpandedBatch(isOpen ? null : groupKey)}
-          className="cursor-pointer border-b border-slate-100 bg-slate-50 last:border-0 hover:bg-slate-100"
+          className="cursor-pointer border-b border-slate-200 bg-slate-100 font-medium last:border-0 hover:bg-slate-200/70 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700/70"
         >
           <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
             <input
@@ -634,16 +661,16 @@ export function Jobs() {
                 if (el) el.indeterminate = !allGroupSelected && someGroupSelected;
               }}
               onChange={() => toggleBatchSelect(groupJobs)}
-              className="rounded border-slate-300"
+              className="rounded border-slate-300 dark:border-slate-600"
               aria-label={`Select group ${groupKey}`}
             />
           </td>
           <td className="px-5 py-3">{renderScheduleCell(scheduleId)}</td>
-          <td className="px-5 py-3 font-medium text-slate-800" colSpan={3}>
-            <span className="mr-2 inline-block w-3 text-slate-400">{isOpen ? "▾" : "▸"}</span>
+          <td className="px-5 py-3 font-semibold text-slate-900 dark:text-slate-100" colSpan={3}>
+            <span className="mr-2 inline-block w-3 text-slate-400 dark:text-slate-500">{isOpen ? "▾" : "▸"}</span>
             {groupLabel(groupJobs)}
           </td>
-          <td className="px-5 py-3 text-slate-600">
+          <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
             {channel === null
               ? "—"
               : channel === "Multiple"
@@ -653,10 +680,10 @@ export function Jobs() {
           <td className="px-5 py-3">
             <BatchStatusSummary jobs={groupJobs} />
           </td>
-          <td className="px-5 py-3 text-slate-600">{engineer ?? "—"}</td>
-          <td className="px-5 py-3 text-slate-500">{fmt(earliestQueued)}</td>
-          <td className="px-5 py-3 text-slate-500">{fmt(latestFinished)}</td>
-          <td className="px-5 py-3 text-slate-500">{groupJobs.length} jobs</td>
+          <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{engineer ?? "—"}</td>
+          <td className="px-5 py-3 text-slate-500 dark:text-slate-400">{fmt(earliestQueued)}</td>
+          <td className="px-5 py-3 text-slate-500 dark:text-slate-400">{fmt(latestFinished)}</td>
+          <td className="px-5 py-3 text-slate-500 dark:text-slate-400">{groupJobs.length} jobs</td>
         </tr>
         {isOpen && groupJobs.map((j) => renderJobRow(j, true))}
       </Fragment>
@@ -673,7 +700,7 @@ export function Jobs() {
             type="button"
             onClick={exportCsv}
             disabled={visibleJobs.length === 0}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             Export CSV
           </button>
@@ -681,12 +708,12 @@ export function Jobs() {
       />
 
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-slate-600">
+        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
           <input
             type="checkbox"
             checked={showArchived}
             onChange={(e) => setShowArchived(e.target.checked)}
-            className="rounded border-slate-300"
+            className="rounded border-slate-300 dark:border-slate-600"
           />
           Show archived jobs
         </label>
@@ -696,13 +723,13 @@ export function Jobs() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search CVE, software, device, engineer…"
-          className="w-64 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+          className="w-64 rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
 
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as JobStatus | "all")}
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         >
           <option value="all">All statuses</option>
           <option value="queued">Queued</option>
@@ -714,7 +741,7 @@ export function Jobs() {
         <select
           value={channelFilter}
           onChange={(e) => setChannelFilter(e.target.value)}
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         >
           <option value="all">All channels</option>
           {channelOptions.map((c) => (
@@ -727,7 +754,7 @@ export function Jobs() {
         <select
           value={groupBy}
           onChange={(e) => setGroupBy(e.target.value as GroupBy)}
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         >
           <option value="batch">Group: Batch</option>
           <option value="schedule">Group: Scheduled job</option>
@@ -740,7 +767,7 @@ export function Jobs() {
         <select
           value={sortKey}
           onChange={(e) => setSortKey(e.target.value as SortKey)}
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         >
           <option value="queuedAt">Sort: Queued</option>
           <option value="finishedAt">Sort: Finished</option>
@@ -750,7 +777,7 @@ export function Jobs() {
         <button
           type="button"
           onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           title="Toggle sort direction"
         >
           {sortDir === "asc" ? "↑ Asc" : "↓ Desc"}
@@ -760,15 +787,15 @@ export function Jobs() {
           type="button"
           onClick={() => refetch()}
           disabled={isFetching}
-          className="ml-auto rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+          className="ml-auto rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           {isFetching ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
       {selected.size > 0 && (
-        <div className="mb-3 flex items-center gap-3 rounded-md border border-slate-300 bg-slate-50 px-4 py-2 text-sm">
-          <span className="font-medium text-slate-700">
+        <div className="mb-3 flex items-center gap-3 rounded-md border border-slate-300 bg-slate-50 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800">
+          <span className="font-medium text-slate-700 dark:text-slate-200">
             {selected.size} job{selected.size === 1 ? "" : "s"} selected
           </span>
           <button
@@ -781,33 +808,34 @@ export function Jobs() {
             }
             disabled={!canWrite || bulkArchiveMutation.isPending || bulkDeleteMutation.isPending}
             title={!canWrite ? "Your role doesn't include remediation write access." : undefined}
-            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             {allSelectedArchived ? "Restore selected" : "Archive selected"}
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm(`Delete ${selected.size} job(s)? This cannot be undone.`)) {
-                bulkDeleteMutation.mutate([...selected]);
-              }
-            }}
+            onClick={() =>
+              setPendingDelete({
+                ids: [...selected],
+                label: `${selected.size} job${selected.size === 1 ? "" : "s"}`,
+              })
+            }
             disabled={!canWrite || bulkArchiveMutation.isPending || bulkDeleteMutation.isPending}
             title={!canWrite ? "Your role doesn't include remediation write access." : undefined}
-            className="rounded-md border border-rose-300 px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+            className="rounded-md border border-rose-300 px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
           >
             Delete selected
           </button>
           <button
             type="button"
             onClick={() => setSelected(new Set())}
-            className="text-xs font-medium text-slate-500 hover:text-slate-700"
+            className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           >
             Clear selection
           </button>
-          {bulkError && <span className="text-xs text-rose-600">{bulkError}</span>}
+          {bulkError && <span className="text-xs text-rose-600 dark:text-rose-400">{bulkError}</span>}
           {!canWrite && (
-            <span className="text-xs text-amber-600">
+            <span className="text-xs text-amber-600 dark:text-amber-400">
               Your role doesn't include remediation write access.
             </span>
           )}
@@ -816,18 +844,18 @@ export function Jobs() {
 
       {isLoading ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">Loading jobs…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading jobs…</p>
         </Card>
       ) : jobs.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             No remediation jobs yet for this tenant. Run one from a finding
             on Vulnerabilities, Recommendations, Devices, or Inventories.
           </p>
         </Card>
       ) : visibleJobs.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             No jobs match the current search/filter.
           </p>
         </Card>
@@ -836,13 +864,13 @@ export function Jobs() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
                   <th className="px-5 py-3 font-medium">
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
                       onChange={toggleSelectAll}
-                      className="rounded border-slate-300"
+                      className="rounded border-slate-300 dark:border-slate-600"
                       aria-label="Select all jobs"
                     />
                   </th>
@@ -868,6 +896,44 @@ export function Jobs() {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* In-app confirm, not window.confirm — see the rationale in settings/Tenants.tsx. */}
+      {pendingDelete && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setPendingDelete(null)}
+            aria-hidden
+          />
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              Delete {pendingDelete.label}?
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              This permanently removes the job{pendingDelete.ids.length === 1 ? "" : "s"} and
+              cannot be undone. Archive instead if you only want{" "}
+              {pendingDelete.ids.length === 1 ? "it" : "them"} out of the way. The change is
+              audited.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingDelete(null)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-rose-500"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

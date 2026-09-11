@@ -12,6 +12,19 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fix the Jobs page's "Delete selected" (and per-row "Delete") doing nothing.
+  Both were gated on a native `window.confirm()`, which silently returns
+  false — with no dialog and no feedback — whenever the browser suppresses
+  page dialogs (Chrome's "prevent this page from creating additional
+  dialogs", automation, some embedded contexts). They now use the same
+  in-app confirmation modal the rest of the app already uses for destructive
+  actions. Archive was unaffected because it never prompted.
+- Jobs page readability: the Job Name is now bold, a batch's top-level row
+  is tinted to stand out from its expanded per-device rows, and the whole
+  table (rows, filters, status pills, the bulk-action bar, the detail
+  drawer) now has proper dark-mode styling instead of near-black text on a
+  dark background.
+
 ## [0.12.0] - 2026-09-10
 
 - Fix recurring schedules missing their fire. The worker's 30s reconcile
