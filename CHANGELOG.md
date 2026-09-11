@@ -18,6 +18,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   portal that no API permission or PowerShell cmdlet can set — a Global
   Administrator has to enable them by hand, once per tenant, with basic
   steps included on both pages.
+- Rename "Windows Updates" to "Windows Update Policies" and move it out of
+  Operations into Settings — every tab on it (Feature Updates, Quality
+  Updates, Update Rings, Driver Updates) manages Intune policy objects, not
+  a live per-device work queue, so it belonged with the rest of the
+  tenant-configuration pages, not alongside act-now pages like Devices and
+  Jobs. The old name also collided in spirit with the Devices page's
+  actual patch-status view. The standalone Settings > Target Build page is
+  now a fifth tab on this page instead of a separate nav item, since it
+  configures the same tenant's Windows-build target the Feature Updates
+  tab's campaigns roll out. Old `/windows-updates` and
+  `/settings/feature-updates` URLs redirect to the new location.
 
 ## [0.13.0] - 2026-09-11
 
