@@ -17,7 +17,7 @@ import { Devices } from "./pages/Devices";
 import { Branding } from "./pages/settings/Branding";
 import { Sla } from "./pages/settings/Sla";
 import { Notifications } from "./pages/settings/Notifications";
-import { FeatureUpdates } from "./pages/settings/FeatureUpdates";
+import { WindowsUpdatePolicies } from "./pages/settings/WindowsUpdatePolicies";
 import { Tenants } from "./pages/settings/Tenants";
 import { License } from "./pages/settings/License";
 import { Updates } from "./pages/settings/Updates";
@@ -29,7 +29,6 @@ import { ChocolateyCatalog } from "./pages/ChocolateyCatalog";
 import { ScriptCatalog } from "./pages/ScriptCatalog";
 import { Schedules } from "./pages/Schedules";
 import { DeviceGroups } from "./pages/DeviceGroups";
-import { WindowsUpdates } from "./pages/WindowsUpdates";
 import { Jobs } from "./pages/Jobs";
 import { SoftwareInventory } from "./pages/SoftwareInventory";
 import { AuditLog } from "./pages/AuditLog";
@@ -163,10 +162,13 @@ export default function App() {
           <Route path="recommendations" element={<Recommendations />} />
           <Route path="devices" element={<Devices />} />
           <Route path="device-groups" element={<DeviceGroups />} />
-          <Route path="windows-updates" element={<WindowsUpdates />} />
+          <Route
+            path="windows-updates"
+            element={<Navigate to="/settings/windows-updates" replace />}
+          />
           <Route
             path="feature-update-campaigns"
-            element={<Navigate to="/windows-updates" replace />}
+            element={<Navigate to="/settings/windows-updates" replace />}
           />
           <Route path="schedules" element={<Schedules />} />
           <Route path="jobs" element={<Jobs />} />
@@ -198,7 +200,11 @@ export default function App() {
           <Route path="settings/branding" element={<Branding />} />
           <Route path="settings/sla" element={<Sla />} />
           <Route path="settings/notifications" element={<Notifications />} />
-          <Route path="settings/feature-updates" element={<FeatureUpdates />} />
+          <Route
+            path="settings/feature-updates"
+            element={<Navigate to="/settings/windows-updates?tab=target-build" replace />}
+          />
+          <Route path="settings/windows-updates" element={<WindowsUpdatePolicies />} />
           <Route path="settings/tenants" element={<Tenants />} />
           <Route path="settings/license" element={<License />} />
           <Route path="settings/updates" element={<Updates />} />

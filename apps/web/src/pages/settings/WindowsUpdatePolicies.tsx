@@ -1,22 +1,24 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, ApiError } from "../lib/api";
-import { useTenant } from "../lib/tenant";
-import { useCan } from "../lib/auth";
-import { PageHeader } from "../components/ui";
-import { FeatureUpdatesTab } from "./windows-updates/FeatureUpdatesTab";
-import { QualityUpdatesTab } from "./windows-updates/QualityUpdatesTab";
-import { UpdateRingsTab } from "./windows-updates/UpdateRingsTab";
-import { DriverUpdatesTab } from "./windows-updates/DriverUpdatesTab";
+import { api, ApiError } from "../../lib/api";
+import { useTenant } from "../../lib/tenant";
+import { useCan } from "../../lib/auth";
+import { PageHeader } from "../../components/ui";
+import { FeatureUpdatesTab } from "../windows-updates/FeatureUpdatesTab";
+import { QualityUpdatesTab } from "../windows-updates/QualityUpdatesTab";
+import { UpdateRingsTab } from "../windows-updates/UpdateRingsTab";
+import { DriverUpdatesTab } from "../windows-updates/DriverUpdatesTab";
+import { TargetBuildTab } from "../windows-updates/TargetBuildTab";
 
-type Tab = "feature-updates" | "quality-updates" | "update-rings" | "driver-updates";
+type Tab = "feature-updates" | "quality-updates" | "update-rings" | "driver-updates" | "target-build";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "feature-updates", label: "Feature Updates" },
   { key: "quality-updates", label: "Quality Updates" },
   { key: "update-rings", label: "Update Rings" },
   { key: "driver-updates", label: "Driver Updates" },
+  { key: "target-build", label: "Target Build" },
 ];
 
 interface SyncCounts {
@@ -27,7 +29,7 @@ interface SyncCounts {
   driverUpdates: number;
 }
 
-export function WindowsUpdates() {
+export function WindowsUpdatePolicies() {
   const { activeTenantId, isAllTenants } = useTenant();
   const canWrite = useCan("operations:write");
   const queryClient = useQueryClient();
@@ -66,8 +68,8 @@ export function WindowsUpdates() {
   return (
     <div>
       <PageHeader
-        title="Windows Updates"
-        subtitle="Feature updates, quality updates, update rings, and driver updates synced live from Intune."
+        title="Windows Update Policies"
+        subtitle="Feature update, quality update, update ring, and driver update policies synced live from Intune, plus this tenant's target build."
         actions={
           <button
             type="button"
@@ -108,6 +110,7 @@ export function WindowsUpdates() {
       {tab === "quality-updates" && <QualityUpdatesTab />}
       {tab === "update-rings" && <UpdateRingsTab />}
       {tab === "driver-updates" && <DriverUpdatesTab />}
+      {tab === "target-build" && <TargetBuildTab />}
     </div>
   );
 }
