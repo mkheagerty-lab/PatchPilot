@@ -5,11 +5,14 @@ import {
   demoWingetCatalogOverrides,
   demoChocolateyCatalog,
   demoChocolateyCatalogOverrides,
+  demoVulnerabilities,
   type WingetCatalogRow,
   type WingetCatalogOverrideRow,
   type ChocolateyCatalogRow,
   type ChocolateyCatalogOverrideRow,
+  type VulnerabilityRow,
 } from "@patchpilot/db";
+import { eq } from "drizzle-orm";
 import {
   matchWinget,
   isOsFinding,
@@ -68,14 +71,75 @@ export function isBundledLibrary(software: string | null | undefined): boolean {
   return BUNDLED_LIBRARY_TITLES.has(normalized);
 }
 
-export async function loadWingetCatalog(): Promise<WingetCatalogRow[]> {
+/**
+ * Process-lifetime, TTL-based cache for the four loaders below.
+ *
+ * matchWinget()/matchChocolatey() (winget.ts/chocolatey.ts) memoize their
+ * ~13k-entry token index and match results in a WeakMap keyed on the
+ * *object identity* of the catalog array they're given. That's cheap across
+ * repeated calls only if callers keep reusing the same array reference — but
+ * every loader here used to run a fresh `db.select()` on every call, handing
+ * back a brand-new array each time. So the WeakMap keyed on it never hit
+ * across requests: every Catalog-page load, coverage refresh, or tenant
+ * switch was rebuilding the full token index and re-scanning the whole
+ * catalog for every distinct software title, from zero, every time.
+ *
+ * Caching the array itself — same reference until it expires or a write
+ * invalidates it — re-enables that existing memoization for free, and the
+ * in-flight `pending` de-dupe also collapses the burst of concurrent
+ * requests a tenant switch fans out into a single DB round-trip.
+ */
+const CATALOG_CACHE_TTL_MS = 60_000;
+
+function ttlCached<T>(loader: () => Promise<T>) {
+  let cached: { value: T; expiresAt: number } | null = null;
+  let pending: Promise<T> | null = null;
+  return {
+    get(): Promise<T> {
+      if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.value);
+      if (pending) return pending;
+      pending = loader()
+        .then((value) => {
+          cached = { value, expiresAt: Date.now() + CATALOG_CACHE_TTL_MS };
+          return value;
+        })
+        .finally(() => {
+          pending = null;
+        });
+      return pending;
+    },
+    /** Drop the cached value so the next `get()` re-reads the DB — call after any write. */
+    invalidate(): void {
+      cached = null;
+    },
+  };
+}
+
+const wingetCatalogCache = ttlCached<WingetCatalogRow[]>(async () => {
   if (config.DEMO_MODE) return demoWingetCatalog;
   return db.select().from(tables.wingetCatalog);
+});
+const wingetOverridesCache = ttlCached<WingetCatalogOverrideRow[]>(async () => {
+  if (config.DEMO_MODE) return demoWingetCatalogOverrides;
+  return db.select().from(tables.wingetCatalogOverride);
+});
+
+export async function loadWingetCatalog(): Promise<WingetCatalogRow[]> {
+  return wingetCatalogCache.get();
 }
 
 export async function loadWingetOverrides(): Promise<WingetCatalogOverrideRow[]> {
-  if (config.DEMO_MODE) return demoWingetCatalogOverrides;
-  return db.select().from(tables.wingetCatalogOverride);
+  return wingetOverridesCache.get();
+}
+
+/** Call after a winget-mirror refresh completes so the next read picks up the new rows. */
+export function invalidateWingetCatalogCache(): void {
+  wingetCatalogCache.invalidate();
+}
+
+/** Call after a winget override is created or deleted so the next read reflects it. */
+export function invalidateWingetOverridesCache(): void {
+  wingetOverridesCache.invalidate();
 }
 
 export function toWingetEntries(catalog: readonly WingetCatalogRow[]): WingetCatalogEntry[] {
@@ -131,14 +195,31 @@ export async function buildWingetMatcher(): Promise<
   };
 }
 
-export async function loadChocolateyCatalog(): Promise<ChocolateyCatalogRow[]> {
+const chocolateyCatalogCache = ttlCached<ChocolateyCatalogRow[]>(async () => {
   if (config.DEMO_MODE) return demoChocolateyCatalog;
   return db.select().from(tables.chocolateyCatalog);
+});
+const chocolateyOverridesCache = ttlCached<ChocolateyCatalogOverrideRow[]>(async () => {
+  if (config.DEMO_MODE) return demoChocolateyCatalogOverrides;
+  return db.select().from(tables.chocolateyCatalogOverride);
+});
+
+export async function loadChocolateyCatalog(): Promise<ChocolateyCatalogRow[]> {
+  return chocolateyCatalogCache.get();
 }
 
 export async function loadChocolateyOverrides(): Promise<ChocolateyCatalogOverrideRow[]> {
-  if (config.DEMO_MODE) return demoChocolateyCatalogOverrides;
-  return db.select().from(tables.chocolateyCatalogOverride);
+  return chocolateyOverridesCache.get();
+}
+
+/** Call after a Chocolatey-mirror refresh completes so the next read picks up the new rows. */
+export function invalidateChocolateyCatalogCache(): void {
+  chocolateyCatalogCache.invalidate();
+}
+
+/** Call after a Chocolatey override is created or deleted so the next read reflects it. */
+export function invalidateChocolateyOverridesCache(): void {
+  chocolateyOverridesCache.invalidate();
 }
 
 export function toChocolateyEntries(catalog: readonly ChocolateyCatalogRow[]): ChocolateyCatalogEntry[] {
@@ -197,6 +278,67 @@ export async function buildChocolateyMatcher(): Promise<
     const overrides = [...(byTenant.get(tenantId) ?? []), ...global];
     return matchChocolatey(software, entries, overrides);
   };
+}
+
+/**
+ * Cached, tenant-filtered vulnerabilities loader shared by /api/catalog/coverage
+ * and /api/chocolatey-catalog/coverage (previously two separate, unfiltered
+ * `db.select().from(tables.vulnerabilities)` copies, each pulling every
+ * tenant's findings on every request and filtering down to one tenant in JS
+ * afterward). Pushing `tenantId` into the SQL `WHERE` clause hits the existing
+ * `vulns_tenant_idx` index instead of scanning the whole table, and caching the
+ * per-tenant result for a short TTL means a tenant's own repeated coverage
+ * requests (winget + Chocolatey, catalog + posture snapshot) share one read.
+ *
+ * Keyed by tenantId, with a separate `ALL_TENANTS_KEY` slot for the
+ * no-tenant-filter case (posture snapshotter / "all tenants" reports) — an
+ * unfiltered read is a distinct query from any single tenant's, so it can't
+ * share a cache entry with one.
+ */
+const ALL_TENANTS_KEY = "__all__";
+const vulnsCache = new Map<string, { value: VulnerabilityRow[]; expiresAt: number }>();
+const vulnsPending = new Map<string, Promise<VulnerabilityRow[]>>();
+
+async function loadVulnsUncached(tenantId?: string): Promise<VulnerabilityRow[]> {
+  if (config.DEMO_MODE) {
+    return tenantId ? demoVulnerabilities.filter((v) => v.tenantId === tenantId) : demoVulnerabilities;
+  }
+  return tenantId
+    ? db.select().from(tables.vulnerabilities).where(eq(tables.vulnerabilities.tenantId, tenantId))
+    : db.select().from(tables.vulnerabilities);
+}
+
+/** Tenant's vulnerabilities (or the whole estate when `tenantId` is omitted), SQL-filtered and cached. */
+export async function loadVulns(tenantId?: string): Promise<VulnerabilityRow[]> {
+  const key = tenantId ?? ALL_TENANTS_KEY;
+  const cached = vulnsCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const existingPending = vulnsPending.get(key);
+  if (existingPending) return existingPending;
+  const pending = loadVulnsUncached(tenantId)
+    .then((value) => {
+      vulnsCache.set(key, { value, expiresAt: Date.now() + CATALOG_CACHE_TTL_MS });
+      return value;
+    })
+    .finally(() => {
+      vulnsPending.delete(key);
+    });
+  vulnsPending.set(key, pending);
+  return pending;
+}
+
+/**
+ * Call after a sync writes to `vulnerabilities` for a tenant so the next read
+ * reflects it. Also drops the all-tenants slot — its aggregate is now stale
+ * too — since a targeted sync only ever touches one tenant's rows.
+ */
+export function invalidateVulnsCache(tenantId?: string): void {
+  if (tenantId) {
+    vulnsCache.delete(tenantId);
+    vulnsCache.delete(ALL_TENANTS_KEY);
+  } else {
+    vulnsCache.clear();
+  }
 }
 
 export type ChocolateyMatcher = (tenantId: string, software: string) => ChocolateyMatch | null;

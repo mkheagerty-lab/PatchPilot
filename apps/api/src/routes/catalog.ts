@@ -21,6 +21,8 @@ import {
   buildWingetMatcher,
   buildChocolateyMatcher,
   loadChocolateyCatalog,
+  invalidateWingetCatalogCache,
+  invalidateWingetOverridesCache,
 } from "../catalog/matching.js";
 import { computeCoverage } from "../catalog/coverage.js";
 import { loadExcludedDeviceIndex } from "./device-exclusions.js";
@@ -189,6 +191,7 @@ export async function catalogRoutes(app: FastifyInstance): Promise<void> {
     const startedAt = Date.now();
     try {
       const result = await refreshWingetCatalogFromMirror();
+      invalidateWingetCatalogCache();
       await audit({
         engineer,
         endpoint: WINGET_SOURCE_AUDIT_ENDPOINT,
@@ -377,6 +380,7 @@ export async function catalogRoutes(app: FastifyInstance): Promise<void> {
         .insert(tables.wingetCatalogOverride)
         .values({ tenantId, softwareTitle, packageId, createdBy: engineer })
         .returning();
+      invalidateWingetOverridesCache();
       await audit({
         engineer,
         tenantId,
@@ -410,6 +414,7 @@ export async function catalogRoutes(app: FastifyInstance): Promise<void> {
     if (!deleted) {
       return reply.code(404).send({ error: "override not found" });
     }
+    invalidateWingetOverridesCache();
     await audit({
       engineer: req.session.engineer!.upn,
       tenantId: deleted.tenantId,

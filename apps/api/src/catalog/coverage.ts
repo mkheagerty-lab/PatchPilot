@@ -1,10 +1,4 @@
 import {
-  db,
-  tables,
-  demoVulnerabilities,
-  type VulnerabilityRow,
-} from "@patchpilot/db";
-import {
   matchWinget,
   isOsFinding,
   resolveDisplaySoftwareName,
@@ -13,10 +7,10 @@ import {
   type WingetCatalogEntry,
   type WingetMatch,
 } from "@patchpilot/shared";
-import { config } from "../config.js";
 import {
   loadWingetCatalog,
   loadWingetOverrides,
+  loadVulns,
   indexWingetOverrides,
   toWingetEntries,
   buildChocolateyMatcher,
@@ -38,11 +32,6 @@ import {
  * implementations of the grouping rules below, and the whole point of a snapshot
  * is that it's the history of what the product actually displayed.
  */
-
-async function loadVulns(): Promise<VulnerabilityRow[]> {
-  if (config.DEMO_MODE) return demoVulnerabilities;
-  return db.select().from(tables.vulnerabilities);
-}
 
 /** One (tenant, software) coverage row. */
 export interface CoverageRow {
@@ -79,8 +68,9 @@ export async function computeCoverage(tenantId?: string): Promise<Coverage> {
   const catalog = await loadWingetCatalog();
   const entries: WingetCatalogEntry[] = toWingetEntries(catalog);
 
-  const allVulns = await loadVulns();
-  const vulns = tenantId ? allVulns.filter((v) => v.tenantId === tenantId) : allVulns;
+  // SQL-filtered and cached (see loadVulns in matching.ts) rather than an
+  // unfiltered table scan filtered down to one tenant here in JS.
+  const vulns = await loadVulns(tenantId);
 
   const { global: globalOverrides, byTenant } = indexWingetOverrides(await loadWingetOverrides());
   const chocolateyMatcher = await buildChocolateyMatcher();

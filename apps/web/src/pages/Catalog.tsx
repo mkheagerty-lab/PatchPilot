@@ -39,6 +39,12 @@ const METHOD_LABELS: Record<WingetMatch["method"], string> = {
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 focus:outline-none";
 
+// The full mirror is ~13k rows — rendering it all into the DOM on every visit
+// is real, measurable jank distinct from the network fetch (which the shared
+// ["catalog"] query already caches across pages). Cap rendered rows and let
+// "Show more" grow it, same pattern as Vulnerabilities' CVE table.
+const CATALOG_PAGE_SIZE = 200;
+
 /** Sort keys for the coverage table; mirrors the visible, sortable columns. */
 type SortKey = "software" | "severity" | "status" | "devices" | "cves";
 
@@ -196,6 +202,8 @@ export function Catalog() {
 
   // Table controls: free-text search, status + severity filters, sortable cols.
   const [search, setSearch] = useState("");
+  const [catalogLimit, setCatalogLimit] = useState(CATALOG_PAGE_SIZE);
+  const [lastCatalogFilterKey, setLastCatalogFilterKey] = useState("");
   const [params, setParams] = useSearchParams();
   // Status filter lives in the URL so the Dashboard's coverage donut can
   // deep-link straight to a filtered catalog view.
@@ -261,7 +269,7 @@ export function Catalog() {
     });
   }, [coverage, search, statusFilter, severityFilter, sortKey, sortDir]);
 
-  const filteredCatalog = useMemo(() => {
+  const filteredCatalogAll = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return catalog;
     return catalog.filter(
@@ -272,6 +280,17 @@ export function Catalog() {
         (c.softwareTitle ?? "").toLowerCase().includes(q),
     );
   }, [catalog, search]);
+
+  // Reset the render cap whenever the result set changes, *during* render
+  // rather than in an effect — see the identical reasoning on Vulnerabilities'
+  // CVE table (an effect would paint one frame at the old, possibly-huge cap
+  // before shrinking it back).
+  if (search !== lastCatalogFilterKey) {
+    setLastCatalogFilterKey(search);
+    setCatalogLimit(CATALOG_PAGE_SIZE);
+  }
+  const filteredCatalog = filteredCatalogAll.slice(0, catalogLimit);
+  const hiddenCatalogRows = filteredCatalogAll.length - filteredCatalog.length;
 
   return (
     <div>
@@ -538,7 +557,7 @@ export function Catalog() {
           Package catalog
           {search.trim() && (
             <span className="ml-2 font-normal text-slate-400 dark:text-slate-500">
-              {filteredCatalog.length.toLocaleString()} matching "{search.trim()}"
+              {filteredCatalogAll.length.toLocaleString()} matching "{search.trim()}"
             </span>
           )}
         </h2>
@@ -547,7 +566,7 @@ export function Catalog() {
             <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Loading…</div>
           ) : catalog.length === 0 ? (
             <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Catalog is empty.</div>
-          ) : filteredCatalog.length === 0 ? (
+          ) : filteredCatalogAll.length === 0 ? (
             <div className="p-5 text-sm text-slate-500 dark:text-slate-400">
               No packages match "{search.trim()}".
             </div>
@@ -583,6 +602,21 @@ export function Catalog() {
                 ))}
               </tbody>
             </table>
+          )}
+          {hiddenCatalogRows > 0 && (
+            <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 dark:border-slate-800 px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setCatalogLimit((n) => n + CATALOG_PAGE_SIZE)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Show {Math.min(hiddenCatalogRows, CATALOG_PAGE_SIZE)} more
+              </button>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Showing {filteredCatalog.length.toLocaleString()} of{" "}
+                {filteredCatalogAll.length.toLocaleString()} packages.
+              </span>
+            </div>
           )}
         </Card>
       </div>
