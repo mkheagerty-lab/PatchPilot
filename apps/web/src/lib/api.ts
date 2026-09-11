@@ -1731,3 +1731,59 @@ export interface UpdatesSettingsView {
    *  cooldown skipped an actual GitHub fetch and this is just the cached view. */
   checked?: boolean;
 }
+
+// ---- Settings > Server Health (apps/api/src/routes/server-health.ts) ----
+
+/** GET /api/server-health/resources. `demoMode: true` means every reading
+ *  below is a placeholder, not a live sample. */
+export interface ServerHealthResources {
+  demoMode: boolean;
+  sampledAt: string;
+  cpu: { percent: number | null; cores: number };
+  memory: { totalBytes: number; freeBytes: number; usedBytes: number; percent: number };
+  disk: { totalBytes: number; freeBytes: number; usedBytes: number; percent: number } | null;
+}
+
+/** GET /api/server-health/services. */
+export interface ServerHealthServices {
+  demoMode: boolean;
+  database: { ok: boolean; latencyMs: number | null };
+  redis: { ok: boolean; latencyMs: number | null };
+}
+
+/** GET /api/server-health/queues. `workers` is `null` for queues with no
+ *  dedicated BullMQ Worker process of their own (see reports, run inline
+ *  inside the remediation/schedule worker process). */
+export interface ServerHealthQueue {
+  name: string;
+  counts: Record<string, number>;
+  workers: number | null;
+}
+export interface ServerHealthQueues {
+  demoMode: boolean;
+  queues: ServerHealthQueue[];
+}
+
+/** One row of GET /api/server-health/schedulers, joining BullMQ's own
+ *  scheduler state against the `schedules` table by id. */
+export interface ServerHealthScheduler {
+  scheduleId: string;
+  name: string;
+  cron: string | null;
+  timezone: string | null;
+  nextFireAt: string | null;
+  /** True when `nextFireAt` is missing or further past-due than the shared
+   *  MISSED_FIRE_GRACE_MS grace period — same definition apps/worker uses to
+   *  decide a fire is lost, not merely mid-promotion. */
+  stuck: boolean;
+}
+export interface ServerHealthSchedulers {
+  demoMode: boolean;
+  schedulers: ServerHealthScheduler[];
+}
+
+/** GET /api/server-health/jobs-summary. */
+export interface ServerHealthJobsSummary {
+  demoMode: boolean;
+  stuckCount: number;
+}

@@ -12,6 +12,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- New Settings > Server Health page: live CPU/Memory/Disk graphs, PostgreSQL/Redis
+  reachability tiles, BullMQ queue depth + worker liveness, and per-schedule
+  healthy/stuck status for every enabled recurring schedule. Admins can restart
+  the api or worker process directly from the page, each gated behind a
+  confirmation dialog (`settings:write` only — visible read-only to every other
+  role). Restarting an individual infra container or the whole compose stack is
+  a deferred follow-up, not part of this page yet.
 - Windows Update Policies: existing Quality Update, Feature Update, Update
   Ring, and Driver Update rows across all four tabs are now clickable,
   opening a detail drawer with the full policy settings (assignments,

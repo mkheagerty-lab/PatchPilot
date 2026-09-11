@@ -13,6 +13,7 @@ import {
   compareWingetVersions,
   altSourceFor,
   DEVICE_EXCLUSION_JUSTIFICATION_LABELS,
+  MISSED_FIRE_GRACE_MS,
   SCHEDULE_QUEUE,
   SYSTEM_ACTORS,
   SEVERITY_RANK,
@@ -63,13 +64,13 @@ const log = logger.child({ module: "scheduler" });
 /** How often the reconciler re-syncs DB schedules to BullMQ job-schedulers. */
 const RECONCILE_INTERVAL_MS = 30_000;
 
-/**
- * How far past its due time a scheduler's next fire may sit before the reconciler
- * treats the pending delayed job as lost and re-arms it. Comfortably larger than
- * the reconcile interval plus BullMQ's own promotion latency, so a fire that is
- * merely mid-promotion is never mistaken for a lost one.
- */
-const MISSED_FIRE_GRACE_MS = 10 * 60_000;
+// MISSED_FIRE_GRACE_MS (how far past its due time a scheduler's next fire may
+// sit before the reconciler treats the pending delayed job as lost and
+// re-arms it — comfortably larger than the reconcile interval plus BullMQ's
+// own promotion latency, so a fire that is merely mid-promotion is never
+// mistaken for a lost one) now lives in @patchpilot/shared's
+// health-thresholds.ts, shared with apps/api's Server Health "schedulers"
+// tab so both agree on the same definition of "stuck".
 
 /** Default IANA zone for a schedule row with no timezone (pre-column rows). */
 const DEFAULT_SCHEDULE_TZ = "UTC";

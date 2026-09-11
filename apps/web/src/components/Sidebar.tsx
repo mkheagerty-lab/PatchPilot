@@ -69,6 +69,7 @@ const GROUPS: NavGroup[] = [
       { label: "Compliance SLA", to: "/settings/sla" },
       { label: "License", to: "/settings/license" },
       { label: "Notifications", to: "/settings/notifications" },
+      { label: "Server Health", to: "/settings/server-health" },
       { label: "Tenants", to: "/settings/tenants" },
       { label: "Updates", to: "/settings/updates" },
       { label: "Users", to: "/settings/users", permission: "users:manage" },
