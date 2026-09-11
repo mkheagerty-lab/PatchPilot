@@ -12,6 +12,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Catalog coverage (`GET /api/catalog/coverage` and
+  `/api/chocolatey-catalog/coverage`) no longer scans the full,
+  unfiltered `vulnerabilities` table on every request: `loadVulns()` now
+  pushes the tenant filter down into SQL (hitting the existing
+  `vulns_tenant_idx`) and shares a 60s TTL cache across both routes,
+  invalidated whenever a sync writes new vulnerabilities. The Winget and
+  Chocolatey catalog browse tables also cap what's rendered into the DOM
+  at 200 rows with a "Show more" control (same pattern as the
+  Vulnerabilities CVE table), rather than rendering the full ~14.8k-row
+  mirror on every visit — the API responses themselves stay unpaginated
+  since Recommendations, Devices, and Vulnerabilities all depend on the
+  full catalog list for package lookups.
 - App Registration's PowerShell instructions (Step 1, Step 3, and client
   secret rotation) now show a single Windows PowerShell command each,
   instead of a redundant `pwsh` variant above it — the `pwsh` line assumed

@@ -32,7 +32,7 @@ import {
   type GraphHost,
   type GraphResult,
 } from "@patchpilot/graph";
-import { isBundledLibrary } from "../catalog/matching.js";
+import { isBundledLibrary, invalidateVulnsCache } from "../catalog/matching.js";
 import { attributeClears, detectReclassifiedCves, type DoomedFinding } from "./attribution.js";
 
 /**
@@ -1483,6 +1483,7 @@ export async function syncVulnerabilities(engineer: Engineer, tenantId: string):
     }
   }
 
+  invalidateVulnsCache(tenantId);
   return { count };
 }
 
@@ -2996,5 +2997,6 @@ export async function backfillOsRecommendationVulnerabilities(
       .where(eq(tables.recommendations.id, recId));
   }
 
+  invalidateVulnsCache(tenantId);
   return { count };
 }

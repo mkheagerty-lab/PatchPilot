@@ -6,7 +6,6 @@ import {
   demoVulnerabilities,
   demoDevices,
   demoDeviceVulnerabilities,
-  type VulnerabilityRow,
 } from "@patchpilot/db";
 import { and, asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import {
@@ -25,8 +24,11 @@ import {
 import {
   loadChocolateyCatalog,
   loadChocolateyOverrides,
+  loadVulns,
   indexChocolateyOverrides,
   toChocolateyEntries,
+  invalidateChocolateyCatalogCache,
+  invalidateChocolateyOverridesCache,
 } from "../catalog/matching.js";
 import {
   loadExcludedDeviceIndex,
@@ -55,11 +57,6 @@ export async function chocolateyCatalogRoutes(app: FastifyInstance): Promise<voi
     }
   });
   app.addHook("preHandler", requirePermission("catalog:read"));
-
-  async function loadVulns(): Promise<VulnerabilityRow[]> {
-    if (config.DEMO_MODE) return demoVulnerabilities;
-    return db.select().from(tables.vulnerabilities);
-  }
 
   app.get("/api/chocolatey-catalog", async () => loadChocolateyCatalog());
 
@@ -146,6 +143,7 @@ export async function chocolateyCatalogRoutes(app: FastifyInstance): Promise<voi
     const startedAt = Date.now();
     try {
       const result = await refreshChocolateyCatalogFromMirror();
+      invalidateChocolateyCatalogCache();
       await audit({
         engineer,
         endpoint: CHOCOLATEY_SOURCE_AUDIT_ENDPOINT,
@@ -193,10 +191,9 @@ export async function chocolateyCatalogRoutes(app: FastifyInstance): Promise<voi
     const catalog = await loadChocolateyCatalog();
     const entries = toChocolateyEntries(catalog);
 
-    const allVulns = await loadVulns();
-    const vulns = req.query.tenantId
-      ? allVulns.filter((v) => v.tenantId === req.query.tenantId)
-      : allVulns;
+    // SQL-filtered and cached (see loadVulns in matching.ts) rather than an
+    // unfiltered table scan filtered down to one tenant here in JS.
+    const vulns = await loadVulns(req.query.tenantId);
 
     const { global: globalOverrides, byTenant } = indexChocolateyOverrides(
       await loadChocolateyOverrides(),
@@ -453,6 +450,7 @@ export async function chocolateyCatalogRoutes(app: FastifyInstance): Promise<voi
         .insert(tables.chocolateyCatalogOverride)
         .values({ tenantId, softwareTitle, packageId, createdBy: engineer })
         .returning();
+      invalidateChocolateyOverridesCache();
       await audit({
         engineer,
         tenantId,
@@ -486,6 +484,7 @@ export async function chocolateyCatalogRoutes(app: FastifyInstance): Promise<voi
     if (!deleted) {
       return reply.code(404).send({ error: "override not found" });
     }
+    invalidateChocolateyOverridesCache();
     await audit({
       engineer: req.session.engineer!.upn,
       tenantId: deleted.tenantId,

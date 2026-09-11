@@ -39,6 +39,11 @@ const METHOD_LABELS: Record<ChocolateyMatch["method"], string> = {
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 focus:outline-none";
 
+// Same rationale as Catalog.tsx's winget table: the full mirror is thousands
+// of rows, and rendering it all into the DOM on every visit is real jank
+// distinct from the (already cross-page-cached) network fetch.
+const CATALOG_PAGE_SIZE = 200;
+
 type SortKey = "software" | "severity" | "status" | "devices" | "cves";
 
 const STATUS_FILTERS: { id: CoverageStatus | "all"; label: string }[] = [
@@ -195,6 +200,8 @@ export function ChocolateyCatalog() {
       : 0;
 
   const [search, setSearch] = useState("");
+  const [catalogLimit, setCatalogLimit] = useState(CATALOG_PAGE_SIZE);
+  const [lastCatalogFilterKey, setLastCatalogFilterKey] = useState("");
   const [statusFilter, setStatusFilter] = useState<CoverageStatus | "all">("all");
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("severity");
@@ -245,7 +252,7 @@ export function ChocolateyCatalog() {
     });
   }, [coverage, search, statusFilter, severityFilter, sortKey, sortDir]);
 
-  const filteredCatalog = useMemo(() => {
+  const filteredCatalogAll = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return catalog;
     return catalog.filter(
@@ -256,6 +263,15 @@ export function ChocolateyCatalog() {
         (c.softwareTitle ?? "").toLowerCase().includes(q),
     );
   }, [catalog, search]);
+
+  // Reset the render cap whenever the result set changes, *during* render
+  // rather than in an effect — see Vulnerabilities' CVE table for why.
+  if (search !== lastCatalogFilterKey) {
+    setLastCatalogFilterKey(search);
+    setCatalogLimit(CATALOG_PAGE_SIZE);
+  }
+  const filteredCatalog = filteredCatalogAll.slice(0, catalogLimit);
+  const hiddenCatalogRows = filteredCatalogAll.length - filteredCatalog.length;
 
   return (
     <div>
@@ -499,7 +515,7 @@ export function ChocolateyCatalog() {
           Package catalog
           {search.trim() && (
             <span className="ml-2 font-normal text-slate-400 dark:text-slate-500">
-              {filteredCatalog.length.toLocaleString()} matching "{search.trim()}"
+              {filteredCatalogAll.length.toLocaleString()} matching "{search.trim()}"
             </span>
           )}
         </h2>
@@ -508,7 +524,7 @@ export function ChocolateyCatalog() {
             <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Loading…</div>
           ) : catalog.length === 0 ? (
             <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Catalog is empty.</div>
-          ) : filteredCatalog.length === 0 ? (
+          ) : filteredCatalogAll.length === 0 ? (
             <div className="p-5 text-sm text-slate-500 dark:text-slate-400">
               No packages match "{search.trim()}".
             </div>
@@ -535,6 +551,21 @@ export function ChocolateyCatalog() {
                 ))}
               </tbody>
             </table>
+          )}
+          {hiddenCatalogRows > 0 && (
+            <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 dark:border-slate-800 px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setCatalogLimit((n) => n + CATALOG_PAGE_SIZE)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Show {Math.min(hiddenCatalogRows, CATALOG_PAGE_SIZE)} more
+              </button>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Showing {filteredCatalog.length.toLocaleString()} of{" "}
+                {filteredCatalogAll.length.toLocaleString()} packages.
+              </span>
+            </div>
           )}
         </Card>
       </div>
