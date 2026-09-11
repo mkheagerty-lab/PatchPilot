@@ -12,6 +12,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- The schedule timezone picker and the Schedules table now show each zone's
+  current GMT offset alongside its name (e.g. `Australia/Brisbane (GMT+10)`),
+  so the intended fire time is unambiguous without cross-referencing the IANA
+  name.
+
 ## [0.12.0] - 2026-09-10
 
 - Fix recurring schedules missing their fire. The worker's 30s reconcile
