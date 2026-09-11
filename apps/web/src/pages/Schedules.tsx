@@ -7,7 +7,7 @@ import { useTenant } from "../lib/tenant";
 import { Card, PageHeader, ResponsiveTable, type ResponsiveTableColumn } from "../components/ui";
 import { downloadCsv } from "../lib/csv";
 import { NewScheduleModal } from "../components/NewScheduleModal";
-import { describeCron } from "../components/RecurrencePicker";
+import { describeCron, describeTimeZone } from "../components/RecurrencePicker";
 import { CHANNEL_LABELS, summarizeTarget } from "../components/ScheduleTargetFields";
 
 /** Shape returned by POST /api/schedules/:id/run. */
@@ -118,7 +118,7 @@ export function Schedules() {
       cell: (s) => (
         <div className="text-xs text-slate-500 dark:text-slate-400">
           <span title={s.cron}>{describeCron(s.cron)}</span>
-          <span className="text-slate-400 dark:text-slate-500"> · {s.timezone}</span>
+          <span className="text-slate-400 dark:text-slate-500"> · {describeTimeZone(s.timezone)}</span>
           <div className="mt-0.5">
             {CHANNEL_LABELS[s.channel] ?? s.channel}
             {s.engineer ? ` · runs as ${s.engineer}` : ""}

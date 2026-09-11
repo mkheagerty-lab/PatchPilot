@@ -6,6 +6,7 @@ import {
   defaultRecurrence,
   describeCron,
   describeRecurrence,
+  describeTimeZone,
   RecurrencePicker,
   toCron,
   type Recurrence,
@@ -123,6 +124,30 @@ describe("cronToRecurrence", () => {
     expect(cronToRecurrence("*/5 * * * *")).toBeNull();
     expect(cronToRecurrence("0 9 15 * 1")).toBeNull();
     expect(cronToRecurrence("garbage")).toBeNull();
+  });
+});
+
+describe("describeTimeZone", () => {
+  it("appends a whole-hour GMT offset", () => {
+    // Brisbane has no DST, so this offset is stable year-round.
+    expect(describeTimeZone("Australia/Brisbane")).toBe("Australia/Brisbane (GMT+10)");
+  });
+
+  it("appends a half-hour offset with minutes", () => {
+    expect(describeTimeZone("Asia/Kolkata")).toBe("Asia/Kolkata (GMT+5:30)");
+  });
+
+  it("shows a bare GMT for UTC", () => {
+    expect(describeTimeZone("UTC")).toBe("UTC (GMT)");
+  });
+
+  it("negative offsets keep the sign", () => {
+    // Phoenix has no DST — always GMT-7.
+    expect(describeTimeZone("America/Phoenix")).toBe("America/Phoenix (GMT-7)");
+  });
+
+  it("falls back to a bare GMT for an unknown zone", () => {
+    expect(describeTimeZone("Not/AZone")).toBe("Not/AZone (GMT)");
   });
 });
 
