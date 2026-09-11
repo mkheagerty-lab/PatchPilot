@@ -64,6 +64,56 @@ export function timeZoneOptions(): string[] {
   ];
 }
 
+/**
+ * Current UTC offset of an IANA zone, in minutes (east of UTC positive). Derived
+ * by formatting one instant in that zone and diffing it against the same instant
+ * in UTC, so it needs no `timeZoneName: "shortOffset"` support and reflects DST
+ * as it stands right now. Returns 0 for an unknown zone rather than throwing.
+ */
+function tzOffsetMinutes(tz: string, at: Date = new Date()): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).formatToParts(at);
+    const p: Record<string, string> = {};
+    for (const part of parts) p[part.type] = part.value;
+    const asUtc = Date.UTC(
+      Number(p.year),
+      Number(p.month) - 1,
+      Number(p.day),
+      Number(p.hour),
+      Number(p.minute),
+      Number(p.second),
+    );
+    return Math.round((asUtc - at.getTime()) / 60_000);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * IANA zone plus its current GMT offset for the picker's option labels and the
+ * schedule table, e.g. `Australia/Brisbane (GMT+10)` or `Asia/Kolkata (GMT+5:30)`.
+ * The stored value is still the bare IANA name — this is display only.
+ */
+export function describeTimeZone(tz: string): string {
+  const mins = tzOffsetMinutes(tz);
+  if (mins === 0) return `${tz} (GMT)`;
+  const sign = mins > 0 ? "+" : "-";
+  const abs = Math.abs(mins);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  const offset = m === 0 ? `${h}` : `${h}:${String(m).padStart(2, "0")}`;
+  return `${tz} (GMT${sign}${offset})`;
+}
+
 export function defaultRecurrence(): Recurrence {
   return {
     freq: "daily",
@@ -312,7 +362,7 @@ export function RecurrencePicker({
               : [value.timezone, ...TZ_OPTIONS]
             ).map((tz) => (
               <option key={tz} value={tz}>
-                {tz}
+                {describeTimeZone(tz)}
               </option>
             ))}
           </select>
@@ -321,7 +371,7 @@ export function RecurrencePicker({
 
       <p className="text-[11px] leading-tight text-slate-500">
         {describeRecurrence(value)} · <code className="font-mono">{toCron(value)}</code> ·{" "}
-        {value.timezone}
+        {describeTimeZone(value.timezone)}
       </p>
     </div>
   );

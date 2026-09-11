@@ -24,6 +24,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   table (rows, filters, status pills, the bulk-action bar, the detail
   drawer) now has proper dark-mode styling instead of near-black text on a
   dark background.
+- The schedule timezone picker and the Schedules table now show each zone's
+  current GMT offset alongside its name (e.g. `Australia/Brisbane (GMT+10)`),
+  so the intended fire time is unambiguous without cross-referencing the IANA
+  name.
 
 ## [0.12.0] - 2026-09-10
 
