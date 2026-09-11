@@ -12,6 +12,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- App Registration and Architecture now document that Defender for
+  Endpoint's Live Response and its unsigned-script execution are gated
+  behind two "Advanced features" toggles in the Microsoft 365 Defender
+  portal that no API permission or PowerShell cmdlet can set — a Global
+  Administrator has to enable them by hand, once per tenant, with basic
+  steps included on both pages.
+
 ## [0.13.0] - 2026-09-11
 
 - Fix the Jobs page's "Delete selected" (and per-row "Delete") doing nothing.

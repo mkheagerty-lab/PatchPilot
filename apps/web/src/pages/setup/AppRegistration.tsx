@@ -650,6 +650,86 @@ function RequestedPermissionsStep({ report }: { report: OnboardingReport }) {
   );
 }
 
+/**
+ * Defender for Endpoint gates Live Response and its ability to run unsigned
+ * scripts behind two tenant-level "Advanced features" toggles in the
+ * Microsoft 365 Defender portal — Microsoft doesn't expose either one as a
+ * Graph/Defender API permission or PowerShell cmdlet, so nothing
+ * Deploy-PatchPilot.ps1 or Step 3 above does can turn them on. They're a
+ * one-time, per-tenant setting an admin has to flip by hand — in the home
+ * tenant if PatchPilot manages it directly, and in every customer tenant
+ * where Live Response remediation should run. Hidden in demo mode, where
+ * nothing here could be a real portal to visit.
+ */
+function DefenderAdvancedFeaturesCard() {
+  return (
+    <Card className="border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-500/5">
+      <h2 className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+        Defender Live Response — one more manual step
+      </h2>
+      <p className="text-sm text-slate-600 dark:text-slate-300">
+        Granting the write API permissions above (Step 3) lets PatchPilot{" "}
+        <em>call</em> Live Response — it doesn&apos;t turn Live Response on.
+        Microsoft gates the feature itself, and its ability to run
+        PatchPilot&apos;s own unsigned remediation scripts, behind two
+        toggles in the Microsoft 365 Defender portal that no API or
+        PowerShell cmdlet can set. A Global Administrator or Security
+        Administrator has to enable them by hand, once per tenant — in the
+        home tenant if PatchPilot manages it directly, and in every
+        customer tenant where Live Response should run. Skip this and Live
+        Response jobs fail immediately with an access-denied error even
+        though the app registration&apos;s permissions all show as granted.
+      </p>
+      <div className="mt-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Basic steps</p>
+        <ol className="mt-1.5 list-decimal space-y-1.5 pl-5 text-sm text-slate-600 dark:text-slate-300">
+          <li>
+            Sign in to{" "}
+            <a
+              href="https://security.microsoft.com"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              security.microsoft.com ↗
+            </a>{" "}
+            for the tenant you&apos;re enabling this in.
+          </li>
+          <li>
+            Open <span className="font-medium text-slate-700 dark:text-slate-200">Settings</span> (the gear
+            icon) → <span className="font-medium text-slate-700 dark:text-slate-200">Endpoints</span> →{" "}
+            <span className="font-medium text-slate-700 dark:text-slate-200">Advanced features</span>.
+          </li>
+          <li>
+            Turn on <span className="font-medium text-slate-700 dark:text-slate-200">Live response</span>.
+          </li>
+          <li>
+            Turn on{" "}
+            <span className="font-medium text-slate-700 dark:text-slate-200">Live response for servers</span>{" "}
+            if any managed devices are Windows Server.
+          </li>
+          <li>
+            Turn on{" "}
+            <span className="font-medium text-slate-700 dark:text-slate-200">
+              Live response unsigned script execution
+            </span>{" "}
+            — required for PatchPilot&apos;s remediation scripts, which
+            aren&apos;t Microsoft-signed.
+          </li>
+          <li>Repeat for every other tenant Live Response should work in.</li>
+        </ol>
+      </div>
+      <p className="mt-2.5 text-xs text-slate-400 dark:text-slate-500">
+        This is a genuine Microsoft limitation, not a gap in PatchPilot —
+        there&apos;s no supported API to read or set these toggles, so
+        PatchPilot can&apos;t detect or auto-remediate a tenant that
+        hasn&apos;t enabled them yet. A failed Live Response job&apos;s
+        error message is usually the first sign one has been missed.
+      </p>
+    </Card>
+  );
+}
+
 const DOMAIN_STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400",
   active: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
@@ -1238,6 +1318,8 @@ export function AppRegistration() {
       ) : (
         <div className="space-y-5">
           {!report.demoMode && <GettingStarted report={report} />}
+
+          {!report.demoMode && <DefenderAdvancedFeaturesCard />}
 
           <CustomDomainsCard demoMode={report.demoMode} />
 
