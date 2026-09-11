@@ -7,7 +7,7 @@ import { Card, PageHeader } from "../components/ui";
 import { NewDeviceGroupModal } from "../components/NewDeviceGroupModal";
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 focus:outline-none";
 
 /** Every query a group create/rename/delete/membership change can move. */
 function invalidateGroupQueries(queryClient: ReturnType<typeof useQueryClient>): void {
@@ -87,11 +87,11 @@ export function DeviceGroups() {
 
       {isLoading ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">Loading device groups…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading device groups…</p>
         </Card>
       ) : groups.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             No device groups yet for this tenant. Click "New device group" to create one, then add
             devices to it from the Devices page.
           </p>
@@ -100,7 +100,7 @@ export function DeviceGroups() {
         <Card className="p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 <th className="px-5 py-3 font-medium">Name</th>
                 <th className="px-5 py-3 font-medium">Members</th>
                 <th className="px-5 py-3 font-medium">Description</th>
@@ -113,7 +113,7 @@ export function DeviceGroups() {
                 const isExpanded = expanded === g.id;
                 return (
                   <Fragment key={g.id}>
-                    <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                    <tr className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
                       <td className="px-5 py-3 align-top">
                         {isRenaming ? (
                           <input
@@ -122,15 +122,15 @@ export function DeviceGroups() {
                             onChange={(e) => setRenameName(e.target.value)}
                           />
                         ) : (
-                          <span className="font-medium text-slate-800">{g.name}</span>
+                          <span className="font-medium text-slate-800 dark:text-slate-100">{g.name}</span>
                         )}
                       </td>
                       <td className="px-5 py-3 align-top">
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+                        <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                           {g.memberCount} {g.memberCount === 1 ? "device" : "devices"}
                         </span>
                       </td>
-                      <td className="px-5 py-3 align-top text-slate-500">
+                      <td className="px-5 py-3 align-top text-slate-500 dark:text-slate-400">
                         {isRenaming ? (
                           <textarea
                             className={INPUT_CLASS}
@@ -148,7 +148,7 @@ export function DeviceGroups() {
                             <div className="flex justify-end gap-2">
                               <button
                                 onClick={() => setRenaming(null)}
-                                className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                               >
                                 Cancel
                               </button>
@@ -161,7 +161,7 @@ export function DeviceGroups() {
                               </button>
                             </div>
                             {rename.isError && (
-                              <div className="text-right text-xs text-rose-600">
+                              <div className="text-right text-xs text-rose-600 dark:text-rose-400">
                                 {rename.error.message}
                               </div>
                             )}
@@ -170,7 +170,7 @@ export function DeviceGroups() {
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => setExpanded(isExpanded ? null : g.id)}
-                              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                             >
                               {isExpanded ? "Hide members" : "View members"}
                             </button>
@@ -181,7 +181,7 @@ export function DeviceGroups() {
                                 setRenameDescription(g.description ?? "");
                               }}
                               disabled={!canWrite}
-                              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
                             >
                               Rename
                             </button>
@@ -191,7 +191,7 @@ export function DeviceGroups() {
                                 remove.mutate(g.id);
                               }}
                               disabled={!canWrite || remove.isPending}
-                              className="rounded-md border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
+                              className="rounded-md border border-rose-200 dark:border-rose-900/50 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10 disabled:opacity-50"
                             >
                               Delete
                             </button>
@@ -200,28 +200,28 @@ export function DeviceGroups() {
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr className="border-b border-slate-100 last:border-0">
-                        <td colSpan={4} className="bg-slate-50 px-5 py-3">
+                      <tr className="border-b border-slate-100 dark:border-slate-800 last:border-0">
+                        <td colSpan={4} className="bg-slate-50 dark:bg-slate-800 px-5 py-3">
                           {membersLoading ? (
-                            <p className="text-xs text-slate-500">Loading members…</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Loading members…</p>
                           ) : members.length === 0 ? (
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
                               No devices in this group yet — add some from the Devices page.
                             </p>
                           ) : (
-                            <ul className="max-h-56 divide-y divide-slate-200 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+                            <ul className="max-h-56 divide-y divide-slate-200 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                               {members.map((m) => (
                                 <li
                                   key={m.id}
                                   className="flex items-center justify-between gap-2 px-3 py-2 text-xs"
                                 >
-                                  <span className="min-w-0 truncate text-slate-700">
+                                  <span className="min-w-0 truncate text-slate-700 dark:text-slate-200">
                                     {m.deviceHostname}
                                   </span>
                                   <button
                                     onClick={() => removeMember.mutate(m.managedDeviceId)}
                                     disabled={!canWrite || removeMember.isPending}
-                                    className="shrink-0 text-slate-400 transition-colors hover:text-rose-600 disabled:opacity-50"
+                                    className="shrink-0 text-slate-400 dark:text-slate-500 transition-colors hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-50"
                                   >
                                     Remove
                                   </button>

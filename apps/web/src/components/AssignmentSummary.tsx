@@ -9,7 +9,7 @@ import type { IntuneAssignmentSummary } from "../lib/api";
  * key off the same `IntuneAssignmentSummary[]` shape.
  */
 export function AssignmentSummary({ assignments }: { assignments: IntuneAssignmentSummary[] }): ReactNode {
-  if (assignments.length === 0) return <span className="text-slate-400">—</span>;
+  if (assignments.length === 0) return <span className="text-slate-400 dark:text-slate-500">—</span>;
 
   const includes = assignments.filter((a) => a.kind === "include");
   const excludes = assignments.filter((a) => a.kind === "exclude");
@@ -22,7 +22,7 @@ export function AssignmentSummary({ assignments }: { assignments: IntuneAssignme
     <span>
       {parts.length > 0 ? parts.join(", ") : "—"}
       {excludes.length > 0 && (
-        <span className="ml-1.5 inline-flex items-center rounded-full bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-600">
+        <span className="ml-1.5 inline-flex items-center rounded-full bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 text-[11px] font-medium text-red-600 dark:text-red-400">
           excl. {excludes.map((a) => a.groupName || a.groupId || "unknown").join(", ")}
         </span>
       )}

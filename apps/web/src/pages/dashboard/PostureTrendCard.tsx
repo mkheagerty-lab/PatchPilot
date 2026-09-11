@@ -78,14 +78,14 @@ export function PostureTrendCard({
           : undefined
       }
       actions={
-        <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 p-0.5">
+        <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 dark:border-slate-800 p-0.5">
           {(Object.keys(LENS_LABELS) as Lens[]).map((l) => (
             <button
               key={l}
               type="button"
               onClick={() => setLens(l)}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                lens === l ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"
+                lens === l ? "bg-slate-900 text-white" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             >
               {LENS_LABELS[l]}
@@ -100,10 +100,10 @@ export function PostureTrendCard({
               <button
                 type="button"
                 onClick={() => nav(hrefFor(lens, s.key))}
-                className="flex items-center gap-1.5 rounded px-1 py-0.5 text-xs hover:bg-slate-50"
+                className="flex items-center gap-1.5 rounded px-1 py-0.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-slate-600">{s.label}</span>
+                <span className="text-slate-600 dark:text-slate-300">{s.label}</span>
               </button>
             </li>
           ))}

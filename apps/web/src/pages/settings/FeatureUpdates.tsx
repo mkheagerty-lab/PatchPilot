@@ -69,14 +69,14 @@ export function FeatureUpdates() {
       />
 
       {!canWrite && (
-        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mb-5 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Your role doesn't include settings write access.
         </div>
       )}
 
       {isAllTenants || !activeTenant ? (
         <Card className="max-w-lg">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Select a single tenant from the switcher above to set its feature-update target.
           </p>
         </Card>
@@ -84,14 +84,14 @@ export function FeatureUpdates() {
         <Card className="max-w-lg">
           <div className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-800">
+              <label className="mb-1.5 block text-sm font-medium text-slate-800 dark:text-slate-100">
                 Target version
               </label>
               <select
                 value={selected}
                 onChange={(e) => setSelected(e.target.value)}
                 disabled={!canWrite}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                className="w-full rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
               >
                 <option value={DEFAULT_VALUE}>Use default (latest: {DEFAULT_LABEL})</option>
                 {LABEL_OPTIONS.map(({ label }) => (
@@ -100,7 +100,7 @@ export function FeatureUpdates() {
                   </option>
                 ))}
               </select>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                 A device is flagged “Behind” once its installed build is older than this target.
                 Leave on default to always track the latest known release.
               </p>

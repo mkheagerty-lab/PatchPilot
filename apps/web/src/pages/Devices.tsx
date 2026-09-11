@@ -147,7 +147,7 @@ function SortableTh<K extends string>({
         onClick={() => onSort(sortKey)}
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
         title={title}
-        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700"
+        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-200"
       >
         {label}
         <SortIcon active={active} dir={dir} />
@@ -464,8 +464,8 @@ function RecKindChip({ kind }: { kind: Recommendation["kind"] }) {
     <span
       className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
         kind === "misconfiguration"
-          ? "bg-violet-100 text-violet-700"
-          : "bg-sky-100 text-sky-700"
+          ? "bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300"
+          : "bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300"
       }`}
     >
       {kind === "misconfiguration" ? "Misconfiguration" : "Vulnerability"}
@@ -502,7 +502,7 @@ function ExcludedChip({ reason }: { reason?: string | null }) {
           ? `Excluded — ${reason}`
           : "An active PatchPilot exclusion covers this device."
       }
-      className="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+      className="inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-200"
     >
       Excluded
     </span>
@@ -518,8 +518,8 @@ function ExcludedChip({ reason }: { reason?: string | null }) {
  */
 function ExcludedTabNotice({ what, reason }: { what: string; reason?: string | null }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-      <p className="font-medium text-slate-800">This device is excluded.</p>
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+      <p className="font-medium text-slate-800 dark:text-slate-100">This device is excluded.</p>
       <p className="mt-1 text-xs leading-relaxed">
         Excluded devices report no {what}, and are blocked from remediation.
         {reason ? ` Reason: ${reason}.` : ""} Stop the exclusion from the
@@ -1280,7 +1280,7 @@ export function Devices() {
             <span className="font-medium text-slate-800 dark:text-slate-100">{d.hostname}</span>
             {d.excluded && <ExcludedChip reason={d.exclusionReason} />}
           </div>
-          {d.owner && <div className="text-xs text-slate-400">{d.owner}</div>}
+          {d.owner && <div className="text-xs text-slate-400 dark:text-slate-500">{d.owner}</div>}
         </div>
       ),
     },
@@ -1346,7 +1346,7 @@ export function Devices() {
                   if (exclusion) stopExclusion.mutate(exclusion.id);
                 }}
                 disabled={!exclusion || stopExclusion.isPending}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 dark:disabled:text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Stop exclusion
               </button>
@@ -1390,7 +1390,7 @@ export function Devices() {
               type="button"
               onClick={exportCsv}
               disabled={sorted.length === 0}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               Export CSV
             </button>
@@ -1407,7 +1407,7 @@ export function Devices() {
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
               >
                 <path
                   fillRule="evenodd"
@@ -1420,14 +1420,14 @@ export function Devices() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search hostname, OS, owner…"
-                className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
               />
             </div>
 
             <select
               value={osFilter}
               onChange={(e) => setOsFilter(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+              className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
             >
               <option value="all">All operating systems</option>
               {osNames.map((os) => (
@@ -1439,15 +1439,15 @@ export function Devices() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+            <div className="flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
               {COMPLIANCE_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => setFilter(f.value)}
                   className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                     filter === f.value
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                   }`}
                 >
                   {f.label}
@@ -1457,18 +1457,18 @@ export function Devices() {
 
             {/* Exclusion state — Defender's own filter, same three states. */}
             <div className="flex items-center gap-2">
-              <span className="text-xs uppercase tracking-wide text-slate-400">
+              <span className="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Exclusion state
               </span>
-              <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+              <div className="flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
                 {EXCLUSION_FILTERS.map((f) => (
                   <button
                     key={f.value}
                     onClick={() => setExclusionFilter(f.value)}
                     className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                       exclusionFilter === f.value
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-800"
+                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                     }`}
                   >
                     {f.label}
@@ -1479,17 +1479,17 @@ export function Devices() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="text-slate-500">
+            <span className="text-slate-500 dark:text-slate-400">
               {sorted.length} {sorted.length === 1 ? "device" : "devices"}
               {sorted.length !== devices.length && ` of ${devices.length}`}
             </span>
             {nonCompliant > 0 && (
-              <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 font-medium text-rose-700">
+              <span className="inline-flex items-center rounded-full bg-rose-100 dark:bg-rose-500/15 px-2.5 py-0.5 font-medium text-rose-700 dark:text-rose-400">
                 {nonCompliant} non-compliant
               </span>
             )}
             {excludedShown > 0 && (
-              <span className="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 font-medium text-slate-700">
+              <span className="inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-700 px-2.5 py-0.5 font-medium text-slate-700 dark:text-slate-200">
                 {excludedShown} excluded
               </span>
             )}
@@ -1501,13 +1501,13 @@ export function Devices() {
               devices off one at a time after a decommission batch is the whole
               reason it does. Only appears once something is checked. ---- */}
       {checkedDevices.length > 0 && (
-        <Card className="mb-4 border-slate-300 bg-slate-50">
+        <Card className="mb-4 border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-sm text-slate-700">
+            <span className="text-sm text-slate-700 dark:text-slate-200">
               <span className="font-semibold">{checkedDevices.length}</span>{" "}
               {checkedDevices.length === 1 ? "device" : "devices"} selected
               {bulkTargets.length !== checkedDevices.length && (
-                <span className="text-slate-500">
+                <span className="text-slate-500 dark:text-slate-400">
                   {" "}
                   ({checkedDevices.length - bulkTargets.length} already excluded)
                 </span>
@@ -1517,7 +1517,7 @@ export function Devices() {
               <button
                 type="button"
                 onClick={() => setCheckedIds(new Set())}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 Clear selection
               </button>
@@ -1530,7 +1530,7 @@ export function Devices() {
                     ? "Selected devices span more than one tenant — group one tenant's devices at a time."
                     : undefined
                 }
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Add to group…
               </button>
@@ -1545,7 +1545,7 @@ export function Devices() {
                       ? "Selected devices span more than one tenant — exclude one tenant's devices at a time."
                       : undefined
                 }
-                className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 dark:disabled:text-slate-500"
               >
                 Exclude {bulkTargets.length || ""}{" "}
                 {bulkTargets.length === 1 ? "device" : "devices"}
@@ -1557,11 +1557,11 @@ export function Devices() {
 
       {isLoading ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </Card>
       ) : sorted.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {devices.length === 0
               ? isAllTenants
                 ? "No devices across any tenant yet."
@@ -1596,12 +1596,12 @@ export function Devices() {
           <div className="space-y-6">
             {/* OS + posture chips */}
             <div>
-              <h3 className="text-base font-semibold text-slate-900">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 {selected.os}
               </h3>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <ComplianceChip compliance={selected.compliance} />
-                <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
                   {selected.vulnerabilityCount}{" "}
                   {selected.vulnerabilityCount === 1 ? "vuln" : "vulns"}
                 </span>
@@ -1610,14 +1610,14 @@ export function Devices() {
                 )}
                 {selectedBehindFeatureUpdate && selectedFeatureUpdateTargetLabel && (
                   <span
-                    className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700"
+                    className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400"
                     title={`Behind the ${selectedFeatureUpdateTargetLabel} feature-update target`}
                   >
                     Behind
                   </span>
                 )}
                 {selected.lastSeen && (
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
                     seen {daysAgo(selected.lastSeen)}d ago
                   </span>
                 )}
@@ -1641,7 +1641,7 @@ export function Devices() {
                         stopExclusion.mutate(selectedExclusion.id)
                       }
                       disabled={stopExclusion.isPending}
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:text-slate-400 dark:disabled:text-slate-500"
                     >
                       {stopExclusion.isPending ? "Stopping…" : "Stop exclusion"}
                     </button>
@@ -1649,7 +1649,7 @@ export function Devices() {
                     <button
                       type="button"
                       onClick={() => setExclusionTarget([selected])}
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
                       Exclude device
                     </button>
@@ -1659,7 +1659,7 @@ export function Devices() {
             </div>
 
             {/* Top-level tabs */}
-            <div className="inline-flex gap-1 rounded-lg bg-slate-100 p-1">
+            <div className="inline-flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
               {(
                 [
                   ["overview", "Overview"],
@@ -1677,8 +1677,8 @@ export function Devices() {
                   onClick={() => setDeviceTab(value)}
                   className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                     deviceTab === value
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                   }`}
                 >
                   {label}
@@ -1690,25 +1690,25 @@ export function Devices() {
               <>
             {/* Overview */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Overview
               </h4>
               <dl className="space-y-1.5 text-sm">
                 {isAllTenants && (
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">Customer tenant</dt>
-                    <dd className="min-w-0 truncate font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">Customer tenant</dt>
+                    <dd className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-100">
                       {tenantNames.get(selected.tenantId) ?? selected.tenantId}
                     </dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Operating system</dt>
-                  <dd className="font-medium text-slate-800">{selected.os}</dd>
+                  <dt className="text-slate-500 dark:text-slate-400">Operating system</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">{selected.os}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Owner</dt>
-                  <dd className="min-w-0 truncate font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Owner</dt>
+                  <dd className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-100">
                     {selected.owner ?? "—"}
                   </dd>
                 </div>
@@ -1716,31 +1716,31 @@ export function Devices() {
                     Defender exposes none reliably, so these are hidden when null. */}
                 {selected.model && (
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">Device model</dt>
-                    <dd className="min-w-0 truncate font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">Device model</dt>
+                    <dd className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-100">
                       {selected.model}
                     </dd>
                   </div>
                 )}
                 {selected.manufacturer && (
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">Manufacturer</dt>
-                    <dd className="min-w-0 truncate font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">Manufacturer</dt>
+                    <dd className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-100">
                       {selected.manufacturer}
                     </dd>
                   </div>
                 )}
                 {selected.serialNumber && (
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">Serial</dt>
-                    <dd className="min-w-0 truncate font-mono text-xs text-slate-700">
+                    <dt className="text-slate-500 dark:text-slate-400">Serial</dt>
+                    <dd className="min-w-0 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
                       {selected.serialNumber}
                     </dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Last seen</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Last seen</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">
                     {selected.lastSeen
                       ? new Date(selected.lastSeen).toLocaleString()
                       : "Never"}
@@ -1751,26 +1751,26 @@ export function Devices() {
 
             {/* Security posture */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Security posture
               </h4>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3">
                 <dl className="space-y-1.5 text-sm">
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="text-slate-500">SLA compliance</dt>
+                    <dt className="text-slate-500 dark:text-slate-400">SLA compliance</dt>
                     <dd>
                       <ComplianceChip compliance={selected.compliance} />
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">Open vulnerabilities</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">Open vulnerabilities</dt>
+                    <dd className="font-medium text-slate-800 dark:text-slate-100">
                       {selected.vulnerabilityCount}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">Defender coverage</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">Defender coverage</dt>
+                    <dd className="font-medium text-slate-800 dark:text-slate-100">
                       {selected.defenderMachineId ? "Onboarded" : "Not covered"}
                     </dd>
                   </div>
@@ -1780,20 +1780,20 @@ export function Devices() {
 
             {/* Identifiers */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Identifiers
               </h4>
               <dl className="space-y-2 text-sm">
                 <div>
-                  <dt className="text-slate-500">Intune device ID</dt>
-                  <dd className="break-all font-mono text-xs text-slate-700">
+                  <dt className="text-slate-500 dark:text-slate-400">Intune device ID</dt>
+                  <dd className="break-all font-mono text-xs text-slate-700 dark:text-slate-200">
                     {selected.managedDeviceId}
                   </dd>
                 </div>
                 {selected.defenderMachineId && (
                   <div>
-                    <dt className="text-slate-500">Defender machine ID</dt>
-                    <dd className="break-all font-mono text-xs text-slate-700">
+                    <dt className="text-slate-500 dark:text-slate-400">Defender machine ID</dt>
+                    <dd className="break-all font-mono text-xs text-slate-700 dark:text-slate-200">
                       {selected.defenderMachineId}
                     </dd>
                   </div>
@@ -1806,14 +1806,14 @@ export function Devices() {
                 exclusion is actually in force. */}
             {selectedExclusion && (
               <section>
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   Exclusion details
                 </h4>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3">
                   <dl className="space-y-1.5 text-sm">
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Justification</dt>
-                      <dd className="font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Justification</dt>
+                      <dd className="font-medium text-slate-800 dark:text-slate-100">
                         {
                           DEVICE_EXCLUSION_JUSTIFICATION_LABELS[
                             selectedExclusion.justification
@@ -1823,27 +1823,27 @@ export function Devices() {
                     </div>
                     {selectedExclusion.notes && (
                       <div>
-                        <dt className="text-slate-500">Note</dt>
-                        <dd className="mt-0.5 whitespace-pre-wrap text-slate-700">
+                        <dt className="text-slate-500 dark:text-slate-400">Note</dt>
+                        <dd className="mt-0.5 whitespace-pre-wrap text-slate-700 dark:text-slate-200">
                           {selectedExclusion.notes}
                         </dd>
                       </div>
                     )}
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Excluded by</dt>
-                      <dd className="min-w-0 truncate font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Excluded by</dt>
+                      <dd className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-100">
                         {selectedExclusion.createdBy}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Excluded on</dt>
-                      <dd className="font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Excluded on</dt>
+                      <dd className="font-medium text-slate-800 dark:text-slate-100">
                         {new Date(selectedExclusion.createdAt).toLocaleString()}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Review date</dt>
-                      <dd className="font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Review date</dt>
+                      <dd className="font-medium text-slate-800 dark:text-slate-100">
                         {selectedExclusion.expiresAt
                           ? new Date(
                               selectedExclusion.expiresAt,
@@ -1852,7 +1852,7 @@ export function Devices() {
                       </dd>
                     </div>
                   </dl>
-                  <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
+                  <p className="mt-3 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
                     This device is hidden from PatchPilot's vulnerability,
                     recommendation, inventory and catalog views, and is blocked
                     from Run Now, Fix Now, Fix All and scheduled remediation.
@@ -1868,10 +1868,10 @@ export function Devices() {
             {deviceTab === "inventories" && (
               <section>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     Inventories
                   </h4>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
                     All software Defender reports installed on this device
                   </span>
                 </div>
@@ -1888,7 +1888,7 @@ export function Devices() {
                       viewBox="0 0 20 20"
                       fill="currentColor"
                       aria-hidden
-                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
                     >
                       <path
                         fillRule="evenodd"
@@ -1901,7 +1901,7 @@ export function Devices() {
                       value={inventorySearch}
                       onChange={(e) => setInventorySearch(e.target.value)}
                       placeholder="Search software, vendor…"
-                      className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
                     />
                   </div>
                   {selected.defenderMachineId && (
@@ -1916,29 +1916,29 @@ export function Devices() {
                             ? "All installed software is already up to date."
                             : "No installed software has a supported package source."
                       }
-                      className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                      className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 dark:disabled:text-slate-500"
                     >
                       Fix all
                     </button>
                   )}
                 </div>
                 {!selected.defenderMachineId ? (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     Not onboarded to Defender — no software inventory for this device.
                   </p>
                 ) : inventoryLoading ? (
-                  <p className="text-sm text-slate-500">Loading…</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
                 ) : sortedInventory.length === 0 ? (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     {deviceSoftwareInventory.length === 0
                       ? "No software inventory reported for this device yet."
                       : "No software matches your search."}
                   </p>
                 ) : (
-                  <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                        <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           <SortableTh label="Software" sortKey="name" activeKey={inventorySortKey} dir={inventorySortDir} onSort={toggleInventorySort} />
                           <SortableTh label="Vendor" sortKey="vendor" activeKey={inventorySortKey} dir={inventorySortDir} onSort={toggleInventorySort} />
                           <SortableTh label="Installed version" sortKey="version" activeKey={inventorySortKey} dir={inventorySortDir} onSort={toggleInventorySort} />
@@ -1965,18 +1965,18 @@ export function Devices() {
                             <tr
                               key={s.softwareId}
                               onClick={() => setInventoryDetail(s)}
-                              className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                              className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                             >
-                              <td className="px-4 py-2.5 font-medium text-slate-800">
+                              <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-100">
                                 {s.name}
                                 {s.publicExploit && (
-                                  <span className="ml-2 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700">
+                                  <span className="ml-2 inline-flex items-center rounded-full bg-rose-100 dark:bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:text-rose-400">
                                     Public exploit
                                   </span>
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 text-slate-500">{s.vendor ?? "—"}</td>
-                              <td className="px-4 py-2.5 text-slate-600">{s.version ?? "—"}</td>
+                              <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{s.vendor ?? "—"}</td>
+                              <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{s.version ?? "—"}</td>
                               <td className="px-4 py-2.5">
                                 <div className="flex items-center gap-1">
                                   <ScopeChip scope={s.installScope} />
@@ -1988,8 +1988,8 @@ export function Devices() {
                                   />
                                 </div>
                               </td>
-                              <td className="px-4 py-2.5 text-slate-600">{s.latestVersion ?? "—"}</td>
-                              <td className="px-4 py-2.5 text-slate-600">{s.weaknessCount}</td>
+                              <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{s.latestVersion ?? "—"}</td>
+                              <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{s.weaknessCount}</td>
                               <td className="px-4 py-2.5 text-right">
                                 <button
                                   type="button"
@@ -1999,7 +1999,7 @@ export function Devices() {
                                   }}
                                   disabled={!canFix}
                                   title={s.upToDate ? "Already up to date." : undefined}
-                                  className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                                  className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 dark:disabled:text-slate-500"
                                 >
                                   Fix now
                                 </button>
@@ -2027,7 +2027,7 @@ export function Devices() {
                 fully visible in the narrow drawer. */}
             <section>
               <div className="mb-2 flex items-center justify-between gap-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   Vulnerabilities
                 </h4>
                 <SeverityCounts counts={deviceSevCounts} />
@@ -2043,12 +2043,12 @@ export function Devices() {
                 <div
                   className={`mb-3 rounded-lg border p-3 text-sm ${
                     fixAllError
-                      ? "border-rose-200 bg-rose-50 text-rose-800"
+                      ? "border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 text-rose-800"
                       : fixAllResult && fixAllResult.jobsCreated === 0
-                        ? "border-rose-200 bg-rose-50 text-rose-800"
+                        ? "border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 text-rose-800"
                         : fixAllResult && fixAllResult.skipped.length > 0
-                          ? "border-amber-200 bg-amber-50 text-amber-800"
-                          : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                          ? "border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 text-amber-800"
+                          : "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -2094,7 +2094,7 @@ export function Devices() {
                         setFixAllResult(null);
                         setFixAllError(null);
                       }}
-                      className="shrink-0 text-xs font-medium text-slate-500 hover:text-slate-700"
+                      className="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                     >
                       Dismiss
                     </button>
@@ -2102,13 +2102,13 @@ export function Devices() {
                 </div>
               )}
               {!selected.defenderMachineId ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   Not onboarded to Defender — no CVE data for this device.
                 </p>
               ) : deviceVulnsLoading ? (
-                <p className="text-sm text-slate-500">Loading…</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
               ) : deviceVulns.length === 0 ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   No open vulnerabilities for this device.
                 </p>
               ) : (
@@ -2118,7 +2118,7 @@ export function Devices() {
                       viewBox="0 0 20 20"
                       fill="currentColor"
                       aria-hidden
-                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
                     >
                       <path
                         fillRule="evenodd"
@@ -2131,11 +2131,11 @@ export function Devices() {
                       value={findingsSearch}
                       onChange={(e) => setFindingsSearch(e.target.value)}
                       placeholder="Search this device's findings…"
-                      className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
                     />
                   </div>
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <div className="inline-flex gap-1 rounded-lg bg-slate-100 p-1">
+                    <div className="inline-flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
                       {(
                         [
                           ["cve", `By CVE (${deviceVulns.length})`],
@@ -2150,8 +2150,8 @@ export function Devices() {
                           onClick={() => setFindingsTab(value)}
                           className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                             findingsTab === value
-                              ? "bg-white text-slate-900 shadow-sm"
-                              : "text-slate-500 hover:text-slate-800"
+                              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                           }`}
                         >
                           {label}
@@ -2168,13 +2168,13 @@ export function Devices() {
                       {fixAllMutation.isPending ? "Fixing all…" : "Fix all"}
                     </button>
                   </div>
-                  <p className="mb-3 text-xs text-slate-400">
+                  <p className="mb-3 text-xs text-slate-400 dark:text-slate-500">
                     Winget-installed software only — does not include Windows/OS updates.
                   </p>
 
                   {findingsTab === "cve" ? (
                     sortedDeviceVulns.length === 0 ? (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
                         {deviceVulns.length === 0
                           ? "No vulnerability findings on this device."
                           : "No findings match your search."}
@@ -2185,10 +2185,10 @@ export function Devices() {
                          already scoped to this one device. Scrolls horizontally
                          instead of clipping: nine columns don't fit the modal's
                          narrower width, unlike the full-width Vulnerabilities page. */
-                      <div className="overflow-x-auto rounded-lg border border-slate-200">
+                      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
                         <table className="w-full min-w-[960px] text-sm">
                           <thead>
-                            <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                            <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                               <SortableTh label="CVE" sortKey="cve" activeKey={cveSortKey} dir={cveSortDir} onSort={toggleCveSort} />
                               <SortableTh label="Severity" sortKey="severity" activeKey={cveSortKey} dir={cveSortDir} onSort={toggleCveSort} />
                               <SortableTh label="CVSS" sortKey="cvss" activeKey={cveSortKey} dir={cveSortDir} onSort={toggleCveSort} />
@@ -2205,25 +2205,25 @@ export function Devices() {
                               <tr
                                 key={v.id}
                                 onClick={() => setSelectedCve(v)}
-                                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                                className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                               >
-                                <td className="px-4 py-2.5 font-medium text-slate-800">
+                                <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-100">
                                   {v.cveId ?? "—"}
                                 </td>
                                 <td className="px-4 py-2.5">
                                   <SeverityChip severity={v.severity} />
                                 </td>
-                                <td className="px-4 py-2.5 text-slate-600">
+                                <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">
                                   {v.cvss != null ? v.cvss.toFixed(1) : "—"}
                                 </td>
                                 <td className="px-4 py-2.5">
                                   <div className="min-w-0">
-                                    <div className="truncate font-medium text-slate-800">
+                                    <div className="truncate font-medium text-slate-800 dark:text-slate-100">
                                       {v.displayName ?? v.software}
                                     </div>
                                     {/* Latin anchor for a non-Latin software name. */}
                                     {hasNonLatinScript(v.software) && v.publisher && (
-                                      <div className="truncate text-xs text-slate-400">
+                                      <div className="truncate text-xs text-slate-400 dark:text-slate-500">
                                         {v.publisher}
                                       </div>
                                     )}
@@ -2237,9 +2237,9 @@ export function Devices() {
                                     )}
                                   </div>
                                 </td>
-                                <td className="px-4 py-2.5 text-slate-600">
+                                <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">
                                   <div>{formatDate(v.detectedAt)}</div>
-                                  <div className="text-xs text-slate-400">
+                                  <div className="text-xs text-slate-400 dark:text-slate-500">
                                     {daysAgo(v.detectedAt)}d ago
                                   </div>
                                 </td>
@@ -2249,7 +2249,7 @@ export function Devices() {
                                 <td className="px-4 py-2.5">
                                   <SlaChip sla={v.sla} />
                                 </td>
-                                <td className="px-4 py-2.5 capitalize text-slate-600">
+                                <td className="px-4 py-2.5 capitalize text-slate-600 dark:text-slate-300">
                                   {v.status}
                                 </td>
                                 <td className="px-4 py-2.5 text-right">
@@ -2301,16 +2301,16 @@ export function Devices() {
                        worst finding, with a Run Now scoped to THIS device —
                        the reachable "fix now" action. */
                     sortedAppRunTargets.length === 0 ? (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
                         {appRunTargets.length === 0
                           ? "No app remediation findings on this device."
                           : "No software matches your search."}
                       </p>
                     ) : (
-                      <div className="overflow-hidden rounded-lg border border-slate-200">
+                      <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                            <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                               <SortableTh label="Software" sortKey="name" activeKey={runTargetSortKey} dir={runTargetSortDir} onSort={toggleRunTargetSort} />
                               <SortableTh label="Scope" sortKey="scope" activeKey={runTargetSortKey} dir={runTargetSortDir} onSort={toggleRunTargetSort} />
                               <SortableTh label="CVEs" sortKey="cves" activeKey={runTargetSortKey} dir={runTargetSortDir} onSort={toggleRunTargetSort} />
@@ -2324,16 +2324,16 @@ export function Devices() {
                               <tr
                                 key={t.software}
                                 onClick={() => setSoftwareDetail(t)}
-                                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                                className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                               >
                                 <td className="px-4 py-2.5">
                                   <div className="min-w-0">
-                                    <div className="truncate font-medium text-slate-800">
+                                    <div className="truncate font-medium text-slate-800 dark:text-slate-100">
                                       {t.displayName ?? t.software}
                                     </div>
                                     {/* Latin anchor for a non-Latin software name. */}
                                     {hasNonLatinScript(t.software) && t.publisher && (
-                                      <div className="truncate text-xs text-slate-400">
+                                      <div className="truncate text-xs text-slate-400 dark:text-slate-500">
                                         {t.publisher}
                                       </div>
                                     )}
@@ -2355,11 +2355,11 @@ export function Devices() {
                                     </div>
                                   )}
                                 </td>
-                                <td className="px-4 py-2.5 text-slate-600">{t.cveCount}</td>
+                                <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{t.cveCount}</td>
                                 <td className="px-4 py-2.5">
                                   <SeverityChip severity={t.severity} />
                                 </td>
-                                <td className="px-4 py-2.5 text-slate-600">{routeLabel(t)}</td>
+                                <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{routeLabel(t)}</td>
                                 <td className="px-4 py-2.5">
                                   <button
                                     type="button"
@@ -2383,16 +2383,16 @@ export function Devices() {
                        stays offered but already hard-fails preflight check #8,
                        same manual-remediation behavior as today. */
                     sortedComponentRunTargets.length === 0 ? (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
                         {componentRunTargets.length === 0
                           ? "No unsupported-component findings on this device."
                           : "No components match your search."}
                       </p>
                     ) : (
-                      <div className="overflow-hidden rounded-lg border border-slate-200">
+                      <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                            <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                               <SortableTh label="Software" sortKey="name" activeKey={runTargetSortKey} dir={runTargetSortDir} onSort={toggleRunTargetSort} />
                               <SortableTh label="Scope" sortKey="scope" activeKey={runTargetSortKey} dir={runTargetSortDir} onSort={toggleRunTargetSort} />
                               <SortableTh label="CVEs" sortKey="cves" activeKey={runTargetSortKey} dir={runTargetSortDir} onSort={toggleRunTargetSort} />
@@ -2406,16 +2406,16 @@ export function Devices() {
                               <tr
                                 key={t.software}
                                 onClick={() => setSoftwareDetail(t)}
-                                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                                className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                               >
                                 <td className="px-4 py-2.5">
                                   <div className="min-w-0">
-                                    <div className="truncate font-medium text-slate-800">
+                                    <div className="truncate font-medium text-slate-800 dark:text-slate-100">
                                       {t.displayName ?? t.software}
                                     </div>
                                     {/* Latin anchor for a non-Latin software name. */}
                                     {hasNonLatinScript(t.software) && t.publisher && (
-                                      <div className="truncate text-xs text-slate-400">
+                                      <div className="truncate text-xs text-slate-400 dark:text-slate-500">
                                         {t.publisher}
                                       </div>
                                     )}
@@ -2435,11 +2435,11 @@ export function Devices() {
                                     </div>
                                   )}
                                 </td>
-                                <td className="px-4 py-2.5 text-slate-600">{t.cveCount}</td>
+                                <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{t.cveCount}</td>
                                 <td className="px-4 py-2.5">
                                   <SeverityChip severity={t.severity} />
                                 </td>
-                                <td className="px-4 py-2.5 text-slate-600">{routeLabel(t)}</td>
+                                <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{routeLabel(t)}</td>
                                 <td className="px-4 py-2.5">
                                   <button
                                     type="button"
@@ -2462,18 +2462,18 @@ export function Devices() {
                     /* Missing KBs: real per-device missing-KB rows (getmissingkbs),
                        not the single rolled-up "Microsoft Windows 11" recommendation. */
                     deviceKbsLoading ? (
-                      <p className="text-sm text-slate-500">Loading…</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
                     ) : sortedMissingKbs.length === 0 ? (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
                         {deviceMissingKbs.length === 0
                           ? "No missing Windows Updates on this device."
                           : "No updates match your search."}
                       </p>
                     ) : (
-                      <div className="overflow-hidden rounded-lg border border-slate-200">
+                      <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                            <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                               <SortableTh label="KB" sortKey="kb" activeKey={kbSortKey} dir={kbSortDir} onSort={toggleKbSort} />
                               <SortableTh label="Title" sortKey="title" activeKey={kbSortKey} dir={kbSortDir} onSort={toggleKbSort} />
                               <SortableTh label="CVEs" sortKey="cves" activeKey={kbSortKey} dir={kbSortDir} onSort={toggleKbSort} />
@@ -2483,11 +2483,11 @@ export function Devices() {
                           </thead>
                           <tbody>
                             {sortedMissingKbs.map((k) => (
-                              <tr key={k.id} className="border-b border-slate-100 last:border-0">
-                                <td className="px-4 py-2.5 font-medium text-slate-800">KB{k.kbId}</td>
-                                <td className="px-4 py-2.5 text-slate-600">{k.title}</td>
-                                <td className="px-4 py-2.5 text-slate-600">{k.cveCount}</td>
-                                <td className="px-4 py-2.5 text-slate-500">
+                              <tr key={k.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
+                                <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-100">KB{k.kbId}</td>
+                                <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{k.title}</td>
+                                <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{k.cveCount}</td>
+                                <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                                   {k.products.length > 0 ? k.products.join(", ") : "—"}
                                 </td>
                                 <td className="px-4 py-2.5">
@@ -2525,16 +2525,16 @@ export function Devices() {
             {deviceTab === "recommendations" && (
               <section>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     Security Recommendations
                   </h4>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
                       Defender's consolidated update recommendations for this device
                     </span>
                     <Link
                       to="/recommendations"
-                      className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                      className="shrink-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
                       Go to Security Recommendations
                     </Link>
@@ -2546,7 +2546,7 @@ export function Devices() {
                     reason={selectedExclusionReason}
                   />
                 ) : !selected.defenderMachineId ? (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     Not onboarded to Defender — no recommendations for this device.
                   </p>
                 ) : (
@@ -2556,7 +2556,7 @@ export function Devices() {
                         viewBox="0 0 20 20"
                         fill="currentColor"
                         aria-hidden
-                        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
                       >
                         <path
                           fillRule="evenodd"
@@ -2569,22 +2569,22 @@ export function Devices() {
                         value={recSearch}
                         onChange={(e) => setRecSearch(e.target.value)}
                         placeholder="Search recommendations, software or vendor…"
-                        className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                        className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
                       />
                     </div>
                     {deviceRecsLoading ? (
-                      <p className="text-sm text-slate-500">Loading…</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
                     ) : sortedDeviceRecs.length === 0 ? (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
                         {deviceRecommendations.length === 0
                           ? "No security recommendations for this device."
                           : "No recommendations match your search."}
                       </p>
                     ) : (
-                      <div className="overflow-hidden rounded-lg border border-slate-200">
+                      <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                            <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                               <SortableTh label="Security recommendation" sortKey="recommendation" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} className="w-full" />
                               <th className="whitespace-nowrap px-4 py-2.5 font-medium">Severity</th>
                               <SortableTh label="CVEs" sortKey="cves" activeKey={recSortKey} dir={recSortDir} onSort={toggleRecSort} className="whitespace-nowrap" />
@@ -2598,11 +2598,11 @@ export function Devices() {
                               <tr
                                 key={r.id}
                                 onClick={() => setSelectedDeviceRec(r)}
-                                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                                className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                               >
                                 <td className="max-w-0 px-4 py-2.5">
                                   <div
-                                    className="truncate font-medium text-slate-800"
+                                    className="truncate font-medium text-slate-800 dark:text-slate-100"
                                     title={r.recommendationName}
                                   >
                                     {r.recommendationName}
@@ -2612,7 +2612,7 @@ export function Devices() {
                                   <div className="mt-1 flex items-center gap-2">
                                     <RecKindChip kind={r.kind} />
                                     {r.vendor && (
-                                      <span className="truncate text-xs text-slate-400">
+                                      <span className="truncate text-xs text-slate-400 dark:text-slate-500">
                                         {r.vendor}
                                       </span>
                                     )}
@@ -2622,15 +2622,15 @@ export function Devices() {
                                 <td className="whitespace-nowrap px-4 py-2.5">
                                   {/* Defender scores misconfigurations by score impact, not severity. */}
                                   {r.kind === "misconfiguration" ? (
-                                    <span className="text-slate-400">—</span>
+                                    <span className="text-slate-400 dark:text-slate-500">—</span>
                                   ) : (
                                     <SeverityChip severity={r.severity} />
                                   )}
                                 </td>
-                                <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">
+                                <td className="whitespace-nowrap px-4 py-2.5 text-slate-600 dark:text-slate-300">
                                   {r.kind === "misconfiguration" ? "—" : r.cveTotal}
                                 </td>
-                                <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">
+                                <td className="whitespace-nowrap px-4 py-2.5 text-slate-600 dark:text-slate-300">
                                   {r.recommendedVersion ?? "—"}
                                 </td>
                                 <td className="whitespace-nowrap px-4 py-2.5">
@@ -2670,7 +2670,7 @@ export function Devices() {
                                           label: r.recommendationName,
                                         });
                                       }}
-                                      className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                      className="shrink-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                                       title={
                                         r.exception
                                           ? "An exception already covers this recommendation"
@@ -2758,7 +2758,7 @@ export function Devices() {
                 )}
                 {selectedDeviceRec.exception && <ExceptionChip />}
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                 {selectedDeviceRec.kind === "misconfiguration" ? (
                   <>
                     A device-configuration finding on this device. Remediate it
@@ -2784,7 +2784,7 @@ export function Devices() {
                       label: selectedDeviceRec.recommendationName,
                     })
                   }
-                  className="mt-3 inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  className="mt-3 inline-flex items-center rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                   title="Record a local exception"
                 >
                   Create exception
@@ -2793,57 +2793,57 @@ export function Devices() {
             </div>
 
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Recommendation
               </h4>
               <dl className="space-y-1.5 text-sm">
                 {selectedDeviceRec.kind === "vulnerability" ? (
                   <>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Related component</dt>
-                      <dd className="min-w-0 truncate font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Related component</dt>
+                      <dd className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-100">
                         {selectedDeviceRec.relatedComponent ??
                           selectedDeviceRec.productName}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Vendor</dt>
-                      <dd className="min-w-0 truncate font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Vendor</dt>
+                      <dd className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-100">
                         {selectedDeviceRec.vendor ?? "—"}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Recommended version</dt>
-                      <dd className="font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Recommended version</dt>
+                      <dd className="font-medium text-slate-800 dark:text-slate-100">
                         {selectedDeviceRec.recommendedVersion ?? "Latest available"}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Remediation</dt>
-                      <dd className="font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Remediation</dt>
+                      <dd className="font-medium text-slate-800 dark:text-slate-100">
                         {prettyRemediationType(selectedDeviceRec.remediationType)}
                       </dd>
                     </div>
                   </>
                 ) : (
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">Devices score impact</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">Devices score impact</dt>
+                    <dd className="font-medium text-slate-800 dark:text-slate-100">
                       {selectedDeviceRec.configScoreImpact?.toFixed(2) ?? "—"}
                     </dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Category</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Category</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">
                     {selectedDeviceRec.subCategory
                       ? `${selectedDeviceRec.category ?? "—"} · ${selectedDeviceRec.subCategory}`
                       : (selectedDeviceRec.category ?? "—")}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Threats</dt>
-                  <dd className="min-w-0 truncate font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Threats</dt>
+                  <dd className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-100">
                     {selectedDeviceRec.activeAlert
                       ? "Active alert"
                       : selectedDeviceRec.associatedThreats.length > 0
@@ -2867,15 +2867,15 @@ export function Devices() {
 
             {selectedDeviceRec.kind === "vulnerability" && (
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Underlying CVEs (this device)
               </h4>
               {selectedDeviceRecCves.length === 0 ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   No matching per-CVE findings on this device.
                 </p>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-slate-200">
+                <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                   <ul>
                     {selectedDeviceRecCves.map((v) => (
                       <li
@@ -2884,13 +2884,13 @@ export function Devices() {
                           setSelectedDeviceRec(null);
                           setSelectedCve(v);
                         }}
-                        className="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 last:border-0 hover:bg-slate-50"
+                        className="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-4 py-2 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium text-slate-800">
+                          <div className="truncate font-medium text-slate-800 dark:text-slate-100">
                             {v.cveId}
                           </div>
-                          <div className="truncate text-xs text-slate-400">
+                          <div className="truncate text-xs text-slate-400 dark:text-slate-500">
                             {v.displayName ?? v.software}
                           </div>
                         </div>
@@ -2951,7 +2951,7 @@ export function Devices() {
                 {/* Latin anchor for a non-Latin software name. */}
                 {hasNonLatinScript(softwareDetail.software) &&
                   softwareDetail.publisher && (
-                    <p className="-mt-2 text-sm text-slate-500">
+                    <p className="-mt-2 text-sm text-slate-500 dark:text-slate-400">
                       {softwareDetail.publisher}
                     </p>
                   )}
@@ -2982,23 +2982,23 @@ export function Devices() {
 
                 {/* Related CVEs — each pops out the same CVE detail panel. */}
                 <section>
-                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     Detected CVEs ({related.length})
                   </h4>
-                  <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                     <ul>
                       {related.map((v) => (
                         <li
                           key={v.id}
                           onClick={() => setSelectedCve(v)}
-                          className="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 last:border-0 hover:bg-slate-50"
+                          className="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-4 py-2 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
                           <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium text-slate-800">
+                            <div className="truncate font-medium text-slate-800 dark:text-slate-100">
                               {v.cveId}
                             </div>
                             {v.title && (
-                              <div className="truncate text-xs text-slate-400">
+                              <div className="truncate text-xs text-slate-400 dark:text-slate-500">
                                 {v.title}
                               </div>
                             )}
@@ -3106,33 +3106,33 @@ export function Devices() {
               registryPaths={inventoryDetail.registryPaths ?? []}
             />
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Details
               </h4>
               <dl className="space-y-1.5 text-sm">
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Vendor</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Vendor</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">
                     {inventoryDetail.vendor ?? "—"}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Latest version</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Latest version</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">
                     {inventoryDetail.latestVersion ?? "—"}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Weaknesses</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Weaknesses</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">
                     {inventoryDetail.weaknessCount}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Public exploit</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Public exploit</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">
                     {inventoryDetail.publicExploit ? (
-                      <span className="text-rose-600">Yes</span>
+                      <span className="text-rose-600 dark:text-rose-400">Yes</span>
                     ) : (
                       "None reported"
                     )}
@@ -3145,7 +3145,7 @@ export function Devices() {
               onClick={() => setInventoryFixTarget(inventoryDetail)}
               disabled={inventoryDetail.upToDate}
               title={inventoryDetail.upToDate ? "Already up to date." : undefined}
-              className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+              className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 dark:disabled:text-slate-500"
             >
               Fix now
             </button>

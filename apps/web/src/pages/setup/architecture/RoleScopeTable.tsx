@@ -72,7 +72,7 @@ export function RoleScopeTable() {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+          <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
             <th className="px-5 py-3 font-medium">Scope</th>
             <th className="px-5 py-3 font-medium">Entra role</th>
             <th className="px-5 py-3 font-medium">Access mechanism</th>
@@ -82,17 +82,17 @@ export function RoleScopeTable() {
         </thead>
         <tbody>
           {ROWS.map((row) => (
-            <tr key={`${row.scope}-${row.role}`} className="border-b border-slate-100 last:border-0">
-              <td className="px-5 py-3 whitespace-nowrap text-slate-500">{row.scope}</td>
-              <td className="px-5 py-3 whitespace-nowrap font-medium text-slate-700">{row.role}</td>
-              <td className="px-5 py-3 whitespace-nowrap text-slate-600">{row.mechanism}</td>
-              <td className="px-5 py-3 text-slate-600">{row.unlocks}</td>
+            <tr key={`${row.scope}-${row.role}`} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
+              <td className="px-5 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">{row.scope}</td>
+              <td className="px-5 py-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-200">{row.role}</td>
+              <td className="px-5 py-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{row.mechanism}</td>
+              <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{row.unlocks}</td>
               <td className="px-5 py-3">
                 <div className="flex flex-wrap gap-1">
                   {row.permissions.map((p) => (
                     <span
                       key={p}
-                      className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-600"
+                      className="inline-flex items-center rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-slate-600 dark:text-slate-300"
                     >
                       {p}
                     </span>

@@ -17,29 +17,29 @@ import { Card, PageHeader, CopyButton } from "../../components/ui";
 // are relabeled to read as a relationship state; the MSP's own tenant is handled
 // separately as the home tenant.
 const GDAP_META: Record<string, { label: string; style: string }> = {
-  consented: { label: "Active", style: "bg-emerald-100 text-emerald-700" },
-  pending: { label: "Pending", style: "bg-amber-100 text-amber-700" },
-  expired: { label: "Expired", style: "bg-rose-100 text-rose-700" },
+  consented: { label: "Active", style: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
+  pending: { label: "Pending", style: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400" },
+  expired: { label: "Expired", style: "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400" },
 };
 
 function gdapMeta(status: string): { label: string; style: string } {
-  return GDAP_META[status] ?? { label: status, style: "bg-slate-100 text-slate-600" };
+  return GDAP_META[status] ?? { label: status, style: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300" };
 }
 
 // Reachability is the honest "can we actually call Graph" signal, distinct from
 // the GDAP relationship status. label + style per value.
 const REACH_META: Record<string, { label: string; style: string }> = {
-  reachable: { label: "Reachable", style: "bg-emerald-100 text-emerald-700" },
-  "consent-needed": { label: "Needs consent", style: "bg-amber-100 text-amber-700" },
-  throttled: { label: "Throttled", style: "bg-sky-100 text-sky-700" },
-  unreachable: { label: "Unreachable", style: "bg-rose-100 text-rose-700" },
-  unknown: { label: "Not probed", style: "bg-slate-100 text-slate-500" },
+  reachable: { label: "Reachable", style: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
+  "consent-needed": { label: "Needs consent", style: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400" },
+  throttled: { label: "Throttled", style: "bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300" },
+  unreachable: { label: "Unreachable", style: "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400" },
+  unknown: { label: "Not probed", style: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400" },
 };
 
 // Resolve to a guaranteed-defined meta — the object-literal fallback keeps this
 // total even under noUncheckedIndexedAccess (a bare REACH_META.unknown is `| undefined`).
 function reachMeta(reachability: string): { label: string; style: string } {
-  return REACH_META[reachability] ?? { label: "Not probed", style: "bg-slate-100 text-slate-500" };
+  return REACH_META[reachability] ?? { label: "Not probed", style: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400" };
 }
 
 // Standard "external link" glyph for the per-row consent action.
@@ -133,12 +133,12 @@ function SortHeader({
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 ${
-          active ? "text-slate-700" : ""
+        className={`inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-200 ${
+          active ? "text-slate-700 dark:text-slate-200" : ""
         }`}
       >
         {label}
-        <span className="text-[9px] leading-none text-slate-400">
+        <span className="text-[9px] leading-none text-slate-400 dark:text-slate-500">
           {active ? (dir === "asc" ? "▲" : "▼") : "↕"}
         </span>
       </button>
@@ -430,7 +430,7 @@ export function Tenants() {
               type="button"
               disabled={isFetching}
               onClick={refresh}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               title="Re-query the tenant list and data (no Graph re-discovery)"
             >
               {isFetching ? "Refreshing…" : "Refresh"}
@@ -460,12 +460,12 @@ export function Tenants() {
       {message && (
         <Card
           className={`mb-5 ${
-            message.tone === "ok" ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"
+            message.tone === "ok" ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10" : "border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10"
           }`}
         >
           <p
             className={`text-sm ${
-              message.tone === "ok" ? "text-emerald-700" : "text-rose-700"
+              message.tone === "ok" ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
             }`}
           >
             {message.text}
@@ -474,14 +474,14 @@ export function Tenants() {
       )}
 
       <Card className="mb-5 border-dashed">
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           {demoMode
             ? "Live sync is disabled in DEMO_MODE — data is served from in-memory fixtures."
             : "Discover tenants reads your home tenant and GDAP customer relationships from Graph, then probes access and licensing. Sync data pulls each tenant's Intune devices and Defender CVE exposure into PatchPilot. "}
           {!demoMode && (
             <>
-              The <span className="font-medium text-slate-600">Licenses</span> column and{" "}
-              <span className="font-medium text-slate-600">Reachability</span> refresh on Discover
+              The <span className="font-medium text-slate-600 dark:text-slate-300">Licenses</span> column and{" "}
+              <span className="font-medium text-slate-600 dark:text-slate-300">Reachability</span> refresh on Discover
               (not Sync data). Per-tenant admin-consent links are below.
             </>
           )}
@@ -490,10 +490,10 @@ export function Tenants() {
 
       {!demoMode && entitlement && (
         <Card className="mb-5 border-dashed">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {entitlement.deviceLicensePool !== null ? (
               <>
-                <span className="font-medium text-slate-700">Live Response device pool:</span>{" "}
+                <span className="font-medium text-slate-700 dark:text-slate-200">Live Response device pool:</span>{" "}
                 {entitlement.deviceLicenseAllocated} / {entitlement.deviceLicensePool} allocated across
                 tenants below.{" "}
                 {entitlement.deviceLicenseAllocated >= entitlement.deviceLicensePool &&
@@ -508,29 +508,29 @@ export function Tenants() {
 
       <Card className="p-0">
         {isLoading ? (
-          <div className="p-5 text-sm text-slate-500">Loading…</div>
+          <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Loading…</div>
         ) : tenants.length === 0 ? (
-          <div className="p-5 text-sm text-slate-500">
+          <div className="p-5 text-sm text-slate-500 dark:text-slate-400">
             No tenants yet.{" "}
             {!demoMode && "Click “Discover tenants” to pull them from Graph."}
           </div>
         ) : (
           <>
-            <div className="border-b border-slate-100 p-3">
+            <div className="border-b border-slate-100 dark:border-slate-800 p-3">
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name or tenant ID…"
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 sm:w-80"
+                className="w-full rounded-md border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 sm:w-80"
               />
             </div>
             {visible.length === 0 ? (
-              <div className="p-5 text-sm text-slate-500">No tenants match “{search}”.</div>
+              <div className="p-5 text-sm text-slate-500 dark:text-slate-400">No tenants match “{search}”.</div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     <SortHeader label="Tenant" sortKey="name" active={sort.key === "name"} dir={sort.dir} onSort={toggleSort} />
                     <th className="px-5 py-3 font-medium">Entra tenant ID</th>
                     <SortHeader label="GDAP status" sortKey="gdap" active={sort.key === "gdap"} dir={sort.dir} onSort={toggleSort} />
@@ -550,23 +550,23 @@ export function Tenants() {
                     return (
                       <tr
                         key={t.id}
-                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                        className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                       >
-                        <td className="px-5 py-3 font-medium text-slate-800">
+                        <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">
                           {t.displayName}
                           {t.isMspTenant && (
-                            <span className="ml-2 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-indigo-700">
+                            <span className="ml-2 rounded bg-indigo-100 dark:bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-indigo-700 dark:text-indigo-300">
                               MSP
                             </span>
                           )}
                         </td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-500">
+                        <td className="px-5 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">
                           {t.tenantId}
                         </td>
                         <td className="px-5 py-3">
                           {t.isMspTenant ? (
                             <span
-                              className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700"
+                              className="inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300"
                               title="Your own MSP tenant — installed directly, no GDAP relationship applies."
                             >
                               Home tenant
@@ -610,7 +610,7 @@ export function Tenants() {
                                     : "Open admin consent for this tenant"
                                 }
                                 aria-label="Open admin consent in a new tab"
-                                className="inline-flex items-center rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                                className="inline-flex items-center rounded-md p-1 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
                               >
                                 <ExternalLinkIcon />
                               </a>
@@ -638,8 +638,8 @@ export function Tenants() {
                                 }
                                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                                   t.readOnly
-                                    ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                    ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                    : "bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-200"
                                 }`}
                               >
                                 {busy
@@ -676,7 +676,7 @@ export function Tenants() {
                                   onChange={(e) =>
                                     setDeviceLimitDrafts((d) => ({ ...d, [t.tenantId]: e.target.value }))
                                   }
-                                  className="w-14 rounded-md border border-slate-200 px-1.5 py-1 text-xs text-slate-700 focus:border-indigo-400 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-50"
+                                  className="w-14 rounded-md border border-slate-200 dark:border-slate-800 px-1.5 py-1 text-xs text-slate-700 dark:text-slate-200 focus:border-indigo-400 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-slate-800"
                                   title={
                                     !canWrite
                                       ? "Your role doesn't include settings write access."
@@ -684,7 +684,7 @@ export function Tenants() {
                                   }
                                 />
                                 {used !== undefined && (
-                                  <span className="text-[10px] text-slate-400">used {used}</span>
+                                  <span className="text-[10px] text-slate-400 dark:text-slate-500">used {used}</span>
                                 )}
                                 {dirty && (
                                   <button
@@ -700,12 +700,12 @@ export function Tenants() {
                             );
                           })()}
                         </td>
-                        <td className="px-5 py-3 text-xs text-slate-500">
+                        <td className="px-5 py-3 text-xs text-slate-500 dark:text-slate-400">
                           {t.licenses.length > 0 ? t.licenses.join(", ") : "—"}
                         </td>
                         <td
                           className={`px-5 py-3 text-xs ${
-                            t.lastSyncedAt ? "text-slate-500" : "text-slate-400"
+                            t.lastSyncedAt ? "text-slate-500 dark:text-slate-400" : "text-slate-400 dark:text-slate-500"
                           }`}
                           title={
                             t.lastSyncedAt
@@ -725,7 +725,7 @@ export function Tenants() {
                               syncing.has(t.tenantId)
                             }
                             onClick={() => void syncTenantData(t.tenantId)}
-                            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-md border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                             title={
                               !canWrite
                                 ? "Your role doesn't include settings write access."
@@ -750,7 +750,7 @@ export function Tenants() {
       {!demoMode && (
         <div className="mt-5">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-slate-700">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               Per-tenant admin consent
             </h2>
             {consentTargets.length > 0 && (
@@ -761,7 +761,7 @@ export function Tenants() {
                   setMessage(null);
                   discover.mutate();
                 }}
-                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 title="Re-probe every tenant's access and consent status."
               >
                 {discover.isPending ? "Re-checking…" : "Re-check access"}
@@ -771,25 +771,25 @@ export function Tenants() {
 
           <Card className="p-0">
             {consentTargets.length === 0 ? (
-              <div className="p-5 text-sm text-slate-500">
+              <div className="p-5 text-sm text-slate-500 dark:text-slate-400">
                 No customer tenants to consent yet.
               </div>
             ) : (
               <>
-                <div className="flex flex-col gap-2 border-b border-slate-100 p-3 sm:flex-row sm:items-center">
+                <div className="flex flex-col gap-2 border-b border-slate-100 dark:border-slate-800 p-3 sm:flex-row sm:items-center">
                   <input
                     type="search"
                     value={consentSearch}
                     onChange={(e) => setConsentSearch(e.target.value)}
                     placeholder="Search by name or tenant ID…"
-                    className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    className="flex-1 rounded-md border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                   />
-                  <label className="flex items-center gap-2 text-xs text-slate-500">
+                  <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                     Sort
                     <select
                       value={consentSortKey}
                       onChange={(e) => setConsentSortKey(e.target.value as ConsentSortKey)}
-                      className="rounded-md border border-slate-200 px-2 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      className="rounded-md border border-slate-200 dark:border-slate-800 px-2 py-2 text-sm text-slate-700 dark:text-slate-200 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     >
                       <option value="name">Name</option>
                       <option value="reachability">Reachability</option>
@@ -798,7 +798,7 @@ export function Tenants() {
                   </label>
                 </div>
                 {visibleConsentTargets.length === 0 ? (
-                  <div className="p-5 text-sm text-slate-500">
+                  <div className="p-5 text-sm text-slate-500 dark:text-slate-400">
                     No tenants match “{consentSearch}”.
                   </div>
                 ) : (
@@ -806,14 +806,14 @@ export function Tenants() {
                     {visibleConsentTargets.map((t) => (
                       <li
                         key={t.tenantId}
-                        className="border-b border-slate-100 px-5 py-4 last:border-0"
+                        className="border-b border-slate-100 dark:border-slate-800 px-5 py-4 last:border-0"
                       >
                         <div className="flex items-center justify-between gap-4">
                           <div className="min-w-0">
-                            <div className="text-sm font-medium text-slate-800">
+                            <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
                               {t.displayName}
                             </div>
-                            <div className="font-mono text-xs text-slate-400">
+                            <div className="font-mono text-xs text-slate-400 dark:text-slate-500">
                               {t.tenantId}
                             </div>
                           </div>
@@ -837,7 +837,7 @@ export function Tenants() {
                         </div>
 
                         {t.reachability === "consent-needed" && (
-                          <p className="mt-2 text-xs text-amber-700">
+                          <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
                             App-only tokens mint but Graph returns 403. Re-run{" "}
                             <code className="font-mono">Deploy-PatchPilot.ps1</code>{" "}
                             to grant customer access (adds the SP to the GDAP
@@ -845,20 +845,20 @@ export function Tenants() {
                           </p>
                         )}
                         {t.reachability === "reachable" && t.licenses.length === 0 && (
-                          <p className="mt-2 text-xs text-slate-400">
+                          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
                             Reachable, but no managed licenses detected
                             (reseller-only or unlicensed) — informational only,
                             no action needed.
                           </p>
                         )}
                         <div className="mt-2 flex items-center gap-2">
-                          <code className="flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">
+                          <code className="flex-1 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                             {t.consentUrl}
                           </code>
                           <CopyButton value={t.consentUrl} />
                           <a
                             href={consentMailto(t.displayName, t.consentUrl)}
-                            className="shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                            className="shrink-0 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                           >
                             Email
                           </a>
@@ -891,11 +891,11 @@ export function Tenants() {
             onClick={() => setPendingWrite(null)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Opt {pendingWrite.displayName} into write actions?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               This lets PatchPilot dispatch real remediations (Live Response scripts, Intune
               actions) to this tenant's devices. The change is audited. You can switch back to
               read-only at any time.
@@ -904,7 +904,7 @@ export function Tenants() {
               <button
                 type="button"
                 onClick={() => setPendingWrite(null)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>

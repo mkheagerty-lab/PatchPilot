@@ -5,7 +5,7 @@ import { useCan } from "../lib/auth";
 import { WizardShell } from "./WizardShell";
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 dark:focus:border-slate-600 focus:outline-none";
 
 export function NewDeviceGroupModal({
   open,
@@ -52,7 +52,7 @@ export function NewDeviceGroupModal({
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Name</label>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Name</label>
           <input
             className={INPUT_CLASS}
             value={name}
@@ -62,7 +62,7 @@ export function NewDeviceGroupModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
             Description (optional)
           </label>
           <textarea
@@ -75,13 +75,13 @@ export function NewDeviceGroupModal({
         </div>
 
         {!canWrite && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
             Your role doesn't include remediation write access.
           </div>
         )}
 
         {create.isError && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
             {create.error.message}
           </div>
         )}

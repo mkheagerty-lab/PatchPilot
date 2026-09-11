@@ -73,7 +73,7 @@ export function WindowsUpdates() {
             type="button"
             onClick={() => sync.mutate()}
             disabled={sync.isPending || isAllTenants || !activeTenantId || !canWrite}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
           >
             {sync.isPending ? "Syncing…" : "Sync now"}
           </button>
@@ -83,20 +83,20 @@ export function WindowsUpdates() {
       {message && (
         <div
           className={`mb-4 rounded-lg border px-3 py-2 text-xs ${
-            message.tone === "ok" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"
+            message.tone === "ok" ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400"
           }`}
         >
           {message.text}
         </div>
       )}
 
-      <div className="mb-4 flex w-fit items-center gap-1 rounded-lg bg-slate-100 p-1">
+      <div className="mb-4 flex w-fit items-center gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
-              tab === t.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
+              tab === t.key ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
             }`}
           >
             {t.label}

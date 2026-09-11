@@ -29,7 +29,7 @@ export function TimeToRemediateCard({
       subtitle={count === 0 ? "No remediations recorded in this window" : `${count} remediations in this window`}
       to={toRemediationHistory()}
       actions={
-        <span className="cursor-help text-xs text-slate-400" title={CAVEAT}>
+        <span className="cursor-help text-xs text-slate-400 dark:text-slate-500" title={CAVEAT}>
           ⓘ
         </span>
       }
@@ -41,14 +41,14 @@ export function TimeToRemediateCard({
       <div className="flex h-full flex-col justify-between">
         <div className="flex items-end gap-8">
           <div>
-            <div className="text-xs font-medium text-slate-500">Average</div>
-            <div className="mt-1 text-3xl font-semibold text-slate-900">
+            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">Average</div>
+            <div className="mt-1 text-3xl font-semibold text-slate-900 dark:text-slate-100">
               {avgHours === null ? "—" : formatDuration(avgHours)}
             </div>
           </div>
           <div>
-            <div className="text-xs font-medium text-slate-500">p90</div>
-            <div className="mt-1 text-xl font-semibold text-slate-700">
+            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">p90</div>
+            <div className="mt-1 text-xl font-semibold text-slate-700 dark:text-slate-200">
               {p90Hours === null ? "—" : formatDuration(p90Hours)}
             </div>
           </div>
@@ -59,7 +59,7 @@ export function TimeToRemediateCard({
             return (
               <div key={s} className="flex items-center justify-between gap-3 text-sm">
                 <SeverityChip severity={s} />
-                <span className="text-slate-600">
+                <span className="text-slate-600 dark:text-slate-300">
                   {bucket.count === 0
                     ? "—"
                     : `${formatDuration(bucket.avgHours ?? 0)} avg · ${bucket.count} remediated`}

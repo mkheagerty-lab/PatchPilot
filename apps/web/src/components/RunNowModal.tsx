@@ -81,9 +81,9 @@ import {
  */
 
 const STATUS_STYLES: Record<PreflightStatus, string> = {
-  pass: "bg-emerald-100 text-emerald-700",
-  warn: "bg-amber-100 text-amber-700",
-  fail: "bg-rose-100 text-rose-700",
+  pass: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  warn: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  fail: "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400",
 };
 
 const STATUS_LABELS: Record<PreflightStatus, string> = {
@@ -146,7 +146,7 @@ function PreviewBadge({ active }: { active: boolean }) {
   return (
     <span
       className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
-        active ? "bg-white/15 text-slate-100" : "bg-amber-100 text-amber-700"
+        active ? "bg-white/15 text-slate-100" : "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400"
       }`}
     >
       Preview
@@ -335,14 +335,14 @@ function WingetPicker({
   wingetSearch: string;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-2.5">
       {wingetPick ? (
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-xs font-medium text-slate-800">
+            <div className="truncate text-xs font-medium text-slate-800 dark:text-slate-100">
               {wingetPick.packageId}
             </div>
-            <div className="truncate text-[11px] text-slate-500">
+            <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
               {wingetPick.name}
               {wingetPick.latestVersion
                 ? ` · v${wingetPick.latestVersion}`
@@ -352,7 +352,7 @@ function WingetPicker({
           <button
             type="button"
             onClick={() => setWingetPick(null)}
-            className="shrink-0 text-[11px] font-medium text-slate-500 hover:text-slate-800"
+            className="shrink-0 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
           >
             Clear
           </button>
@@ -364,31 +364,31 @@ function WingetPicker({
             value={wingetQuery}
             onChange={(e) => setWingetQuery(e.target.value)}
             placeholder="Search the winget catalog…"
-            className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+            className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
           />
           {wingetSearching ? (
-            <div className="mt-1.5 text-[11px] text-slate-400">
+            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
               Searching…
             </div>
           ) : wingetResults.length > 0 ? (
-            <ul className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-white">
+            <ul className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               {wingetResults.map((p) => (
                 <li key={p.packageId}>
                   <button
                     type="button"
                     onClick={() => setWingetPick(p)}
-                    className="flex w-full items-center justify-between gap-2 border-b border-slate-100 px-2.5 py-1.5 text-left last:border-0 hover:bg-slate-50"
+                    className="flex w-full items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 px-2.5 py-1.5 text-left last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-xs font-medium text-slate-800">
+                      <span className="block truncate text-xs font-medium text-slate-800 dark:text-slate-100">
                         {p.packageId}
                       </span>
-                      <span className="block truncate text-[11px] text-slate-500">
+                      <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
                         {p.name}
                       </span>
                     </span>
                     {p.latestVersion && (
-                      <span className="shrink-0 text-[10px] text-slate-400">
+                      <span className="shrink-0 text-[10px] text-slate-400 dark:text-slate-500">
                         v{p.latestVersion}
                       </span>
                     )}
@@ -397,12 +397,12 @@ function WingetPicker({
               ))}
             </ul>
           ) : wingetSearch.length >= 2 ? (
-            <div className="mt-1.5 text-[11px] text-slate-400">
+            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
               No catalog match — PatchPilot's stored mapping for
               this CVE will be used if one exists.
             </div>
           ) : null}
-          <p className="mt-1.5 text-[11px] leading-tight text-slate-500">
+          <p className="mt-1.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
             No selection — the CVE's stored winget match is used.
             Pick a package to override it.
           </p>
@@ -435,14 +435,14 @@ function ChocolateyPicker({
   chocoSearch: string;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-2.5">
       {chocoPick ? (
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-xs font-medium text-slate-800">
+            <div className="truncate text-xs font-medium text-slate-800 dark:text-slate-100">
               {chocoPick.packageId}
             </div>
-            <div className="truncate text-[11px] text-slate-500">
+            <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
               {chocoPick.name}
               {chocoPick.latestVersion ? ` · v${chocoPick.latestVersion}` : ""}
             </div>
@@ -450,7 +450,7 @@ function ChocolateyPicker({
           <button
             type="button"
             onClick={() => setChocoPick(null)}
-            className="shrink-0 text-[11px] font-medium text-slate-500 hover:text-slate-800"
+            className="shrink-0 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
           >
             Clear
           </button>
@@ -462,31 +462,31 @@ function ChocolateyPicker({
             value={chocoQuery}
             onChange={(e) => setChocoQuery(e.target.value)}
             placeholder="Search the Chocolatey catalog…"
-            className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+            className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
           />
           {chocoSearching ? (
-            <div className="mt-1.5 text-[11px] text-slate-400">
+            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
               Searching…
             </div>
           ) : chocoResults.length > 0 ? (
-            <ul className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-white">
+            <ul className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               {chocoResults.map((p) => (
                 <li key={p.packageId}>
                   <button
                     type="button"
                     onClick={() => setChocoPick(p)}
-                    className="flex w-full items-center justify-between gap-2 border-b border-slate-100 px-2.5 py-1.5 text-left last:border-0 hover:bg-slate-50"
+                    className="flex w-full items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 px-2.5 py-1.5 text-left last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-xs font-medium text-slate-800">
+                      <span className="block truncate text-xs font-medium text-slate-800 dark:text-slate-100">
                         {p.packageId}
                       </span>
-                      <span className="block truncate text-[11px] text-slate-500">
+                      <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
                         {p.name}
                       </span>
                     </span>
                     {p.latestVersion && (
-                      <span className="shrink-0 text-[10px] text-slate-400">
+                      <span className="shrink-0 text-[10px] text-slate-400 dark:text-slate-500">
                         v{p.latestVersion}
                       </span>
                     )}
@@ -495,12 +495,12 @@ function ChocolateyPicker({
               ))}
             </ul>
           ) : chocoSearch.length >= 2 ? (
-            <div className="mt-1.5 text-[11px] text-slate-400">
+            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
               No catalog match — enter the exact Chocolatey package id below
               if you know it.
             </div>
           ) : null}
-          <p className="mt-1.5 text-[11px] leading-tight text-slate-500">
+          <p className="mt-1.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
             No selection — PatchPilot's live Chocolatey match is used. Pick a
             package to override it.
           </p>
@@ -529,15 +529,15 @@ function ScriptPicker({
   channel: RemediationChannel;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-2.5">
       {scriptPick ? (
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-xs font-medium text-slate-800">
+            <div className="truncate text-xs font-medium text-slate-800 dark:text-slate-100">
               {scriptPick.name}
             </div>
             {scriptPick.description && (
-              <div className="truncate text-[11px] text-slate-500">
+              <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                 {scriptPick.description}
               </div>
             )}
@@ -545,19 +545,19 @@ function ScriptPicker({
           <button
             type="button"
             onClick={() => setScriptPick(null)}
-            className="shrink-0 text-[11px] font-medium text-slate-500 hover:text-slate-800"
+            className="shrink-0 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
           >
             Clear
           </button>
         </div>
       ) : loading ? (
-        <div className="text-[11px] text-slate-400">Loading scripts…</div>
+        <div className="text-[11px] text-slate-400 dark:text-slate-500">Loading scripts…</div>
       ) : scripts.length === 0 ? (
-        <div className="text-[11px] text-slate-400">
+        <div className="text-[11px] text-slate-400 dark:text-slate-500">
           No scripts uploaded yet for this tenant.
         </div>
       ) : (
-        <ul className="max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-white">
+        <ul className="max-h-40 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           {scripts.map((s) => {
             // Shown but not selectable rather than filtered out: an engineer who
             // just uploaded a .sh should see it here with the reason, not wonder
@@ -574,23 +574,23 @@ function ScriptPicker({
                       ? undefined
                       : NON_POWERSHELL_REASON
                   }
-                  className="flex w-full flex-col items-start gap-0.5 border-b border-slate-100 px-2.5 py-1.5 text-left last:border-0 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+                  className="flex w-full flex-col items-start gap-0.5 border-b border-slate-100 dark:border-slate-800 px-2.5 py-1.5 text-left last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
                 >
                   <span className="flex w-full items-center gap-1.5">
-                    <span className="truncate text-xs font-medium text-slate-800">
+                    <span className="truncate text-xs font-medium text-slate-800 dark:text-slate-100">
                       {s.name}
                     </span>
-                    <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                    <span className="shrink-0 rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
                       {SCRIPT_TYPE_LABELS[s.scriptType]}
                     </span>
                   </span>
                   {s.description && (
-                    <span className="truncate text-[11px] text-slate-500">
+                    <span className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                       {s.description}
                     </span>
                   )}
                   {!dispatchable && (
-                    <span className="text-[11px] text-amber-600">{NON_POWERSHELL_REASON}</span>
+                    <span className="text-[11px] text-amber-600 dark:text-amber-400">{NON_POWERSHELL_REASON}</span>
                   )}
                 </button>
               </li>
@@ -598,13 +598,13 @@ function ScriptPicker({
           })}
         </ul>
       )}
-      <p className="mt-1.5 text-[11px] leading-tight text-slate-500">
+      <p className="mt-1.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
         {channel === "win32-app"
           ? "Dispatch runs through Intune (Win32 app) — creates or reuses a Win32 app that runs this script."
           : "Dispatch always runs through Intune (Platform/Remediation Script)."}{" "}
         <Link
           to="/catalog/scripts"
-          className="font-medium text-slate-600 underline-offset-2 hover:underline"
+          className="font-medium text-slate-600 dark:text-slate-300 underline-offset-2 hover:underline"
         >
           Manage scripts →
         </Link>
@@ -1448,10 +1448,10 @@ export function RunNowModal({
         {!isAutomated && (
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
               Affected devices
               {deviceIds.length > 0 && (
-                <span className="ml-1 font-normal text-slate-400">
+                <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">
                   ({deviceIds.length} selected)
                 </span>
               )}
@@ -1466,7 +1466,7 @@ export function RunNowModal({
                       : devices.map((d) => d.id),
                   )
                 }
-                className="text-[11px] font-medium text-slate-500 hover:text-slate-800"
+                className="text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
               >
                 {deviceIds.length === devices.length
                   ? "Clear all"
@@ -1474,13 +1474,13 @@ export function RunNowModal({
               </button>
             )}
           </div>
-          <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-300 bg-white">
+          <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
             {exposedLoading || inventoryDevicesLoading ? (
-              <div className="px-3 py-2.5 text-xs text-slate-400">
+              <div className="px-3 py-2.5 text-xs text-slate-400 dark:text-slate-500">
                 Loading affected devices…
               </div>
             ) : devices.length === 0 ? (
-              <div className="px-3 py-2.5 text-xs text-slate-400">
+              <div className="px-3 py-2.5 text-xs text-slate-400 dark:text-slate-500">
                 {isInventoryMode
                   ? "No devices currently have this software installed."
                   : "No devices are currently exposed to this finding."}
@@ -1491,18 +1491,18 @@ export function RunNowModal({
                 return (
                   <label
                     key={d.id}
-                    className="flex cursor-pointer items-center gap-2.5 border-b border-slate-100 px-3 py-2 last:border-0 hover:bg-slate-50"
+                    className="flex cursor-pointer items-center gap-2.5 border-b border-slate-100 dark:border-slate-800 px-3 py-2 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleDevice(d.id)}
-                      className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                      className="h-3.5 w-3.5 rounded border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-slate-400"
                     />
-                    <span className="min-w-0 flex-1 truncate text-sm text-slate-800">
+                    <span className="min-w-0 flex-1 truncate text-sm text-slate-800 dark:text-slate-100">
                       {d.hostname}
                     </span>
-                    <span className="shrink-0 text-[11px] text-slate-400">
+                    <span className="shrink-0 text-[11px] text-slate-400 dark:text-slate-500">
                       {d.os}
                     </span>
                   </label>
@@ -1511,7 +1511,7 @@ export function RunNowModal({
             )}
           </div>
           {deviceIds.length > 1 && (
-            <p className="mt-1.5 text-[11px] leading-tight text-slate-500">
+            <p className="mt-1.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
               The gate is previewed on{" "}
               <span className="font-medium">{device?.hostname}</span>; the run
               dispatches one remediation per selected device.
@@ -1522,7 +1522,7 @@ export function RunNowModal({
 
         {/* ── 1. When ──────────────────────────────────────────────────── */}
         <div>
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             1. When
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -1537,14 +1537,14 @@ export function RunNowModal({
                 className={`rounded-lg border px-2 py-2 text-left transition-colors ${
                   whenMode === m.id
                     ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 <div className="text-xs font-medium">{m.label}</div>
               </button>
             ))}
           </div>
-          <p className="mt-1.5 text-[11px] leading-tight text-slate-500">
+          <p className="mt-1.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
             {isAutomated ? (
               <>
                 Creates a recurring schedule scoped to{" "}
@@ -1569,7 +1569,7 @@ export function RunNowModal({
           {isAutomated && (
             <div className="mt-2 space-y-2.5">
               <div>
-                <label className="mb-1 block text-[11px] font-medium text-slate-600">
+                <label className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-300">
                   Schedule name
                 </label>
                 <input
@@ -1577,11 +1577,11 @@ export function RunNowModal({
                   value={scheduleName}
                   onChange={(e) => setScheduleName(e.target.value)}
                   placeholder={`Recurring patch — ${software}`}
-                  className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-medium text-slate-600">
+                <label className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-300">
                   Devices
                 </label>
                 <select
@@ -1590,7 +1590,7 @@ export function RunNowModal({
                     setScheduleDeviceGroupId(e.target.value);
                     setScheduleExcludedDeviceIds([]);
                   }}
-                  className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
                 >
                   <option value="">All devices</option>
                   {scheduleGroups.map((g) => (
@@ -1603,16 +1603,16 @@ export function RunNowModal({
 
               {scheduleDeviceGroupId && scheduleGroupMembers.length > 0 && (
                 <div>
-                  <label className="mb-1 block text-[11px] font-medium text-slate-600">
+                  <label className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-300">
                     Exclude from this schedule
                   </label>
-                  <div className="max-h-32 overflow-y-auto rounded-lg border border-slate-300 bg-white">
+                  <div className="max-h-32 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
                     {scheduleGroupMembers.map((m) => {
                       const excluded = scheduleExcludedDeviceIds.includes(m.managedDeviceId);
                       return (
                         <label
                           key={m.id}
-                          className="flex cursor-pointer items-center gap-2 border-b border-slate-100 px-3 py-1.5 text-xs text-slate-700 last:border-0 hover:bg-slate-50"
+                          className="flex cursor-pointer items-center gap-2 border-b border-slate-100 dark:border-slate-800 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
                           <input
                             type="checkbox"
@@ -1624,7 +1624,7 @@ export function RunNowModal({
                                   : current.filter((id) => id !== m.managedDeviceId),
                               )
                             }
-                            className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                            className="h-3.5 w-3.5 rounded border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-slate-400"
                           />
                           {m.deviceHostname}
                         </label>
@@ -1635,7 +1635,7 @@ export function RunNowModal({
               )}
 
               <div>
-                <label className="mb-1 block text-[11px] font-medium text-slate-600">
+                <label className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-300">
                   Minimum severity level
                 </label>
                 <div className="grid grid-cols-5 gap-1.5">
@@ -1647,7 +1647,7 @@ export function RunNowModal({
                       className={`rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
                         scheduleSeverity === s.id
                           ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                          : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                       }`}
                     >
                       {s.label}
@@ -1655,7 +1655,7 @@ export function RunNowModal({
                   ))}
                 </div>
                 {scheduleSeverity === "none" && (
-                  <p className="mt-1 text-[11px] leading-tight text-slate-500">
+                  <p className="mt-1 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
                     Matches every open finding regardless of severity, and also sweeps
                     outdated software that has no CVE at all.
                   </p>
@@ -1669,7 +1669,7 @@ export function RunNowModal({
         {!isAutomated && (
         <div>
           {/* ── 2. Remediation Option ────────────────────────────────────── */}
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             2. Remediation Option
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -1692,13 +1692,13 @@ export function RunNowModal({
                     active
                       ? "border-slate-900 bg-slate-900 text-white"
                       : disabled
-                        ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 opacity-60"
-                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                        ? "cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60"
+                        : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   <div className="text-xs font-medium">{opt.label}</div>
                   {disabled && (
-                    <div className="mt-0.5 text-[10px] leading-tight text-slate-400">
+                    <div className="mt-0.5 text-[10px] leading-tight text-slate-400 dark:text-slate-500">
                       Not applicable to OS findings.
                     </div>
                   )}
@@ -1712,17 +1712,17 @@ export function RunNowModal({
         {/* ── 3. Channel ───────────────────────────────────────────────── */}
         {!isManualRecord && (
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               3. Channel
             </label>
             {methodLocked ? (
-              <div className="flex items-start justify-between gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2">
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-xs font-medium text-slate-800">
+                  <div className="flex items-center gap-2 text-xs font-medium text-slate-800 dark:text-slate-100">
                     {spec.label}
                     <PreviewBadge active={false} />
                   </div>
-                  <div className="mt-0.5 text-[10px] leading-tight text-slate-400">
+                  <div className="mt-0.5 text-[10px] leading-tight text-slate-400 dark:text-slate-500">
                     {channel === "win32-app" ? (
                       <>
                         Locked — Script Catalog dispatch via {spec.label} was
@@ -1759,8 +1759,8 @@ export function RunNowModal({
                           active
                             ? "border-slate-900 bg-slate-900 text-white"
                             : applicable
-                              ? "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                              : "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 opacity-60"
+                              ? "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                              : "cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60"
                         }`}
                       >
                         <div className="min-w-0">
@@ -1772,7 +1772,7 @@ export function RunNowModal({
                           </div>
                           <div
                             className={`mt-0.5 text-[10px] leading-tight ${
-                              active ? "text-slate-300" : "text-slate-400"
+                              active ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"
                             }`}
                           >
                             {TRIGGER_CAPTIONS[c] ?? s.useCase}
@@ -1787,7 +1787,7 @@ export function RunNowModal({
                   })}
                 </div>
                 {triggerOverridden && (
-                  <p className="mt-1.5 text-[11px] leading-tight text-amber-600">
+                  <p className="mt-1.5 text-[11px] leading-tight text-amber-600 dark:text-amber-400">
                     Overridden — Scheduling would have routed to{" "}
                     {CHANNEL_SPECS[autoChannel].label}.
                   </p>
@@ -1806,7 +1806,7 @@ export function RunNowModal({
             always leaving it to the live auto-match at fire time. */}
         <div>
           {/* ── 4. Catalog / Manual remediation ───────────────────────── */}
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             4. {remediationOption === "manual" ? "Manual remediation" : "Catalog"}
           </label>
 
@@ -1819,7 +1819,7 @@ export function RunNowModal({
                   className={`rounded-lg border px-2 py-2 text-left transition-colors ${
                     manualMode === "dispatch"
                       ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   <div className="text-xs font-medium">Dispatch with a script</div>
@@ -1830,7 +1830,7 @@ export function RunNowModal({
                   className={`rounded-lg border px-2 py-2 text-left transition-colors ${
                     manualMode === "record"
                       ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   <div className="text-xs font-medium">Record only</div>
@@ -1846,9 +1846,9 @@ export function RunNowModal({
                     placeholder={
                       "# Script to run on the device via the Channel above.\n# Runs exactly as written — no winget/catalog substitution."
                     }
-                    className="w-full rounded-lg border border-slate-300 bg-slate-900 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-100 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-900 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-100 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
                   />
-                  <p className="text-[11px] leading-tight text-slate-500">
+                  <p className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">
                     Dispatched through the Channel selected above exactly as
                     written.
                   </p>
@@ -1860,20 +1860,20 @@ export function RunNowModal({
                     onChange={(e) => setManualNotes(e.target.value)}
                     rows={4}
                     placeholder="What was done to remediate this manually? (steps taken, ticket reference, etc.)"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
                   />
                   {tenantReadOnly && (
-                    <p className="text-[11px] text-amber-600">
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
                       This tenant is read-only.
                     </p>
                   )}
                   {!canWrite && (
-                    <p className="text-[11px] text-amber-600">
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
                       Your role doesn't include remediation write access.
                     </p>
                   )}
                   {markManual.isError && (
-                    <p className="text-[11px] text-rose-600">
+                    <p className="text-[11px] text-rose-600 dark:text-rose-400">
                       {markManual.error.message}
                     </p>
                   )}
@@ -1889,7 +1889,7 @@ export function RunNowModal({
                         ? `Mark ${deviceIds.length} devices as manually remediated`
                         : "Mark as manually remediated"}
                   </button>
-                  <p className="text-[11px] leading-tight text-slate-500">
+                  <p className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">
                     No script runs and no Job is created. PatchPilot confirms
                     automatically once Defender's next scan stops reporting
                     this CVE on the selected device
@@ -1899,11 +1899,11 @@ export function RunNowModal({
               )}
             </div>
           ) : patchType === "os" ? (
-            <div className="cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 opacity-60">
-              <div className="text-xs font-medium text-slate-400">
+            <div className="cursor-not-allowed rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-2 opacity-60">
+              <div className="text-xs font-medium text-slate-400 dark:text-slate-500">
                 Not applicable
               </div>
-              <div className="mt-0.5 text-[10px] leading-tight text-slate-400">
+              <div className="mt-0.5 text-[10px] leading-tight text-slate-400 dark:text-slate-500">
                 {spec.label} pushes the update directly — no catalog package
                 or generated script is involved.
               </div>
@@ -1923,14 +1923,14 @@ export function RunNowModal({
                   catalog === "winget"
                     ? "border-slate-900 bg-slate-900 text-white"
                     : channel === "winget-app"
-                      ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 opacity-60"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      ? "cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 <div className="text-xs font-medium">Winget catalog</div>
                 <div
                   className={`mt-0.5 text-[10px] leading-tight ${
-                    catalog === "winget" ? "text-slate-300" : "text-slate-400"
+                    catalog === "winget" ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"
                   }`}
                 >
                   {channel === "winget-app"
@@ -1962,8 +1962,8 @@ export function RunNowModal({
                   catalog === "chocolatey"
                     ? "border-slate-900 bg-slate-900 text-white"
                     : remediationOption === "uninstall" || channel === "winget-app"
-                      ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 opacity-60"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      ? "cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 <div className="flex items-center gap-2 text-xs font-medium">
@@ -1974,7 +1974,7 @@ export function RunNowModal({
                 </div>
                 <div
                   className={`mt-0.5 text-[10px] leading-tight ${
-                    catalog === "chocolatey" ? "text-slate-300" : "text-slate-400"
+                    catalog === "chocolatey" ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"
                   }`}
                 >
                   {channel === "winget-app"
@@ -2005,8 +2005,8 @@ export function RunNowModal({
                   catalog === "script"
                     ? "border-slate-900 bg-slate-900 text-white"
                     : channel === "winget-app"
-                      ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 opacity-60"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      ? "cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 <div className="flex items-center gap-2 text-xs font-medium">
@@ -2015,7 +2015,7 @@ export function RunNowModal({
                 </div>
                 <div
                   className={`mt-0.5 text-[10px] leading-tight ${
-                    catalog === "script" ? "text-slate-300" : "text-slate-400"
+                    catalog === "script" ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"
                   }`}
                 >
                   {channel === "winget-app"
@@ -2045,8 +2045,8 @@ export function RunNowModal({
                     catalog === "microsoft-store"
                       ? "border-slate-900 bg-slate-900 text-white"
                       : remediationOption === "uninstall" || channel === "winget-app"
-                        ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 opacity-60"
-                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                        ? "cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60"
+                        : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   <div className="flex items-center gap-2 text-xs font-medium">
@@ -2056,8 +2056,8 @@ export function RunNowModal({
                   <div
                     className={`mt-0.5 break-all text-[10px] leading-tight ${
                       catalog === "microsoft-store"
-                        ? "text-slate-300"
-                        : "text-slate-400"
+                        ? "text-slate-300 dark:text-slate-600"
+                        : "text-slate-400 dark:text-slate-500"
                     }`}
                   >
                     {channel === "winget-app"
@@ -2089,8 +2089,8 @@ export function RunNowModal({
                   catalog === "microsoft-store-app"
                     ? "border-slate-900 bg-slate-900 text-white"
                     : remediationOption === "uninstall" && channel !== "live-response"
-                      ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 opacity-60"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      ? "cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-60"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 <div className="text-xs font-medium">
@@ -2099,8 +2099,8 @@ export function RunNowModal({
                 <div
                   className={`mt-0.5 text-[10px] leading-tight ${
                     catalog === "microsoft-store-app"
-                      ? "text-slate-300"
-                      : "text-slate-400"
+                      ? "text-slate-300 dark:text-slate-600"
+                      : "text-slate-400 dark:text-slate-500"
                   }`}
                 >
                   {remediationOption === "uninstall" && channel !== "live-response"
@@ -2119,7 +2119,7 @@ export function RunNowModal({
                     setQuery={setStoreAppQuery}
                   />
                   {channel === "live-response" && (
-                    <p className="text-[11px] leading-tight text-slate-500">
+                    <p className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">
                       Dispatched via winget through Live Response — no Intune
                       app is created. Deploy options below only apply to the
                       Microsoft Store app (new) channel.
@@ -2131,8 +2131,8 @@ export function RunNowModal({
               {channel === "win32-app" &&
                 catalog !== "microsoft-store" &&
                 catalog !== "microsoft-store-app" && (
-                  <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
-                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="mt-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Win32 app deploy options
                     </div>
                     <Win32DeployOptionsPanel
@@ -2145,8 +2145,8 @@ export function RunNowModal({
                 )}
 
               {channel === "winget-app" && (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
-                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <div className="mt-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-3">
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Microsoft Store app deploy options
                   </div>
                   <StoreAppDeployOptionsPanel
@@ -2162,15 +2162,15 @@ export function RunNowModal({
 
         {/* ── 5. Preview & checks ──────────────────────────────────────── */}
         {!(isManualRecord && !markManual.data) && (
-          <div className="border-t border-slate-200 pt-4">
-            <label className="mb-3 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
+            <label className="mb-3 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Preview & checks
             </label>
             <div className="space-y-5">
               {isAutomated ? (
                 createScheduleMutation.data ? (
                   <div className="space-y-3">
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                    <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
                       Created — this will run as a recurring{" "}
                       {scheduleDeviceGroupId
                         ? `"${scheduleGroups.find((g) => g.id === scheduleDeviceGroupId)?.name ?? "group"}"`
@@ -2184,7 +2184,7 @@ export function RunNowModal({
                     <Link
                       to="/schedules"
                       onClick={onClose}
-                      className="block w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-center text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                      className="block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-center text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
                       View schedules
                     </Link>
@@ -2192,7 +2192,7 @@ export function RunNowModal({
                 ) : (
                   <div className="space-y-3">
                     {createScheduleMutation.isError && (
-                      <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                      <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
                         {createScheduleMutation.error.message}
                       </div>
                     )}
@@ -2200,7 +2200,7 @@ export function RunNowModal({
                       <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                       >
                         Cancel
                       </button>
@@ -2224,10 +2224,10 @@ export function RunNowModal({
                       <div
                         className={`rounded-lg border px-3 py-2 text-xs ${
                           failed.length === 0
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                             : ok.length === 0
-                              ? "border-rose-200 bg-rose-50 text-rose-700"
-                              : "border-amber-200 bg-amber-50 text-amber-700"
+                              ? "border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400"
+                              : "border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400"
                         }`}
                       >
                         {ok.length > 0 ? (
@@ -2242,25 +2242,25 @@ export function RunNowModal({
                           <>Nothing was recorded — every device failed.</>
                         )}
                       </div>
-                      <ul className="rounded-lg border border-slate-200">
+                      <ul className="rounded-lg border border-slate-200 dark:border-slate-800">
                         {outcomes.map((o) => (
                           <li
                             key={o.deviceId}
-                            className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 last:border-0"
+                            className="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-3 py-2 last:border-0"
                           >
                             <div className="min-w-0">
-                              <div className="truncate text-xs font-medium text-slate-800">
+                              <div className="truncate text-xs font-medium text-slate-800 dark:text-slate-100">
                                 {o.hostname}
                               </div>
                               {!o.ok && (
-                                <div className="text-[11px] text-rose-600">{o.error}</div>
+                                <div className="text-[11px] text-rose-600 dark:text-rose-400">{o.error}</div>
                               )}
                             </div>
                             <span
                               className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
                                 o.ok
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-rose-100 text-rose-700"
+                                  ? "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                                  : "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400"
                               }`}
                             >
                               {o.ok ? "Waiting on Defender" : "Failed"}
@@ -2271,7 +2271,7 @@ export function RunNowModal({
                       <button
                         type="button"
                         onClick={onClose}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                       >
                         Close
                       </button>
@@ -2280,22 +2280,22 @@ export function RunNowModal({
                 })()
               ) : (
                 <>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+                  <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-slate-800">
+                      <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
                         {spec.label}
                       </span>
-                      <span className="text-xs text-slate-500">{spec.latency}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{spec.latency}</span>
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">{spec.useCase}</div>
+                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{spec.useCase}</div>
                     <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                         Graph call preview
                       </span>
                       <button
                         type="button"
                         onClick={copyBody}
-                        className="text-[11px] font-medium text-slate-500 hover:text-slate-800"
+                        className="text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                       >
                         {copied ? "Copied!" : "Copy body"}
                       </button>
@@ -2316,28 +2316,28 @@ export function RunNowModal({
                   </div>
 
                   {deviceIds.length > 1 && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                       Group execution: dispatches concurrently to all {deviceIds.length}{" "}
                       selected devices. Each device produces its own Job record.
                     </div>
                   )}
 
                   {tenantReadOnly && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                       This tenant is read-only. Opt in to write actions under Settings →
                       Tenants before remediating.
                     </div>
                   )}
 
                   {!canWrite && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                       Your role doesn't include remediation write access — ask an admin
                       to change it under Settings → Users.
                     </div>
                   )}
 
                   {needsManualScript && !effectiveManualScript && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                       {remediationOption === "manual"
                         ? "Enter a script above before dispatching."
                         : "Pick a script from the Script Catalog above before dispatching."}
@@ -2345,18 +2345,18 @@ export function RunNowModal({
                   )}
 
                   {needsStoreAppPick && !storeAppPick && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                       Search and pick a Microsoft Store package above before dispatching.
                     </div>
                   )}
 
                   {preflight.isError && (
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
                       {preflight.error.message}
                     </div>
                   )}
                   {remediate.isError && (
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
                       {remediate.error instanceof ApiError && remediate.error.status === 422
                         ? "Remediation was blocked by the pre-flight gate — resolve the failing checks below."
                         : remediate.error.message}
@@ -2368,25 +2368,25 @@ export function RunNowModal({
                       <div
                         className={`rounded-lg border px-3 py-2 text-xs font-medium ${
                           report.canProceed
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-rose-200 bg-rose-50 text-rose-700"
+                            ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            : "border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400"
                         }`}
                       >
                         {report.canProceed
                           ? "Cleared — this remediation can proceed."
                           : "Blocked — at least one check failed."}
                       </div>
-                      <ul className="mt-2 rounded-lg border border-slate-200">
+                      <ul className="mt-2 rounded-lg border border-slate-200 dark:border-slate-800">
                         {report.checks.map((c) => (
                           <li
                             key={c.id}
-                            className="flex items-start justify-between gap-3 border-b border-slate-100 px-3 py-2.5 last:border-0"
+                            className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-3 py-2.5 last:border-0"
                           >
                             <div>
-                              <div className="text-xs font-medium text-slate-800">
+                              <div className="text-xs font-medium text-slate-800 dark:text-slate-100">
                                 {c.label}
                               </div>
-                              <div className="mt-0.5 text-[11px] text-slate-500">
+                              <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
                                 {c.detail}
                               </div>
                             </div>
@@ -2399,7 +2399,7 @@ export function RunNowModal({
                           dispatch so the engineer reviews it up front — not only after. */}
                       {report.script && (
                         <div className="mt-3">
-                          <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                          <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                             Generated script —{" "}
                             {deviceIds.length > 1
                               ? `runs on each of the ${deviceIds.length} selected devices`
@@ -2425,10 +2425,10 @@ export function RunNowModal({
                           <div
                             className={`rounded-lg border px-4 py-3 ${
                               failed.length === 0
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800"
                                 : queued.length === 0
-                                  ? "border-rose-200 bg-rose-50 text-rose-800"
-                                  : "border-amber-200 bg-amber-50 text-amber-800"
+                                  ? "border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 text-rose-800"
+                                  : "border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 text-amber-800"
                             }`}
                           >
                             {queued.length > 0 ? (
@@ -2457,22 +2457,22 @@ export function RunNowModal({
                             )}
                           </div>
 
-                          <ul className="rounded-lg border border-slate-200">
+                          <ul className="rounded-lg border border-slate-200 dark:border-slate-800">
                             {result.map((o) => (
                               <li
                                 key={o.deviceId}
-                                className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 last:border-0"
+                                className="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-3 py-2 last:border-0"
                               >
                                 <div className="min-w-0">
-                                  <div className="truncate text-xs font-medium text-slate-800">
+                                  <div className="truncate text-xs font-medium text-slate-800 dark:text-slate-100">
                                     {o.hostname}
                                   </div>
                                   {o.ok ? (
-                                    <div className="text-[11px] text-slate-500">
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
                                       Job {o.result.job.id.slice(0, 8)}…
                                     </div>
                                   ) : (
-                                    <div className="text-[11px] text-rose-600">
+                                    <div className="text-[11px] text-rose-600 dark:text-rose-400">
                                       {o.error}
                                     </div>
                                   )}
@@ -2480,8 +2480,8 @@ export function RunNowModal({
                                 <span
                                   className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
                                     o.ok
-                                      ? "bg-emerald-100 text-emerald-700"
-                                      : "bg-rose-100 text-rose-700"
+                                      ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                                      : "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400"
                                   }`}
                                 >
                                   {o.ok ? "Queued" : "Blocked"}
@@ -2495,7 +2495,7 @@ export function RunNowModal({
                               <button
                                 type="button"
                                 onClick={() => setShowQueuedScript((v) => !v)}
-                                className="text-xs font-medium text-slate-500 hover:text-slate-800"
+                                className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                               >
                                 {showQueuedScript ? "Hide" : "Show"} deployable script
                                 (remediation payload)
@@ -2515,7 +2515,7 @@ export function RunNowModal({
                       <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
                       >
                         Cancel
                       </button>

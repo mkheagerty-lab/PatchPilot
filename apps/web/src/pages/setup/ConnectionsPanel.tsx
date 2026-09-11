@@ -14,10 +14,10 @@ interface ConnectionRow {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  connected: "bg-emerald-100 text-emerald-700",
-  mocked: "bg-slate-100 text-slate-600",
-  unknown: "bg-amber-100 text-amber-700",
-  error: "bg-rose-100 text-rose-700",
+  connected: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  mocked: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
+  unknown: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  error: "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400",
 };
 
 type ScopeResource = "graph" | "defender" | "partnerCenter";
@@ -72,7 +72,7 @@ export function ConnectionsPanel() {
   return (
     <div>
       <div className="mb-4 flex items-start justify-between gap-4">
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Microsoft API surfaces PatchPilot talks to. Probes are read-only and
           run against the MSP home tenant; each one is audited.
         </p>
@@ -86,7 +86,7 @@ export function ConnectionsPanel() {
       </div>
 
       {test.isError && (
-        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="mb-4 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
           {(test.error as Error).message}
         </div>
       )}
@@ -94,7 +94,7 @@ export function ConnectionsPanel() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {isLoading ? (
           <Card>
-            <p className="text-sm text-slate-500">Loading…</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
           </Card>
         ) : (
           connections.map((c) => {
@@ -110,7 +110,7 @@ export function ConnectionsPanel() {
             return (
               <Card key={c.name}>
                 <div className="flex items-start justify-between">
-                  <h3 className="text-sm font-semibold text-slate-800">
+                  <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                     {c.name}
                   </h3>
                   <span
@@ -123,7 +123,7 @@ export function ConnectionsPanel() {
                 </div>
 
                 {failedScopes.length > 0 && (
-                  <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  <div className="mt-3 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
                     <span className="font-medium">{c.name}:</span> {failedScopes.length} permission
                     {failedScopes.length === 1 ? "" : "s"} not found on the resource —{" "}
                     {failedScopes.join(", ")}.
@@ -140,8 +140,8 @@ export function ConnectionsPanel() {
                   />
                 </div>
 
-                <div className="mt-3 text-xs text-slate-500">{c.detail}</div>
-                <div className="mt-1 text-xs text-slate-400">
+                <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">{c.detail}</div>
+                <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                   {c.lastSuccessfulCall
                     ? `Last OK: ${new Date(c.lastSuccessfulCall).toLocaleString()}${
                         c.latencyMs != null ? ` · ${c.latencyMs}ms` : ""

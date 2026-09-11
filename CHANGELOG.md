@@ -12,6 +12,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fix dark mode text/background/chip contrast across the rest of the app
+  (tables, modals, badges, and settings/setup pages) — the pass that fixed
+  Jobs only covered that one page; this extends the same `dark:` pairings
+  to every other page and shared component, including several files (e.g.
+  Windows Updates' parent page, Setup Pairing, and a handful of status
+  chips) that had never received any dark-mode treatment before, and adds
+  missing `dark:` variants for the `orange`/`red`/`violet` color families
+  that earlier passes only covered for `rose`/`amber`/etc.
+
 ## [0.12.0] - 2026-09-10
 
 - Fix recurring schedules missing their fire. The worker's 30s reconcile

@@ -57,9 +57,9 @@ export function DonutChart({
         {(centerLabel || centerValue !== undefined) && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             {centerValue !== undefined && (
-              <div className="text-2xl font-semibold text-slate-900">{centerValue}</div>
+              <div className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{centerValue}</div>
             )}
-            {centerLabel && <div className="text-xs text-slate-500">{centerLabel}</div>}
+            {centerLabel && <div className="text-xs text-slate-500 dark:text-slate-400">{centerLabel}</div>}
           </div>
         )}
       </div>
@@ -72,15 +72,15 @@ export function DonutChart({
                 type="button"
                 onClick={() => onSelect?.(d)}
                 disabled={!onSelect}
-                className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-xs hover:bg-slate-50 disabled:hover:bg-transparent"
+                className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-800 disabled:hover:bg-transparent"
               >
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: d.fill }}
                 />
-                <span className="truncate text-slate-600">{d.label}</span>
-                <span className="ml-auto shrink-0 font-medium text-slate-900">{d.value}</span>
-                <span className="w-9 shrink-0 text-right text-slate-400">{pct}%</span>
+                <span className="truncate text-slate-600 dark:text-slate-300">{d.label}</span>
+                <span className="ml-auto shrink-0 font-medium text-slate-900 dark:text-slate-100">{d.value}</span>
+                <span className="w-9 shrink-0 text-right text-slate-400 dark:text-slate-500">{pct}%</span>
               </button>
             </li>
           );

@@ -113,7 +113,7 @@ const CONTEXT_LABELS: Record<string, string> = {
 function ContextTag({ context }: { context: string | null }) {
   const label = context ? (CONTEXT_LABELS[context] ?? context) : "Unknown scope";
   return (
-    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+    <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
       {label}
     </span>
   );
@@ -329,7 +329,7 @@ export function SoftwareInventory() {
               e.stopPropagation();
               setRowFixAllTarget(s);
             }}
-            className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+            className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 dark:disabled:text-slate-500"
           >
             Fix Now
           </button>
@@ -349,7 +349,7 @@ export function SoftwareInventory() {
               type="button"
               onClick={exportCsv}
               disabled={sorted.length === 0}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               Export CSV
             </button>
@@ -368,7 +368,7 @@ export function SoftwareInventory() {
                   viewBox="0 0 20 20"
                   fill="currentColor"
                   aria-hidden
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
                 >
                   <path
                     fillRule="evenodd"
@@ -381,10 +381,10 @@ export function SoftwareInventory() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search software, vendor…"
-                  className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
                 />
               </div>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 {filtered.length} {filtered.length === 1 ? "title" : "titles"}
                 {filtered.length !== inventory.length && ` of ${inventory.length}`}
               </span>
@@ -393,11 +393,11 @@ export function SoftwareInventory() {
 
           {isLoading ? (
             <Card className="border-dashed">
-              <p className="text-sm text-slate-500">Loading…</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
             </Card>
           ) : filtered.length === 0 ? (
             <Card className="border-dashed">
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 {inventory.length === 0
                   ? "No software inventory reported for this tenant yet."
                   : "No software matches your search."}
@@ -424,9 +424,9 @@ export function SoftwareInventory() {
         subtitle={selected?.vendor ?? undefined}
       >
         {devicesLoading ? (
-          <div className="text-sm text-slate-500">Loading…</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">Loading…</div>
         ) : !devicesResult || devicesResult.devices.length === 0 ? (
-          <div className="text-sm text-slate-500">No devices reported for this software.</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">No devices reported for this software.</div>
         ) : (
           <>
             <div className="mb-3 flex justify-end">
@@ -441,7 +441,7 @@ export function SoftwareInventory() {
                       ? "All devices are already up to date."
                       : "No devices are enrolled for remediation."
                 }
-                className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 dark:disabled:text-slate-500"
               >
                 Fix all
               </button>
@@ -459,11 +459,11 @@ export function SoftwareInventory() {
                 return (
                   <li
                     key={d.defenderMachineId}
-                    className="border-b border-slate-100 py-3 last:border-0"
+                    className="border-b border-slate-100 dark:border-slate-800 py-3 last:border-0"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-slate-800">{d.hostname}</div>
+                        <div className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{d.hostname}</div>
                         <div className="mt-1 space-y-1">
                           <DetailRow label="Detected version">{d.detectedVersion ?? "—"}</DetailRow>
                           <DetailRow label="Context">
@@ -491,7 +491,7 @@ export function SoftwareInventory() {
                               ? "Already up to date."
                               : undefined
                         }
-                        className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                        className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 dark:disabled:text-slate-500"
                       >
                         Fix now
                       </button>
@@ -501,7 +501,7 @@ export function SoftwareInventory() {
                         <button
                           type="button"
                           onClick={() => setExpandedDevice(expanded ? null : d.defenderMachineId)}
-                          className="mt-2 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                          className="mt-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
                         >
                           {expanded ? "Hide how it was detected" : "How it was detected"}
                         </button>

@@ -162,7 +162,7 @@ const ATTRIBUTION_LABELS: Record<RemediationAttributionKind, string> = {
 
 function AttributionTag({ attribution }: { attribution: RemediationAttributionKind }) {
   if (attribution === "job") return null;
-  const styles = attribution === "manual" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-500";
+  const styles = attribution === "manual" ? "bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400";
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${styles}`}>
       {ATTRIBUTION_LABELS[attribution]}
@@ -174,7 +174,7 @@ function ClosureTag({ closure }: { closure: RemediationClosure }) {
   if (closure !== "reclassified") return null;
   return (
     <span
-      className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"
+      className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400"
       title="Defender re-catalogued this finding under different software; nothing was actually fixed, so it isn't counted toward time-to-remediate."
     >
       Reclassified
@@ -412,7 +412,7 @@ export function RemediationHistory() {
         <SortableLabel
           label={
             <>
-              Cleared <span className="font-normal normal-case text-slate-400">(newest first)</span>
+              Cleared <span className="font-normal normal-case text-slate-400 dark:text-slate-500">(newest first)</span>
             </>
           }
           sortKey="remediatedAt"
@@ -440,7 +440,7 @@ export function RemediationHistory() {
       cell: (record) => (
         <span className="font-medium text-slate-800 dark:text-slate-100">
           {record.kind === "vulnerability" ? record.cveId ?? "—" : record.recommendationId ?? "—"}
-          <div className="text-xs font-normal capitalize text-slate-400">{record.kind}</div>
+          <div className="text-xs font-normal capitalize text-slate-400 dark:text-slate-500">{record.kind}</div>
         </span>
       ),
     },
@@ -476,7 +476,7 @@ export function RemediationHistory() {
       cell: (record) => (
         <>
           {record.attribution === "unattributed" ? (
-            <span className="text-slate-400">—</span>
+            <span className="text-slate-400 dark:text-slate-500">—</span>
           ) : record.engineer ? (
             <span className="flex items-center gap-2">
               {isSystemActor(record.engineer) && (
@@ -549,7 +549,7 @@ export function RemediationHistory() {
             <a
               href={`/api/remediation-history/export.csv?${queryString}`}
               download
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Export CSV
             </a>
@@ -557,7 +557,7 @@ export function RemediationHistory() {
               type="button"
               onClick={() => refetch()}
               disabled={isFetching}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               {isFetching && !isFetchingNextPage ? "Refreshing…" : "Refresh"}
             </button>
@@ -586,7 +586,7 @@ export function RemediationHistory() {
 
       <Card className="mb-4">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex overflow-hidden rounded-lg border border-slate-200">
+          <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
             {(
               [
                 ["cleared", "Cleared"],
@@ -598,7 +598,7 @@ export function RemediationHistory() {
                 type="button"
                 onClick={() => set("closure", value)}
                 className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                  filters.closure === value ? "bg-[var(--pp-primary)] text-white" : "bg-white text-slate-600 hover:bg-slate-50"
+                  filters.closure === value ? "bg-[var(--pp-primary)] text-white" : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 {label}
@@ -611,7 +611,7 @@ export function RemediationHistory() {
               viewBox="0 0 20 20"
               fill="currentColor"
               aria-hidden
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
             >
               <path
                 fillRule="evenodd"
@@ -624,14 +624,14 @@ export function RemediationHistory() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search CVE, software, device, technician…"
-              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
             />
           </div>
 
           <select
             value={filters.severity}
             onChange={(e) => set("severity", e.target.value as Severity | "all")}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm"
           >
             <option value="all">All severities</option>
             {SEVERITY_ORDER.map((s) => (
@@ -644,7 +644,7 @@ export function RemediationHistory() {
           <select
             value={filters.kind}
             onChange={(e) => set("kind", e.target.value as RemediationEventKind | "all")}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm"
           >
             <option value="all">Vulns + recommendations</option>
             <option value="vulnerability">Vulnerabilities</option>
@@ -654,7 +654,7 @@ export function RemediationHistory() {
           <select
             value={filters.attribution}
             onChange={(e) => set("attribution", e.target.value as RemediationAttributionKind | "all")}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm"
           >
             <option value="all">All attributions</option>
             <option value="job">Job</option>
@@ -662,22 +662,22 @@ export function RemediationHistory() {
             <option value="unattributed">Unattributed</option>
           </select>
 
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             From
             <input
               type="datetime-local"
               value={filters.from}
               onChange={(e) => set("from", e.target.value)}
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm text-slate-700 dark:text-slate-200"
             />
           </label>
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             To
             <input
               type="datetime-local"
               value={filters.to}
               onChange={(e) => set("to", e.target.value)}
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm text-slate-700 dark:text-slate-200"
             />
           </label>
 
@@ -688,7 +688,7 @@ export function RemediationHistory() {
                 setSearch("");
                 setFilters(EMPTY_FILTERS);
               }}
-              className="text-xs font-medium text-slate-500 hover:text-slate-700"
+              className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             >
               Clear filters
             </button>
@@ -696,13 +696,13 @@ export function RemediationHistory() {
         </div>
 
         {filters.cveId && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <span>Filtered to CVE</span>
-            <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-slate-700">{filters.cveId}</span>
+            <span className="rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 font-mono text-slate-700 dark:text-slate-200">{filters.cveId}</span>
             <button
               type="button"
               onClick={() => set("cveId", "")}
-              className="font-medium text-slate-500 hover:text-slate-700"
+              className="font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             >
               Clear
             </button>
@@ -710,7 +710,7 @@ export function RemediationHistory() {
         )}
 
         {!isAllTenants && (
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
             Showing closed findings for this tenant only. Switch to All Tenants to compare exposure across
             customers.
           </p>
@@ -719,11 +719,11 @@ export function RemediationHistory() {
 
       {isLoading ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">Loading remediation history…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading remediation history…</p>
         </Card>
       ) : rows.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {hasFilters
               ? "No closed findings match the current filters."
               : "No remediation history recorded yet."}
@@ -732,21 +732,21 @@ export function RemediationHistory() {
       ) : (
         <>
           {selected.size > 0 && (
-            <div className="mb-3 flex items-center gap-3 rounded-md border border-slate-300 bg-slate-50 px-4 py-2 text-sm">
-              <span className="font-medium text-slate-700">
+            <div className="mb-3 flex items-center gap-3 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2 text-sm">
+              <span className="font-medium text-slate-700 dark:text-slate-200">
                 {selected.size} finding{selected.size === 1 ? "" : "s"} selected
               </span>
               <button
                 type="button"
                 onClick={exportSelectedCsv}
-                className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-white"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900"
               >
                 Export selected ({selected.size})
               </button>
               <button
                 type="button"
                 onClick={() => setSelected(new Set())}
-                className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               >
                 Clear selection
               </button>
@@ -780,7 +780,7 @@ export function RemediationHistory() {
             }
           />
 
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
             Showing {rows.length} finding{rows.length === 1 ? "" : "s"}
             {hasNextPage ? " — more available" : ""}.
           </p>
@@ -796,13 +796,13 @@ export function RemediationHistory() {
         {detail && (
           <>
             {detail.attribution === "unattributed" && (
-              <p className="mb-4 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              <p className="mb-4 rounded-md bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
                 No PatchPilot job or manual record matched this clearing — it was likely closed by
                 Autopatch, WSUS, a user action, or a Defender re-scan.
               </p>
             )}
             {detail.closure === "reclassified" && (
-              <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              <p className="mb-4 rounded-md bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                 Defender re-catalogued this finding under different software shortly after this row was
                 recorded. Nothing was actually fixed — this row is excluded from time-to-remediate.
               </p>
@@ -820,7 +820,7 @@ export function RemediationHistory() {
             </dl>
 
             <div className="mt-5">
-              <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Chronology</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Chronology</div>
               <dl className="mt-1">
                 <DetailRow label="First detected">{fmt(detail.detectedAt)}</DetailRow>
                 <DetailRow label="Fix dispatched">{fmt(detail.fixStartedAt)}</DetailRow>
@@ -830,7 +830,7 @@ export function RemediationHistory() {
             </div>
 
             <div className="mt-5">
-              <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Attribution</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Attribution</div>
               <dl className="mt-1">
                 <DetailRow label="Matched by">
                   <span className="flex items-center gap-2">
@@ -840,7 +840,7 @@ export function RemediationHistory() {
                 </DetailRow>
                 <DetailRow label="Device">
                   {detail.deviceId ? (
-                    <a href={toDevice(detail.deviceId)} className="text-indigo-600 hover:underline">
+                    <a href={toDevice(detail.deviceId)} className="text-indigo-600 dark:text-indigo-400 hover:underline">
                       {detail.deviceHostname ?? detail.deviceId}
                     </a>
                   ) : (
@@ -859,8 +859,8 @@ export function RemediationHistory() {
             </div>
 
             <div className="mt-5">
-              <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Event ID</div>
-              <p className="mt-1 break-all font-mono text-xs text-slate-700">{detail.id}</p>
+              <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Event ID</div>
+              <p className="mt-1 break-all font-mono text-xs text-slate-700 dark:text-slate-200">{detail.id}</p>
             </div>
           </>
         )}

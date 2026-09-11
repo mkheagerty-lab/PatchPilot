@@ -64,7 +64,7 @@ export function DropdownButton({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-1 shadow-lg"
         >
           {options.map((opt) => (
             <button
@@ -76,7 +76,7 @@ export function DropdownButton({
                 setOpen(false);
                 opt.onSelect();
               }}
-              className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+              className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               {opt.label}
             </button>

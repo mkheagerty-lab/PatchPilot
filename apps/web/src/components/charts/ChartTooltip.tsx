@@ -1,6 +1,6 @@
 // One custom tooltip `content` for every chart in the app, styled to match
 // the existing popover pattern (see ui.tsx's ManualRemediationTag popover:
-// `rounded-lg border border-slate-200 bg-white p-3 text-xs shadow-lg`).
+// `rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-xs shadow-lg`).
 // Recharts' built-in tooltip is never used — it looks visually foreign here.
 //
 // Props are intentionally a loose local shape rather than Recharts'
@@ -31,9 +31,9 @@ export function ChartTooltip({
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs shadow-lg">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-xs shadow-lg">
       {label !== undefined && label !== null && (
-        <div className="mb-1.5 font-medium text-slate-900">{label}</div>
+        <div className="mb-1.5 font-medium text-slate-900 dark:text-slate-100">{label}</div>
       )}
       <ul className="space-y-1">
         {payload.map((entry, i) => (
@@ -42,8 +42,8 @@ export function ChartTooltip({
               className="h-2 w-2 shrink-0 rounded-full"
               style={{ backgroundColor: entry.color ?? entry.fill }}
             />
-            <span className="text-slate-500">{entry.name}</span>
-            <span className="ml-auto font-medium text-slate-900">{String(entry.value)}</span>
+            <span className="text-slate-500 dark:text-slate-400">{entry.name}</span>
+            <span className="ml-auto font-medium text-slate-900 dark:text-slate-100">{String(entry.value)}</span>
           </li>
         ))}
       </ul>

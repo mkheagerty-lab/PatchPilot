@@ -433,7 +433,7 @@ export function ArchitectureDiagram({
             >
               {NODE_TOKENS[selectedNode.category].label}
             </span>
-            <p className="mt-4 text-sm text-slate-700">{selectedNode.detail.summary}</p>
+            <p className="mt-4 text-sm text-slate-700 dark:text-slate-200">{selectedNode.detail.summary}</p>
             {selectedNode.detail.facts && selectedNode.detail.facts.length > 0 && (
               <dl className="mt-4">
                 {selectedNode.detail.facts.map((fact) => (
@@ -444,7 +444,7 @@ export function ArchitectureDiagram({
               </dl>
             )}
             {selectedNode.detail.source && (
-              <p className="mt-4 break-all font-mono text-xs text-slate-400">
+              <p className="mt-4 break-all font-mono text-xs text-slate-400 dark:text-slate-500">
                 {selectedNode.detail.source}
               </p>
             )}

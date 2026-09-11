@@ -90,7 +90,7 @@ export function NewScheduleModal({
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Name</label>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Name</label>
           <input
             className={INPUT_CLASS}
             value={name}
@@ -100,12 +100,12 @@ export function NewScheduleModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Recurrence</label>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Recurrence</label>
           <RecurrencePicker value={recurrence} onChange={setRecurrence} />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Channel</label>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Channel</label>
           <select
             className={INPUT_CLASS}
             value={channel}
@@ -119,8 +119,8 @@ export function NewScheduleModal({
           </select>
         </div>
 
-        <div className="border-t border-slate-100 pt-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Target</p>
+        <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Target</p>
           <ScheduleTargetFields
             target={target}
             onChange={setTarget}
@@ -137,13 +137,13 @@ export function NewScheduleModal({
         </div>
 
         {!canWrite && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
             Your role doesn't include remediation write access.
           </div>
         )}
 
         {save.isError && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
             {save.error.message}
           </div>
         )}

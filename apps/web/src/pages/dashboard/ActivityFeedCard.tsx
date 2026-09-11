@@ -27,19 +27,19 @@ export function ActivityFeedCard({
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-700">Recent activity</h2>
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent activity</h2>
         <Link
           to={toAudit()}
-          className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-800"
+          className="text-xs font-medium text-slate-500 dark:text-slate-400 transition-colors hover:text-slate-800 dark:hover:text-slate-100"
         >
           View all →
         </Link>
       </div>
       <Card className="p-0">
         {isLoading ? (
-          <div className="p-5 text-sm text-slate-500">Loading…</div>
+          <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Loading…</div>
         ) : activity.length === 0 ? (
-          <div className="p-5 text-sm text-slate-500">No recent activity.</div>
+          <div className="p-5 text-sm text-slate-500 dark:text-slate-400">No recent activity.</div>
         ) : (
           <ul>
             {activity.map((record) => {
@@ -53,20 +53,20 @@ export function ActivityFeedCard({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") nav(href);
                 }}
-                className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-5 py-3 text-sm outline-none last:border-0 hover:bg-slate-50 focus-visible:bg-slate-50"
+                className="flex cursor-pointer items-center gap-3 border-b border-slate-100 dark:border-slate-800 px-5 py-3 text-sm outline-none last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800 focus-visible:bg-slate-50 dark:focus-visible:bg-slate-800"
               >
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                     record.outcome ? OUTCOME_DOT[record.outcome] : "bg-slate-300"
                   }`}
                 />
-                <span className="w-32 shrink-0 truncate font-medium text-slate-700">
+                <span className="w-32 shrink-0 truncate font-medium text-slate-700 dark:text-slate-200">
                   {actorLabel(record)}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-slate-600">
+                <span className="min-w-0 flex-1 truncate text-slate-600 dark:text-slate-300">
                   {record.summary ?? record.resourceLabel ?? record.action ?? record.endpoint}
                 </span>
-                <span className="shrink-0 text-xs text-slate-400">{relativeTime(record.at)}</span>
+                <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{relativeTime(record.at)}</span>
               </li>
               );
             })}

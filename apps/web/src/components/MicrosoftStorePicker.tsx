@@ -44,14 +44,14 @@ export function MicrosoftStorePicker({
   });
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-2.5">
       {pick ? (
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-xs font-medium text-slate-800">
+            <div className="truncate text-xs font-medium text-slate-800 dark:text-slate-100">
               {pick.packageId}
             </div>
-            <div className="truncate text-[11px] text-slate-500">
+            <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
               {pick.name}
               {pick.publisher ? ` · ${pick.publisher}` : ""}
             </div>
@@ -59,7 +59,7 @@ export function MicrosoftStorePicker({
           <button
             type="button"
             onClick={() => setPick(null)}
-            className="shrink-0 text-[11px] font-medium text-slate-500 hover:text-slate-800"
+            className="shrink-0 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
           >
             Clear
           </button>
@@ -71,14 +71,14 @@ export function MicrosoftStorePicker({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search the Microsoft Store…"
-            className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+            className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
           />
           {searching ? (
-            <div className="mt-1.5 text-[11px] text-slate-400">
+            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
               Searching…
             </div>
           ) : results.length > 0 ? (
-            <ul className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-white">
+            <ul className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               {results.map((p) => (
                 <li key={p.packageIdentifier}>
                   <button
@@ -90,19 +90,19 @@ export function MicrosoftStorePicker({
                         publisher: p.publisher,
                       })
                     }
-                    className="flex w-full items-center justify-between gap-2 border-b border-slate-100 px-2.5 py-1.5 text-left last:border-0 hover:bg-slate-50"
+                    className="flex w-full items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 px-2.5 py-1.5 text-left last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-xs font-medium text-slate-800">
+                      <span className="block truncate text-xs font-medium text-slate-800 dark:text-slate-100">
                         {p.packageIdentifier}
                       </span>
-                      <span className="block truncate text-[11px] text-slate-500">
+                      <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
                         {p.name}
                         {p.publisher ? ` · ${p.publisher}` : ""}
                       </span>
                     </span>
                     {p.version && (
-                      <span className="shrink-0 text-[10px] text-slate-400">
+                      <span className="shrink-0 text-[10px] text-slate-400 dark:text-slate-500">
                         v{p.version}
                       </span>
                     )}
@@ -111,11 +111,11 @@ export function MicrosoftStorePicker({
               ))}
             </ul>
           ) : debounced.length >= 2 ? (
-            <div className="mt-1.5 text-[11px] text-slate-400">
+            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
               No Microsoft Store match for "{debounced}".
             </div>
           ) : null}
-          <p className="mt-1.5 text-[11px] leading-tight text-slate-500">
+          <p className="mt-1.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
             Live Microsoft Store lookup — no auto-match. Search by app name
             (e.g. "Mozilla Firefox").
           </p>

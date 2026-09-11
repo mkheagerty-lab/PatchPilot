@@ -22,23 +22,23 @@ export function UrgentVulnsCard({
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-700">Most urgent vulnerabilities</h2>
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Most urgent vulnerabilities</h2>
         <Link
           to={toSla("breached")}
-          className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-800"
+          className="text-xs font-medium text-slate-500 dark:text-slate-400 transition-colors hover:text-slate-800 dark:hover:text-slate-100"
         >
           View all →
         </Link>
       </div>
       <Card className="p-0">
         {isLoading ? (
-          <div className="p-5 text-sm text-slate-500">Loading…</div>
+          <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Loading…</div>
         ) : rows.length === 0 ? (
-          <div className="p-5 text-sm text-slate-500">No vulnerabilities for this tenant.</div>
+          <div className="p-5 text-sm text-slate-500 dark:text-slate-400">No vulnerabilities for this tenant.</div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 <th className="px-5 py-3 font-medium">Software</th>
                 {isAllTenants && <th className="px-5 py-3 font-medium">Customer tenant</th>}
                 <th className="px-5 py-3 font-medium">Severity</th>
@@ -56,24 +56,24 @@ export function UrgentVulnsCard({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") onSelect(v.id);
                   }}
-                  className="cursor-pointer border-b border-slate-100 outline-none last:border-0 hover:bg-slate-50 focus-visible:bg-slate-50"
+                  className="cursor-pointer border-b border-slate-100 dark:border-slate-800 outline-none last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800 focus-visible:bg-slate-50 dark:focus-visible:bg-slate-800"
                 >
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-800">{v.displayName}</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-100">{v.displayName}</span>
                       {v.exploitVerified && <VerifiedExploitChip />}
                     </div>
-                    <div className="text-xs text-slate-400">{v.cveId}</div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500">{v.cveId}</div>
                   </td>
                   {isAllTenants && (
-                    <td className="px-5 py-3 text-slate-600">
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
                       {tenantNames.get(v.tenantId) ?? v.tenantId}
                     </td>
                   )}
                   <td className="px-5 py-3">
                     <SeverityChip severity={v.severity} />
                   </td>
-                  <td className="px-5 py-3 text-slate-700">{v.affectedDeviceCount}</td>
+                  <td className="px-5 py-3 text-slate-700 dark:text-slate-200">{v.affectedDeviceCount}</td>
                   <td className="px-5 py-3">
                     <SlaChip sla={v.sla} />
                   </td>

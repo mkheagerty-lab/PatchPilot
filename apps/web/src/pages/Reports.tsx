@@ -45,10 +45,10 @@ const STATUS_LABEL: Record<ReportStatus, string> = {
 };
 
 const STATUS_STYLES: Record<ReportStatus, string> = {
-  pending: "bg-slate-100 text-slate-600",
-  rendering: "bg-sky-100 text-sky-700",
-  ready: "bg-emerald-100 text-emerald-700",
-  failed: "bg-rose-100 text-rose-700",
+  pending: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
+  rendering: "bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  ready: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  failed: "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400",
 };
 
 function formatBytes(bytes: number | null): string {
@@ -72,7 +72,7 @@ function StatusChip({ status }: { status: ReportStatus }) {
 function NarrationChip({ row }: { row: ReportSummary }) {
   if (row.narrated) {
     return (
-      <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+      <span className="inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
         AI
       </span>
     );
@@ -82,7 +82,7 @@ function NarrationChip({ row }: { row: ReportSummary }) {
     <span
       title={row.narrationSkippedReason ?? undefined}
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        degraded ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+        degraded ? "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
       }`}
     >
       Data only
@@ -198,7 +198,7 @@ export function Reports() {
       />
 
       <Card className="mb-6">
-        <h2 className="text-sm font-semibold text-slate-900">Generate a report</h2>
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Generate a report</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {REPORT_TYPES.map((type) => {
             const typeDef = REPORT_TYPE_DEFS[type];
@@ -207,20 +207,20 @@ export function Reports() {
               <label
                 key={type}
                 className={`flex cursor-pointer flex-col gap-1 rounded-lg border p-3 text-sm transition-colors ${
-                  active ? "border-indigo-400 bg-indigo-50/60" : "border-slate-200 hover:bg-slate-50"
+                  active ? "border-indigo-400 dark:border-indigo-500 bg-indigo-50/60 dark:bg-indigo-500/10" : "border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
-                <span className="flex items-center gap-2 font-medium text-slate-800">
+                <span className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-100">
                   <input
                     type="radio"
                     name="reportType"
                     checked={active}
                     onChange={() => selectReportType(type)}
-                    className="text-indigo-600"
+                    className="text-indigo-600 dark:text-indigo-400"
                   />
                   {typeDef.label}
                 </span>
-                <span className="pl-6 text-xs text-slate-500">{typeDef.description}</span>
+                <span className="pl-6 text-xs text-slate-500 dark:text-slate-400">{typeDef.description}</span>
               </label>
             );
           })}
@@ -228,11 +228,11 @@ export function Reports() {
 
         <div className="mt-4 flex flex-wrap items-end gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-600">Tenant</span>
+            <span className="font-medium text-slate-600 dark:text-slate-300">Tenant</span>
             <select
               value={tenantId}
               onChange={(e) => setTenantId(e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200"
             >
               {!def.requiresTenant && <option value={ALL_TENANTS}>All Tenants</option>}
               {reachableTenants.map((t) => (
@@ -243,11 +243,11 @@ export function Reports() {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-600">Window</span>
+            <span className="font-medium text-slate-600 dark:text-slate-300">Window</span>
             <select
               value={windowDays}
               onChange={(e) => setWindowDays(Number(e.target.value))}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200"
             >
               {def.windowOptions.map((d) => (
                 <option key={d} value={d}>
@@ -262,15 +262,15 @@ export function Reports() {
               className={`flex flex-col gap-1 text-sm ${aiAvailable ? "" : "opacity-60"}`}
               title={aiAvailable ? undefined : "AI features aren't enabled on this deployment."}
             >
-              <span className="font-medium text-slate-600">Narration</span>
-              <span className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5">
+              <span className="font-medium text-slate-600 dark:text-slate-300">Narration</span>
+              <span className="flex items-center gap-2 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5">
                 <input
                   type="checkbox"
                   checked={narrate && aiAvailable}
                   disabled={!aiAvailable}
                   onChange={(e) => setNarrate(e.target.checked)}
                 />
-                <span className="text-sm text-slate-700">AI-written summaries</span>
+                <span className="text-sm text-slate-700 dark:text-slate-200">AI-written summaries</span>
               </span>
             </label>
           )}
@@ -284,13 +284,13 @@ export function Reports() {
             {generate.isPending || inFlight ? "Generating…" : "Generate Report"}
           </button>
         </div>
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
           Charts, tables and exports are produced either way — narration only adds AI-written prose
           on top.
         </p>
 
         {generate.isError && (
-          <p className="mt-3 text-sm text-rose-600">
+          <p className="mt-3 text-sm text-rose-600 dark:text-rose-400">
             {generate.error instanceof ApiError
               ? generate.error.message
               : "Couldn't start report generation."}
@@ -302,8 +302,8 @@ export function Reports() {
         <Card className="mb-6">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-slate-800">{activeReport.data.title}</p>
-              <p className="mt-0.5 text-xs text-slate-400">
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{activeReport.data.title}</p>
+              <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
                 {inFlight
                   ? "Rendering — this can take up to a minute…"
                   : activeReport.data.status === "ready"
@@ -328,14 +328,14 @@ export function Reports() {
       )}
 
       <Card className="mb-6">
-        <h2 className="text-sm font-semibold text-slate-900">Report history</h2>
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Report history</h2>
         {rows.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-400">No reports generated yet.</p>
+          <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">No reports generated yet.</p>
         ) : (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   <th className="py-2 pr-3 font-medium">Type</th>
                   <th className="py-2 pr-3 font-medium">Tenant</th>
                   <th className="py-2 pr-3 font-medium">Window</th>
@@ -350,13 +350,13 @@ export function Reports() {
               <tbody>
                 {rows.map((row) => (
                   <Fragment key={row.id}>
-                    <tr className="border-b border-slate-100 align-top">
+                    <tr className="border-b border-slate-100 dark:border-slate-800 align-top">
                       <td className="py-2 pr-3">
                         {REPORT_TYPE_DEFS[row.reportType as ReportType]?.label ?? row.reportType}
                       </td>
                       <td className="py-2 pr-3">{row.tenantName ?? "All Tenants"}</td>
                       <td className="py-2 pr-3">{row.windowDays}d</td>
-                      <td className="py-2 pr-3 text-xs text-slate-500">
+                      <td className="py-2 pr-3 text-xs text-slate-500 dark:text-slate-400">
                         {new Date(row.requestedAt).toLocaleString()}
                       </td>
                       <td className="py-2 pr-3">{formatBytes(row.pdfBytes)}</td>
@@ -372,7 +372,7 @@ export function Reports() {
                               onClick={() =>
                                 setExpandedWarnings(expandedWarnings === row.id ? null : row.id)
                               }
-                              className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-200"
+                              className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400 transition-colors hover:bg-amber-200"
                             >
                               {row.factCheckWarnings.length} note
                               {row.factCheckWarnings.length === 1 ? "" : "s"}
@@ -380,7 +380,7 @@ export function Reports() {
                           )}
                         </div>
                       </td>
-                      <td className="py-2 pr-3 text-xs text-slate-500">
+                      <td className="py-2 pr-3 text-xs text-slate-500 dark:text-slate-400">
                         {new Date(row.expiresAt).toLocaleDateString()}
                       </td>
                       <td className="py-2 pr-3">
@@ -389,7 +389,7 @@ export function Reports() {
                             <a
                               href={reportDownloadUrl(row.id)}
                               download
-                              className="text-sm font-medium text-indigo-600 hover:underline"
+                              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                             >
                               Download
                             </a>
@@ -397,7 +397,7 @@ export function Reports() {
                           <button
                             type="button"
                             onClick={() => setPendingDelete(row)}
-                            className="text-sm font-medium text-rose-600 hover:underline"
+                            className="text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline"
                           >
                             Delete
                           </button>
@@ -405,12 +405,12 @@ export function Reports() {
                       </td>
                     </tr>
                     {expandedWarnings === row.id && row.factCheckWarnings.length > 0 && (
-                      <tr className="border-b border-slate-100 bg-amber-50/60">
+                      <tr className="border-b border-slate-100 dark:border-slate-800 bg-amber-50/60">
                         <td colSpan={9} className="px-3 py-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
                             Data verification notes
                           </p>
-                          <ul className="mt-1 list-disc pl-5 text-xs text-amber-700">
+                          <ul className="mt-1 list-disc pl-5 text-xs text-amber-700 dark:text-amber-400">
                             {row.factCheckWarnings.map((warning) => (
                               <li key={warning}>{warning}</li>
                             ))}
@@ -427,8 +427,8 @@ export function Reports() {
       </Card>
 
       <Card>
-        <h2 className="text-sm font-semibold text-slate-900">Metric exports</h2>
-        <p className="mt-1 text-xs text-slate-400">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Metric exports</h2>
+        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
           Server-generated CSVs for the current tenant/window selection above — no separate export
           UI, no client-side row limit.
         </p>
@@ -441,10 +441,10 @@ export function Reports() {
                 windowDays: metric.windowed ? windowDays : undefined,
               })}
               download
-              className="flex flex-col gap-1 rounded-lg border border-slate-200 p-3 text-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50/40"
+              className="flex flex-col gap-1 rounded-lg border border-slate-200 dark:border-slate-800 p-3 text-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50/40"
             >
-              <span className="font-medium text-slate-800">{metric.label}</span>
-              <span className="text-xs text-slate-500">{metric.description}</span>
+              <span className="font-medium text-slate-800 dark:text-slate-100">{metric.label}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">{metric.description}</span>
             </a>
           ))}
         </div>
@@ -457,11 +457,11 @@ export function Reports() {
             onClick={() => setPendingDelete(null)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Delete &quot;{pendingDelete.title}&quot;?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               This permanently removes the stored PDF. It can't be regenerated from this row once
               deleted.
             </p>
@@ -469,7 +469,7 @@ export function Reports() {
               <button
                 type="button"
                 onClick={() => setPendingDelete(null)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>

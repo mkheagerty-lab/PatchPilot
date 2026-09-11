@@ -42,7 +42,7 @@ const DURATIONS: { value: Duration; label: string }[] = [
 const MAX_CUSTOM_MS = 366 * 24 * 60 * 60 * 1000;
 
 const REMINDER = (
-  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800">
+  <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-800">
     <span className="font-semibold">Defender can't be updated via API.</span>{" "}
     Microsoft only supports exceptions through the Defender portal — this
     record is local to PatchPilot only. You must still create the matching
@@ -142,7 +142,7 @@ export function ExceptionModal({
     <SlideOver open={open} onClose={onClose} title="Create exception" subtitle={subjectLabel} elevated>
       {create.data ? (
         <div className="space-y-4">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+          <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
             Exception recorded — this will now be hidden from PatchPilot's
             default views until it expires or is cancelled.
           </div>
@@ -160,7 +160,7 @@ export function ExceptionModal({
           {REMINDER}
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Scope
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -177,11 +177,11 @@ export function ExceptionModal({
                   className={`rounded-lg border px-3 py-2 text-left transition-colors ${
                     scope === opt.id
                       ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   <div className="text-xs font-medium">{opt.label}</div>
-                  <div className={`mt-0.5 text-[10px] leading-tight ${scope === opt.id ? "text-slate-300" : "text-slate-400"}`}>
+                  <div className={`mt-0.5 text-[10px] leading-tight ${scope === opt.id ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"}`}>
                     {opt.hint}
                   </div>
                 </button>
@@ -189,9 +189,9 @@ export function ExceptionModal({
             </div>
 
             {scope === "device-group" && (
-              <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-slate-300 bg-white">
+              <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
                 {deviceGroups.length === 0 ? (
-                  <div className="px-3 py-2.5 text-xs text-slate-400">
+                  <div className="px-3 py-2.5 text-xs text-slate-400 dark:text-slate-500">
                     No device groups found for this tenant.
                   </div>
                 ) : (
@@ -200,15 +200,15 @@ export function ExceptionModal({
                     return (
                       <label
                         key={g.id}
-                        className="flex cursor-pointer items-center gap-2.5 border-b border-slate-100 px-3 py-2 last:border-0 hover:bg-slate-50"
+                        className="flex cursor-pointer items-center gap-2.5 border-b border-slate-100 dark:border-slate-800 px-3 py-2 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleGroup(g.id)}
-                          className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                          className="h-3.5 w-3.5 rounded border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-slate-400"
                         />
-                        <span className="min-w-0 flex-1 truncate text-sm text-slate-800">{g.name}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm text-slate-800 dark:text-slate-100">{g.name}</span>
                       </label>
                     );
                   })
@@ -218,13 +218,13 @@ export function ExceptionModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Justification
             </label>
             <select
               value={justification}
               onChange={(e) => setJustification(e.target.value as ExceptionJustification)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
             >
               {justificationOptions.map((j) => (
                 <option key={j.value} value={j.value}>
@@ -235,7 +235,7 @@ export function ExceptionModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Notes
             </label>
             <textarea
@@ -243,12 +243,12 @@ export function ExceptionModal({
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="Optional context for other engineers (ticket reference, mitigation detail, etc.)"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Duration
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -260,7 +260,7 @@ export function ExceptionModal({
                   className={`rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
                     duration === d.value
                       ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   {d.label}
@@ -270,7 +270,7 @@ export function ExceptionModal({
             {duration === "custom" && (
               <div className="mt-2">
                 <DateTimePicker value={customDate} onChange={setCustomDate} maxDate={maxCustomDate} />
-                <p className="mt-1.5 text-[11px] leading-tight text-slate-500">
+                <p className="mt-1.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
                   Custom durations are capped at 1 year.
                 </p>
               </div>
@@ -278,13 +278,13 @@ export function ExceptionModal({
           </div>
 
           {!canWrite && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
               Your role doesn't include write access.
             </div>
           )}
 
           {create.isError && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
               {create.error.message}
             </div>
           )}
@@ -293,7 +293,7 @@ export function ExceptionModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Cancel
             </button>

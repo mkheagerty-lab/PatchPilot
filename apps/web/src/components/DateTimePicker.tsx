@@ -72,7 +72,7 @@ export function DateTimePicker({
   const minTime = selectedDay && sameDay(selectedDay, today) ? toTimeInputValue(now) : undefined;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -80,7 +80,7 @@ export function DateTimePicker({
             setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
           }
           aria-label="Previous month"
-          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          className="rounded-md p-1 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
             <path
@@ -90,7 +90,7 @@ export function DateTimePicker({
             />
           </svg>
         </button>
-        <div className="text-xs font-medium text-slate-700">
+        <div className="text-xs font-medium text-slate-700 dark:text-slate-200">
           {MONTH_FORMAT.format(viewMonth)}
         </div>
         <button
@@ -99,7 +99,7 @@ export function DateTimePicker({
             setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))
           }
           aria-label="Next month"
-          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          className="rounded-md p-1 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
             <path
@@ -111,7 +111,7 @@ export function DateTimePicker({
         </button>
       </div>
 
-      <div className="mt-2 grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-slate-400">
+      <div className="mt-2 grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-slate-400 dark:text-slate-500">
         {WEEKDAY_LABELS.map((w) => (
           <div key={w}>{w}</div>
         ))}
@@ -132,12 +132,12 @@ export function DateTimePicker({
                 selected
                   ? "bg-slate-900 font-semibold text-white"
                   : disabled
-                    ? "cursor-not-allowed text-slate-300"
+                    ? "cursor-not-allowed text-slate-300 dark:text-slate-600"
                     : !inMonth
-                      ? "text-slate-300 hover:bg-slate-50"
+                      ? "text-slate-300 dark:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800"
                       : isToday
-                        ? "font-semibold text-slate-900 hover:bg-slate-100"
-                        : "text-slate-700 hover:bg-slate-100"
+                        ? "font-semibold text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             >
               {day.getDate()}
@@ -146,17 +146,17 @@ export function DateTimePicker({
         })}
       </div>
 
-      <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
-        <label className="text-xs font-medium text-slate-600">Time</label>
+      <div className="mt-3 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Time</label>
         <input
           type="time"
           value={timeValue}
           min={minTime}
           onChange={(e) => selectTime(e.target.value)}
-          className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"
+          className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
         />
         {selectedDay && (
-          <span className="ml-auto text-[11px] text-slate-500">
+          <span className="ml-auto text-[11px] text-slate-500 dark:text-slate-400">
             {selectedDay.toLocaleDateString(undefined, {
               weekday: "short",
               month: "short",

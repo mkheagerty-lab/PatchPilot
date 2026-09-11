@@ -105,7 +105,7 @@ type ViewMode = "grouped" | "os" | "components" | "cves";
 /** A small "N CVEs (Total)" pill — the headline noise-reduction number on a roll-up. */
 function WeaknessPill({ count }: { count: number }) {
   return (
-    <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+    <span className="inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
       {count} {count === 1 ? "CVE" : "CVEs"} (Total)
     </span>
   );
@@ -139,12 +139,12 @@ function CveIdChips({
             onSelect(id);
           }}
           title={`Find ${id} in All CVEs`}
-          className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-200"
+          className="rounded-full bg-indigo-100 dark:bg-indigo-500/15 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 transition-colors hover:bg-indigo-200"
         >
           {id}
         </button>
       ))}
-      {hidden > 0 && <span className="text-xs text-slate-400">+{hidden} more</span>}
+      {hidden > 0 && <span className="text-xs text-slate-400 dark:text-slate-500">+{hidden} more</span>}
     </div>
   );
 }
@@ -830,7 +830,7 @@ export function Vulnerabilities() {
             {r.productName}
             {r.publicExploit && <ExploitChip />}
           </div>
-          {r.vendor && <div className="text-xs text-slate-400">{r.vendor}</div>}
+          {r.vendor && <div className="text-xs text-slate-400 dark:text-slate-500">{r.vendor}</div>}
         </>
       ),
     },
@@ -839,7 +839,7 @@ export function Vulnerabilities() {
       header: "Context",
       cell: (r) =>
         isOsFinding(r.productName) ? (
-          <span className="text-slate-400">—</span>
+          <span className="text-slate-400 dark:text-slate-500">—</span>
         ) : (
           <div className="flex items-center gap-1">
             <ScopeChip scope={r.installScope} />
@@ -873,7 +873,7 @@ export function Vulnerabilities() {
           title="View exposed devices"
         >
           {r.exposedMachinesCount}
-          <span className="text-slate-400">
+          <span className="text-slate-400 dark:text-slate-500">
             {" / "}
             {r.totalMachineCount}
           </span>
@@ -893,7 +893,7 @@ export function Vulnerabilities() {
       cell: (r) => (
         <>
           <div>{formatDate(r.detectedAt)}</div>
-          <div className="text-xs text-slate-400">{daysAgo(r.detectedAt)}d ago</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500">{daysAgo(r.detectedAt)}d ago</div>
         </>
       ),
     },
@@ -965,7 +965,7 @@ export function Vulnerabilities() {
       cell: (k) => (
         <>
           <div className="font-medium text-slate-800 dark:text-slate-100">KB{k.kbId}</div>
-          <div className="text-xs text-slate-400">{k.title}</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500">{k.title}</div>
         </>
       ),
     },
@@ -999,7 +999,7 @@ export function Vulnerabilities() {
       cell: (k) => (
         <>
           <div>{formatDate(k.latestSyncedAt)}</div>
-          <div className="text-xs text-slate-400">{daysAgo(k.latestSyncedAt)}d ago</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500">{daysAgo(k.latestSyncedAt)}d ago</div>
         </>
       ),
     },
@@ -1073,7 +1073,7 @@ export function Vulnerabilities() {
       cell: (v) => (
         <>
           <div className="font-medium text-slate-800 dark:text-slate-100">{v.displayName ?? v.software}</div>
-          {v.publisher && <div className="text-xs text-slate-400">{v.publisher}</div>}
+          {v.publisher && <div className="text-xs text-slate-400 dark:text-slate-500">{v.publisher}</div>}
           <ManualRemediationTag software={v.software} className="mt-1" />
         </>
       ),
@@ -1091,7 +1091,7 @@ export function Vulnerabilities() {
       cell: (v) => (
         <>
           <div>{formatDate(v.detectedAt)}</div>
-          <div className="text-xs text-slate-400">{daysAgo(v.detectedAt)}d ago</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500">{daysAgo(v.detectedAt)}d ago</div>
         </>
       ),
     },
@@ -1171,7 +1171,7 @@ export function Vulnerabilities() {
           It may have already been remediated —{" "}
           <Link
             to={toRemediationHistoryCve(query.toUpperCase())}
-            className="font-medium text-indigo-600 hover:text-indigo-700"
+            className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
           >
             check Remediation History
           </Link>
@@ -1203,7 +1203,7 @@ export function Vulnerabilities() {
               type="button"
               onClick={exportCsv}
               disabled={resultCount === 0}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               Export CSV
             </button>
@@ -1212,13 +1212,13 @@ export function Vulnerabilities() {
       />
 
       {/* ---- View toggle: software roll-up / Missing KBs / unsupported components / raw CVEs ---- */}
-      <div className="mb-4 flex items-center gap-1 rounded-lg bg-slate-100 p-1 w-fit">
+      <div className="mb-4 flex items-center gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1 w-fit">
         <button
           onClick={() => setParam("view", "grouped")}
           className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
             view === "grouped"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-800"
+              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
           }`}
         >
           By software
@@ -1227,8 +1227,8 @@ export function Vulnerabilities() {
           onClick={() => setParam("view", "os")}
           className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
             view === "os"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-800"
+              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
           }`}
         >
           Missing KBs
@@ -1237,8 +1237,8 @@ export function Vulnerabilities() {
           onClick={() => setParam("view", "components")}
           className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
             view === "components"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-800"
+              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
           }`}
         >
           By Components
@@ -1247,8 +1247,8 @@ export function Vulnerabilities() {
           onClick={() => setParam("view", "cves")}
           className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
             view === "cves"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-800"
+              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
           }`}
         >
           All CVEs
@@ -1264,7 +1264,7 @@ export function Vulnerabilities() {
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 aria-hidden
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
               >
                 <path
                   fillRule="evenodd"
@@ -1283,7 +1283,7 @@ export function Vulnerabilities() {
                       ? "Search KB, title, product…"
                       : "Search software or vendor…"
                 }
-                className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
               />
             </div>
 
@@ -1292,7 +1292,7 @@ export function Vulnerabilities() {
               <select
                 value={publisherFilter}
                 onChange={(e) => setPublisherFilter(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
               >
                 <option value="all">
                   {view === "cves" ? "All publishers" : "All vendors"}
@@ -1312,7 +1312,7 @@ export function Vulnerabilities() {
                 onChange={(e) =>
                   setRemediationFilter(e.target.value as RemediationFilter)
                 }
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
               >
                 <option value="all">All remediation</option>
                 <option value="winget">Winget</option>
@@ -1326,30 +1326,30 @@ export function Vulnerabilities() {
           {/* Severity/SLA filters key off fields missing KBs don't have. */}
           {view !== "os" && (
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+            <div className="flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
               {SEVERITY_FILTERS.map((f) => (
                 <button
                   key={f}
                   onClick={() => setParam("severity", f)}
                   className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                     severityFilter === f
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                   }`}
                 >
                   {f}
                 </button>
               ))}
             </div>
-            <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+            <div className="flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
               {SLA_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => setParam("sla", f.value)}
                   className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                     slaFilter === f.value
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
                   }`}
                 >
                   {f.label}
@@ -1360,12 +1360,12 @@ export function Vulnerabilities() {
           )}
 
           <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="text-slate-500">
+            <span className="text-slate-500 dark:text-slate-400">
               {resultCount} {resultCount === 1 ? noun : `${noun}s`}
               {resultCount !== totalCount && ` of ${totalCount}`}
             </span>
             {outsideSla > 0 && (
-              <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 font-medium text-rose-700">
+              <span className="inline-flex items-center rounded-full bg-rose-100 dark:bg-rose-500/15 px-2.5 py-0.5 font-medium text-rose-700 dark:text-rose-400">
                 {outsideSla} outside SLA
               </span>
             )}
@@ -1375,7 +1375,7 @@ export function Vulnerabilities() {
 
       {isLoading ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </Card>
       ) : view === "grouped" || view === "components" ? (
         <ResponsiveTable
@@ -1414,7 +1414,7 @@ export function Vulnerabilities() {
                 >
                   Show {Math.min(hiddenCves, CVE_PAGE_SIZE)} more
                 </button>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   Showing {sorted.length} of {sortedAll.length} matching findings. Sorting and
                   filters apply to all {sortedAll.length}.
                 </span>
@@ -1474,7 +1474,7 @@ export function Vulnerabilities() {
               <div className="flex flex-wrap items-center gap-2">
                 <SeverityChip severity={selectedRec.severity} />
                 {selectedRec.severityScore != null && (
-                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                  <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
                     Score {selectedRec.severityScore.toFixed(1)}
                   </span>
                 )}
@@ -1482,7 +1482,7 @@ export function Vulnerabilities() {
                 <SlaChip sla={selectedRec.sla} />
                 {selectedRec.publicExploit && <ExploitChip />}
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                 Consolidates {selectedRec.weaknessCount}{" "}
                 {selectedRec.weaknessCount === 1 ? "CVE" : "CVEs"} Defender
                 reports for {selectedRec.productName} into one action. Updating to
@@ -1492,7 +1492,7 @@ export function Vulnerabilities() {
 
             {/* Recommendation detail */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Recommendation
               </h4>
               <dl>
@@ -1527,7 +1527,7 @@ export function Vulnerabilities() {
                 </DetailRow>
                 <DetailRow label="Public exploit">
                   {selectedRec.publicExploit ? (
-                    <span className="text-rose-600">Yes</span>
+                    <span className="text-rose-600 dark:text-rose-400">Yes</span>
                   ) : (
                     "None reported"
                   )}
@@ -1552,18 +1552,18 @@ export function Vulnerabilities() {
 
             {/* Exposure */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Exposure
               </h4>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3">
                 <dl className="space-y-1.5 text-sm">
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">Exposed devices</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">Exposed devices</dt>
+                    <dd className="font-medium text-slate-800 dark:text-slate-100">
                       <button
                         type="button"
                         onClick={() => setExposedFor(selectedRec)}
-                        className="rounded font-medium text-indigo-600 underline-offset-2 hover:underline"
+                        className="rounded font-medium text-indigo-600 dark:text-indigo-400 underline-offset-2 hover:underline"
                         title="View exposed devices"
                       >
                         {selectedRec.exposedMachinesCount} of{" "}
@@ -1572,8 +1572,8 @@ export function Vulnerabilities() {
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">First detected</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-slate-500 dark:text-slate-400">First detected</dt>
+                    <dd className="font-medium text-slate-800 dark:text-slate-100">
                       {formatDate(selectedRec.detectedAt)} (
                       {daysAgo(selectedRec.detectedAt)}d ago)
                     </dd>
@@ -1585,11 +1585,11 @@ export function Vulnerabilities() {
             {/* Drill-down: the underlying CVEs we can associate to this product.
                 Clicking one hands off to the per-CVE detail panel. */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Underlying CVEs
               </h4>
               {selectedRecCves.length === 0 ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   No matching per-CVE findings are ingested for this product.
                   Defender rolls up{" "}
                   {selectedRec.weaknessCount > 0
@@ -1599,10 +1599,10 @@ export function Vulnerabilities() {
                   individual findings.
                 </p>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-slate-200">
+                <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         <CveSortableTh label="CVE" sortKey="cve" activeKey={cveSortKey} dir={cveSortDir} onSort={toggleCveSort} />
                         <CveSortableTh label="Severity" sortKey="severity" activeKey={cveSortKey} dir={cveSortDir} onSort={toggleCveSort} />
                         <CveSortableTh label="SLA" sortKey="sla" activeKey={cveSortKey} dir={cveSortDir} onSort={toggleCveSort} />
@@ -1616,13 +1616,13 @@ export function Vulnerabilities() {
                             setSelectedRec(null);
                             setSelected(v);
                           }}
-                          className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                          className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
                           <td className="px-4 py-2.5">
-                            <div className="font-medium text-slate-800">
+                            <div className="font-medium text-slate-800 dark:text-slate-100">
                               {v.cveId ?? "—"}
                             </div>
-                            <div className="max-w-[220px] truncate text-xs text-slate-500">
+                            <div className="max-w-[220px] truncate text-xs text-slate-500 dark:text-slate-400">
                               {v.title}
                             </div>
                           </td>
@@ -1642,27 +1642,27 @@ export function Vulnerabilities() {
 
             {/* SLA detail */}
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 SLA
               </h4>
               <dl className="space-y-1.5 text-sm">
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Status</dt>
-                  <dd className="font-medium text-slate-800 capitalize">
+                  <dt className="text-slate-500 dark:text-slate-400">Status</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100 capitalize">
                     {selectedRec.status}
                   </dd>
                 </div>
                 {selectedRec.sla && (
                   <>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Due</dt>
-                      <dd className="font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Due</dt>
+                      <dd className="font-medium text-slate-800 dark:text-slate-100">
                         {new Date(selectedRec.sla.dueDate).toLocaleDateString()}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-slate-500">Days remaining</dt>
-                      <dd className="font-medium text-slate-800">
+                      <dt className="text-slate-500 dark:text-slate-400">Days remaining</dt>
+                      <dd className="font-medium text-slate-800 dark:text-slate-100">
                         {selectedRec.sla.overdue
                           ? `${Math.abs(selectedRec.sla.daysRemaining)} overdue`
                           : selectedRec.sla.daysRemaining}
@@ -1690,20 +1690,20 @@ export function Vulnerabilities() {
       >
         {exposedFor && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               {exposedFor.exposedMachinesCount} of {exposedFor.totalMachineCount}{" "}
               devices exposed to {exposedFor.productName}.
             </p>
             {exposedLoading ? (
-              <div className="text-sm text-slate-500">Loading devices…</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">Loading devices…</div>
             ) : exposedDevices.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                 No exposed device details available.
               </div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     <th className="py-2 pr-3 font-medium">Device</th>
                     <th className="py-2 pr-3 font-medium">Owner</th>
                     <th className="py-2 pr-3 font-medium">Last seen</th>
@@ -1726,17 +1726,17 @@ export function Vulnerabilities() {
                               )}`,
                             )
                           }
-                          className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                          className="cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800"
                           title="Open in Devices"
                         >
-                          <td className="py-2 pr-3 font-medium text-indigo-600">
+                          <td className="py-2 pr-3 font-medium text-indigo-600 dark:text-indigo-400">
                             {d.deviceName}
                           </td>
-                          <td className="py-2 pr-3 text-slate-600">{d.owner ?? "—"}</td>
-                          <td className="py-2 pr-3 text-slate-600">
+                          <td className="py-2 pr-3 text-slate-600 dark:text-slate-300">{d.owner ?? "—"}</td>
+                          <td className="py-2 pr-3 text-slate-600 dark:text-slate-300">
                             {formatDate(d.lastSeen)}
                           </td>
-                          <td className="py-2 text-slate-600">
+                          <td className="py-2 text-slate-600 dark:text-slate-300">
                             <div className="flex items-center justify-between gap-2">
                               <span>
                                 {d.pendingReboot === null
@@ -1752,7 +1752,7 @@ export function Vulnerabilities() {
                                     e.stopPropagation();
                                     setExpandedExposedId(expanded ? null : rowId);
                                   }}
-                                  className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                                  className="shrink-0 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
                                 >
                                   {expanded ? "Hide detection" : "How detected"}
                                 </button>
@@ -1761,7 +1761,7 @@ export function Vulnerabilities() {
                           </td>
                         </tr>
                         {expanded && (
-                          <tr className="border-b border-slate-100 last:border-0 bg-slate-50">
+                          <tr className="border-b border-slate-100 dark:border-slate-800 last:border-0 bg-slate-50 dark:bg-slate-800">
                             <td colSpan={4} className="px-3 py-3">
                               <DetectionEvidence
                                 installedVersions={d.installedVersion ? [d.installedVersion] : []}
@@ -1802,7 +1802,7 @@ export function Vulnerabilities() {
                     href={selectedKb.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded font-medium text-indigo-600 underline-offset-2 hover:underline text-xs"
+                    className="rounded font-medium text-indigo-600 dark:text-indigo-400 underline-offset-2 hover:underline text-xs"
                   >
                     KB article
                   </a>
@@ -1816,7 +1816,7 @@ export function Vulnerabilities() {
                 Fix all
               </button>
             </div>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               {selectedKb.products.length > 0
                 ? `Applies to ${selectedKb.products.join(", ")}.`
                 : null}{" "}
@@ -1824,21 +1824,21 @@ export function Vulnerabilities() {
               {selectedKb.deviceCount === 1 ? "device" : "devices"}.
             </p>
             <section>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Devices
               </h4>
-              <div className="overflow-hidden rounded-lg border border-slate-200">
+              <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       <th className="px-4 py-2.5 font-medium">Device</th>
                       <th className="px-4 py-2.5 text-right font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedKb.devices.map((d) => (
-                      <tr key={d.deviceId} className="border-b border-slate-100 last:border-0">
-                        <td className="px-4 py-2.5 font-medium text-slate-800">{d.hostname}</td>
+                      <tr key={d.deviceId} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
+                        <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-100">{d.hostname}</td>
                         <td className="px-4 py-2.5 text-right">
                           <button
                             type="button"

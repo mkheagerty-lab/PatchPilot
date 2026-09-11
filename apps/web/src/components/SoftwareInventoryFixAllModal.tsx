@@ -239,7 +239,7 @@ export function SoftwareInventoryFixAllModal({
         {!fixAll.isSuccess && (
           <>
             <div>
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 1. When
               </span>
               <div className="grid grid-cols-2 gap-2">
@@ -251,7 +251,7 @@ export function SoftwareInventoryFixAllModal({
                     className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                       whenMode === mode.id
                         ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                        : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                     }`}
                   >
                     {mode.label}
@@ -266,7 +266,7 @@ export function SoftwareInventoryFixAllModal({
             </div>
 
             <div>
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 2. Trigger method
               </span>
               <div className="space-y-1.5">
@@ -281,12 +281,12 @@ export function SoftwareInventoryFixAllModal({
                       className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                         active
                           ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                          : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{s.label}</span>
-                        <span className={active ? "text-slate-300" : "text-slate-400"}>
+                        <span className={active ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"}>
                           {s.latency}
                         </span>
                       </div>
@@ -295,8 +295,8 @@ export function SoftwareInventoryFixAllModal({
                 })}
               </div>
               {channel === "win32-app" && (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
-                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <div className="mt-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-3">
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Win32 app deploy options
                   </div>
                   <Win32DeployOptionsPanel
@@ -312,7 +312,7 @@ export function SoftwareInventoryFixAllModal({
 
             <div>
               <div className="mb-1 flex items-center justify-between gap-2">
-                <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   3. {target.kind === "software" ? "Devices" : "Software"} ({selectedCount} of {items.length} selected)
                 </span>
                 {items.length > 0 && (
@@ -325,7 +325,7 @@ export function SoftwareInventoryFixAllModal({
                         className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
                           scopeFilter === f.value
                             ? "bg-slate-900 text-white"
-                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
                         }`}
                       >
                         {f.label}
@@ -335,29 +335,29 @@ export function SoftwareInventoryFixAllModal({
                 )}
               </div>
               {isLoading ? (
-                <p className="text-sm text-slate-500">Loading…</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
               ) : items.length === 0 ? (
-                <p className="text-sm text-slate-500">Nothing to fix.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Nothing to fix.</p>
               ) : (
-                <ul className="max-h-80 overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200">
+                <ul className="max-h-80 overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                   {filteredItems.map((item) => {
                     const checked = selected.has(item.key);
                     return (
                       <li
                         key={item.key}
-                        className="border-b border-slate-100 px-3 py-2.5 last:border-0"
+                        className="border-b border-slate-100 dark:border-slate-800 px-3 py-2.5 last:border-0"
                       >
                         <div className="flex items-start gap-2.5">
                           <input
                             type="checkbox"
-                            className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 dark:border-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                             checked={checked}
                             disabled={item.upToDate}
                             onChange={() => toggle(item.key)}
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="truncate text-sm font-medium text-slate-800">
+                              <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                                 {item.label}
                               </span>
                               <div className="flex shrink-0 items-center gap-1">
@@ -365,9 +365,9 @@ export function SoftwareInventoryFixAllModal({
                                 <MsStoreChip isStoreInstall={item.isStoreInstall} />
                               </div>
                             </div>
-                            <div className="text-xs text-slate-400">{item.sublabel}</div>
+                            <div className="text-xs text-slate-400 dark:text-slate-500">{item.sublabel}</div>
                             {item.upToDate ? (
-                              <p className="mt-1 text-xs text-slate-400">Already up to date.</p>
+                              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Already up to date.</p>
                             ) : checked ? (
                               <WingetPicker
                                 value={packageIds[item.key] ?? ""}
@@ -376,7 +376,7 @@ export function SoftwareInventoryFixAllModal({
                                 }
                               />
                             ) : !item.wingetPackageId ? (
-                              <p className="mt-1 text-xs text-amber-600">
+                              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                                 No winget package mapped — will be skipped unless one is entered.
                               </p>
                             ) : null}
@@ -392,20 +392,20 @@ export function SoftwareInventoryFixAllModal({
         )}
 
         {!canWrite && !fixAll.isSuccess && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
             Your role doesn't include remediation write access.
           </div>
         )}
 
         {fixAll.isError && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
             {fixAll.error.message}
           </div>
         )}
 
         {fixAll.isSuccess && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-emerald-800">
               <p className="text-sm font-medium">
                 {fixAll.data.jobsCreated === 0
                   ? "No jobs created — every item was skipped."
@@ -425,15 +425,15 @@ export function SoftwareInventoryFixAllModal({
             </div>
             {fixAll.data.skipped.length > 0 && (
               <div>
-                <div className="mb-1 text-xs font-medium text-slate-600">Skipped</div>
-                <ul className="rounded-lg border border-slate-200">
+                <div className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">Skipped</div>
+                <ul className="rounded-lg border border-slate-200 dark:border-slate-800">
                   {fixAll.data.skipped.map((s, i) => (
                     <li
                       key={`${s.label}-${i}`}
-                      className="border-b border-slate-100 px-3 py-2 text-xs last:border-0"
+                      className="border-b border-slate-100 dark:border-slate-800 px-3 py-2 text-xs last:border-0"
                     >
-                      <span className="font-medium text-slate-700">{s.label}</span>
-                      <span className="text-slate-500">: {s.reason}</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-200">{s.label}</span>
+                      <span className="text-slate-500 dark:text-slate-400">: {s.reason}</span>
                     </li>
                   ))}
                 </ul>
@@ -447,7 +447,7 @@ export function SoftwareInventoryFixAllModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Cancel
             </button>

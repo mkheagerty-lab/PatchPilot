@@ -15,7 +15,7 @@ const DEFAULTS: SmtpSettings = {
 };
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-slate-400 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-400 dark:focus:border-slate-600 focus:outline-none";
 
 /**
  * Settings > Notifications — the SMTP relay used for job/sync failure alert
@@ -108,32 +108,32 @@ export function Notifications() {
       />
 
       {!canWrite && (
-        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mb-5 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Your role doesn't include settings write access.
         </div>
       )}
 
       {isLoading ? (
         <Card>
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </Card>
       ) : (
         <>
           <Card className="mb-5 max-w-lg">
-            <label className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700">
+            <label className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
               <input
                 type="checkbox"
                 checked={form.enabled}
                 onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))}
                 disabled={!canWrite}
-                className="rounded border-slate-300"
+                className="rounded border-slate-300 dark:border-slate-700"
               />
               Enable alert emails
             </label>
 
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">SMTP host</label>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">SMTP host</label>
                 <input
                   className={INPUT_CLASS}
                   value={form.host}
@@ -145,7 +145,7 @@ export function Notifications() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Port</label>
+                  <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Port</label>
                   <input
                     type="number"
                     min={1}
@@ -157,13 +157,13 @@ export function Notifications() {
                   />
                 </div>
                 <div className="flex items-end pb-2">
-                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                  <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                     <input
                       type="checkbox"
                       checked={form.secure}
                       onChange={(e) => setForm((f) => ({ ...f, secure: e.target.checked }))}
                       disabled={!canWrite}
-                      className="rounded border-slate-300"
+                      className="rounded border-slate-300 dark:border-slate-700"
                     />
                     Use TLS (implicit, e.g. port 465)
                   </label>
@@ -171,7 +171,7 @@ export function Notifications() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Username</label>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Username</label>
                 <input
                   className={INPUT_CLASS}
                   value={form.user}
@@ -182,7 +182,7 @@ export function Notifications() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Password</label>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Password</label>
                 <input
                   type="password"
                   className={INPUT_CLASS}
@@ -194,7 +194,7 @@ export function Notifications() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">From address</label>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">From address</label>
                 <input
                   className={INPUT_CLASS}
                   value={form.from}
@@ -207,8 +207,8 @@ export function Notifications() {
           </Card>
 
           <Card className="max-w-lg">
-            <div className="mb-1 text-sm font-medium text-slate-700">Send a test email</div>
-            <p className="mb-3 text-xs text-slate-500">
+            <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Send a test email</div>
+            <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
               Sends using the settings above (including any unsaved changes) — use it to confirm the
               relay works before saving.
             </p>
@@ -225,22 +225,22 @@ export function Notifications() {
                 type="button"
                 onClick={() => testMutation.mutate()}
                 disabled={!canSendTest}
-                className="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="shrink-0 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {testMutation.isPending ? "Sending…" : "Send test"}
               </button>
             </div>
             {testResult && (
-              <p className={`mt-2 text-xs ${testResult.ok ? "text-emerald-600" : "text-rose-600"}`}>
+              <p className={`mt-2 text-xs ${testResult.ok ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                 {testResult.message}
               </p>
             )}
           </Card>
 
           <Card className="mt-5 max-w-lg border-dashed">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Who actually receives these emails is controlled per-person on{" "}
-              <span className="font-medium text-slate-600">Settings &gt; Users</span> — admins are
+              <span className="font-medium text-slate-600 dark:text-slate-300">Settings &gt; Users</span> — admins are
               opted in by default, everyone else opts in individually.
             </p>
           </Card>

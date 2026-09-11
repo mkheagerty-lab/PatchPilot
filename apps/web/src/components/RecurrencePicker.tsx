@@ -233,7 +233,7 @@ export function RecurrencePicker({
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 space-y-3">
       <div className="grid grid-cols-3 gap-2">
         {FREQ_OPTIONS.map((f) => (
           <button
@@ -243,7 +243,7 @@ export function RecurrencePicker({
             className={`rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
               value.freq === f.id
                 ? "border-slate-900 bg-slate-900 text-white"
-                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
             }`}
           >
             {f.label}
@@ -263,7 +263,7 @@ export function RecurrencePicker({
                 className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                   active
                     ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                    : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 {w.label}
@@ -275,11 +275,11 @@ export function RecurrencePicker({
 
       {value.freq === "monthly" && (
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-600">Day of month</label>
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Day of month</label>
           <select
             value={value.dayOfMonth}
             onChange={(e) => onChange({ ...value, dayOfMonth: Number(e.target.value) })}
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
           >
             {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
               <option key={d} value={d}>
@@ -292,20 +292,20 @@ export function RecurrencePicker({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-600">Time</label>
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Time</label>
           <input
             type="time"
             value={value.time}
             onChange={(e) => onChange({ ...value, time: e.target.value })}
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
           />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-600">Timezone</label>
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Timezone</label>
           <select
             value={value.timezone}
             onChange={(e) => onChange({ ...value, timezone: e.target.value })}
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
           >
             {(TZ_OPTIONS.includes(value.timezone)
               ? TZ_OPTIONS
@@ -319,7 +319,7 @@ export function RecurrencePicker({
         </div>
       </div>
 
-      <p className="text-[11px] leading-tight text-slate-500">
+      <p className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">
         {describeRecurrence(value)} · <code className="font-mono">{toCron(value)}</code> ·{" "}
         {value.timezone}
       </p>

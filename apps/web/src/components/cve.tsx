@@ -79,7 +79,9 @@ export function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
       fill="currentColor"
       aria-hidden
       className={`h-3 w-3 transition ${
-        active ? "text-slate-700" : "text-slate-300 group-hover:text-slate-400"
+        active
+          ? "text-slate-700 dark:text-slate-200"
+          : "text-slate-300 group-hover:text-slate-400 dark:text-slate-600 dark:group-hover:text-slate-500"
       } ${active && dir === "desc" ? "rotate-180" : ""}`}
     >
       <path
@@ -112,7 +114,7 @@ export function CveSortableTh({
         type="button"
         onClick={() => onSort(sortKey)}
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700"
+        className="group inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-slate-700 dark:hover:text-slate-200"
       >
         {label}
         <SortIcon active={active} dir={dir} />
@@ -145,7 +147,7 @@ export function CveSortButton({
       type="button"
       onClick={() => onSort(sortKey)}
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-      className="group inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 transition-colors hover:text-slate-700"
+      className="group inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
     >
       {label}
       <SortIcon active={active} dir={dir} />
@@ -183,25 +185,25 @@ export function RemediationBadge({
   switch (remediationRoute(software, wingetRemediable)) {
     case "winget":
       return (
-        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
           Winget
         </span>
       );
     case "os":
       return (
-        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
           OS / Update Ring
         </span>
       );
     case "manual":
       return (
-        <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700">
+        <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-500/15 dark:text-rose-400">
           Manual
         </span>
       );
     case "unsupported":
       return (
-        <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+        <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
           Unsupported
         </span>
       );
@@ -211,7 +213,7 @@ export function RemediationBadge({
 /** Compact "exploit available" warning chip, reused across CVE surfaces. */
 export function ExploitChip() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700">
+    <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-500/15 dark:text-rose-400">
       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden className="h-3 w-3">
         <path
           fillRule="evenodd"
@@ -250,7 +252,7 @@ export function ExceptionChip() {
   return (
     <span
       title="An active PatchPilot exception covers this — hidden from default views."
-      className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+      className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
     >
       Excepted
     </span>
@@ -308,7 +310,7 @@ export function FixedOnDeviceChip({ fix }: { fix: FixedOnDevice }) {
   return (
     <span
       title={fixTooltip(fix)}
-      className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700"
+      className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
     >
       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden className="h-3 w-3">
         <path
@@ -325,11 +327,11 @@ export function FixedOnDeviceChip({ fix }: { fix: FixedOnDevice }) {
 /** The same evidence as a full callout, for detail panels that have the room. */
 export function FixedOnDeviceNote({ fix }: { fix: FixedOnDevice }) {
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-      <p className="text-sm font-medium text-emerald-800">
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/50 dark:bg-emerald-500/10">
+      <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
         Fixed on device {formatFixedAt(fix.verifiedAt)} — awaiting Defender
       </p>
-      <p className="mt-1 text-xs leading-relaxed text-emerald-700">
+      <p className="mt-1 text-xs leading-relaxed text-emerald-700 dark:text-emerald-400">
         {wasAlreadyCurrent(fix) ? (
           <>
             A PatchPilot remediation confirmed{" "}
@@ -382,13 +384,13 @@ export function WingetCommand({ packageId }: { packageId: string }) {
   return (
     <section>
       <div className="mb-1.5 flex items-center justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
           Recommended winget command
         </h4>
         <button
           type="button"
           onClick={copy}
-          className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+          className="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
         >
           {copied ? "Copied" : "Copy"}
         </button>
@@ -427,28 +429,28 @@ export function DetectionEvidence({
   }
   return (
     <section>
-      <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
         How it was detected
         <MsStoreChip isStoreInstall={detectMicrosoftStoreInstall(diskPaths, registryPaths)} />
       </h4>
       <dl className="space-y-3 text-sm">
         {showVersion && (
           <div>
-            <dt className="text-slate-500">Installed version</dt>
-            <dd className="font-mono text-xs text-slate-700">
+            <dt className="text-slate-500 dark:text-slate-400">Installed version</dt>
+            <dd className="font-mono text-xs text-slate-700 dark:text-slate-300">
               {installedVersions.length > 0 ? installedVersions.join(", ") : "—"}
             </dd>
           </div>
         )}
         {diskPaths.length > 0 && (
           <div>
-            <dt className="text-slate-500">Disk path(s)</dt>
+            <dt className="text-slate-500 dark:text-slate-400">Disk path(s)</dt>
             <dd>
               <ul className="mt-1 space-y-1">
                 {diskPaths.map((p) => (
                   <li
                     key={p}
-                    className="break-all rounded bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700"
+                    className="break-all rounded bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   >
                     {p}
                   </li>
@@ -459,19 +461,19 @@ export function DetectionEvidence({
         )}
         {registryPaths.length > 0 && (
           <div>
-            <dt className="text-slate-500">Registry path(s)</dt>
+            <dt className="text-slate-500 dark:text-slate-400">Registry path(s)</dt>
             <dd>
               <ul className="mt-1 space-y-1">
                 {registryPaths.map((p) => (
                   <li
                     key={p}
-                    className="break-all rounded bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700"
+                    className="break-all rounded bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   >
                     {p}
                   </li>
                 ))}
               </ul>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                 {registryPaths.some((p) => /^HKEY_USERS\\|^HKU\\/i.test(p))
                   ? "Registered under HKEY_USERS — installed per-user, not machine-wide."
                   : "Registered under HKEY_LOCAL_MACHINE — installed machine-wide."}
@@ -481,9 +483,9 @@ export function DetectionEvidence({
         )}
         {diskPaths.length === 0 && registryPaths.length === 0 && (
           <div>
-            <dt className="text-slate-500">Detected at</dt>
+            <dt className="text-slate-500 dark:text-slate-400">Detected at</dt>
             <dd>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Detected as an OS/registry component — Defender reported no file or
                 registry path.
               </p>
@@ -522,11 +524,11 @@ export function CveDetailBody({
     <div className="space-y-6">
       {/* Title + chips */}
       <div>
-        <h3 className="text-base font-semibold text-slate-900">{vuln.title}</h3>
+        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{vuln.title}</h3>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <SeverityChip severity={vuln.severity} />
           {vuln.cvss != null && (
-            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
               CVSS {vuln.cvss.toFixed(1)}
             </span>
           )}
@@ -537,7 +539,7 @@ export function CveDetailBody({
             vuln.exploitAvailable && <ExploitChip />
           )}
           {vuln.exception && <ExceptionChip />}
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-400 dark:text-slate-500">
             detected {daysAgo(vuln.detectedAt)}d ago
           </span>
         </div>
@@ -552,7 +554,7 @@ export function CveDetailBody({
                   )}&recommendationId=${encodeURIComponent(vuln.relatedRecommendationId!)}`,
                 )
               }
-              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-900/50 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
             >
               Go to related Security Recommendation
               <span aria-hidden>→</span>
@@ -562,7 +564,7 @@ export function CveDetailBody({
             <button
               type="button"
               onClick={onCreateException}
-              className="inline-flex items-center gap-1 rounded font-medium text-slate-600 underline-offset-2 hover:underline"
+              className="inline-flex items-center gap-1 rounded font-medium text-slate-600 underline-offset-2 hover:underline dark:text-slate-300"
             >
               Create exception
             </button>
@@ -577,23 +579,23 @@ export function CveDetailBody({
 
       {/* Description */}
       <section>
-        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
           Description
         </h4>
-        <p className="text-sm leading-relaxed text-slate-600">
+        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
           {vuln.description ?? "No description available for this finding."}
         </p>
       </section>
 
       {/* Detection & threat insights */}
       <section>
-        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
           Detection &amp; threat insights
         </h4>
         <dl>
           <DetailRow label="First detected">
             {formatDate(vuln.detectedAt)}
-            <span className="ml-1 font-normal text-slate-400">
+            <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">
               ({daysAgo(vuln.detectedAt)}d ago)
             </span>
           </DetailRow>
@@ -610,11 +612,11 @@ export function CveDetailBody({
           <DetailRow label="EPSS">{formatEpss(vuln.epss)}</DetailRow>
           <DetailRow label="Exploit availability">
             {vuln.exploitVerified ? (
-              <span className="font-medium text-rose-600">
+              <span className="font-medium text-rose-600 dark:text-rose-400">
                 Active exploitation confirmed
               </span>
             ) : vuln.exploitAvailable ? (
-              <span className="text-rose-600">Public exploit known</span>
+              <span className="text-rose-600 dark:text-rose-400">Public exploit known</span>
             ) : (
               "None reported"
             )}
@@ -638,32 +640,32 @@ export function CveDetailBody({
 
       {/* Affected software */}
       <section>
-        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
           Affected software
         </h4>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-          <div className="font-medium text-slate-800">{vuln.displayName ?? vuln.software}</div>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+          <div className="font-medium text-slate-800 dark:text-slate-100">{vuln.displayName ?? vuln.software}</div>
           {vuln.publisher && (
-            <div className="text-sm text-slate-500">{vuln.publisher}</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">{vuln.publisher}</div>
           )}
           <ManualRemediationTag software={vuln.software} className="mt-1" />
           <dl className="mt-3 space-y-1.5 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Affected devices</dt>
-              <dd className="font-medium text-slate-800">
+              <dt className="text-slate-500 dark:text-slate-400">Affected devices</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-100">
                 {vuln.affectedDeviceCount}
               </dd>
             </div>
             {latestVersion && (
               <div className="flex justify-between gap-4">
-                <dt className="text-slate-500">Latest version</dt>
-                <dd className="font-medium text-slate-800">{latestVersion}</dd>
+                <dt className="text-slate-500 dark:text-slate-400">Latest version</dt>
+                <dd className="font-medium text-slate-800 dark:text-slate-100">{latestVersion}</dd>
               </div>
             )}
             {tenantLabel && (
               <div className="flex justify-between gap-4">
-                <dt className="text-slate-500">Customer tenant</dt>
-                <dd className="min-w-0 truncate font-medium text-slate-800">
+                <dt className="text-slate-500 dark:text-slate-400">Customer tenant</dt>
+                <dd className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-100">
                   {tenantLabel}
                 </dd>
               </div>
@@ -679,25 +681,25 @@ export function CveDetailBody({
 
       {/* SLA detail */}
       <section>
-        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
           SLA
         </h4>
         <dl className="space-y-1.5 text-sm">
           <div className="flex justify-between gap-4">
-            <dt className="text-slate-500">Status</dt>
-            <dd className="font-medium text-slate-800 capitalize">
+            <dt className="text-slate-500 dark:text-slate-400">Status</dt>
+            <dd className="font-medium text-slate-800 capitalize dark:text-slate-100">
               {vuln.status}
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-slate-500">Due</dt>
-            <dd className="font-medium text-slate-800">
+            <dt className="text-slate-500 dark:text-slate-400">Due</dt>
+            <dd className="font-medium text-slate-800 dark:text-slate-100">
               {new Date(vuln.sla.dueDate).toLocaleDateString()}
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-slate-500">Days remaining</dt>
-            <dd className="font-medium text-slate-800">
+            <dt className="text-slate-500 dark:text-slate-400">Days remaining</dt>
+            <dd className="font-medium text-slate-800 dark:text-slate-100">
               {vuln.sla.overdue
                 ? `${Math.abs(vuln.sla.daysRemaining)} overdue`
                 : vuln.sla.daysRemaining}

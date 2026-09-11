@@ -47,27 +47,27 @@ export function KpiCard({
   sparkline?: ReactNode;
 }) {
   const toneClass = {
-    default: "text-slate-900",
-    critical: "text-rose-600",
-    warn: "text-amber-600",
-    good: "text-emerald-600",
+    default: "text-slate-900 dark:text-slate-100",
+    critical: "text-rose-600 dark:text-rose-400",
+    warn: "text-amber-600 dark:text-amber-400",
+    good: "text-emerald-600 dark:text-emerald-400",
   }[tone];
 
   const body = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <div className="text-sm font-medium text-slate-500">{label}</div>
+        <div className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</div>
         {sparkline && <div className="shrink-0">{sparkline}</div>}
       </div>
       <div className={`mt-2 text-3xl font-semibold ${toneClass}`}>{value}</div>
-      {hint && <div className="mt-1 text-xs text-slate-400">{hint}</div>}
+      {hint && <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">{hint}</div>}
     </>
   );
 
   if (to) {
     return (
       <Link to={to} className="block">
-        <Card className="h-full transition-colors hover:border-slate-300 hover:bg-slate-50">
+        <Card className="h-full transition-colors hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
           {body}
         </Card>
       </Link>
@@ -135,7 +135,7 @@ export function SlideOver({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            className="shrink-0 rounded-md p-1 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <svg
               viewBox="0 0 20 20"
@@ -226,7 +226,7 @@ const SLA_STYLES = chipClasses(SLA_TOKENS);
 
 /** Findings with no patch clock (Defender misconfigurations) pass `null`. */
 export function SlaChip({ sla }: { sla: Sla | null }) {
-  if (!sla) return <span className="text-slate-400">—</span>;
+  if (!sla) return <span className="text-slate-400 dark:text-slate-500">—</span>;
   const tone = slaTone(sla);
   return (
     <span
@@ -242,10 +242,10 @@ export function SlaChip({ sla }: { sla: Sla | null }) {
 // so this tag doubles as a supported-method hint at a glance. "unknown"
 // means Defender reported no disk/registry evidence either way.
 const SCOPE_STYLES: Record<InstallScope, string> = {
-  machine: "bg-sky-100 text-sky-700",
-  user: "bg-purple-100 text-purple-700",
-  unknown: "bg-slate-100 text-slate-500",
-  os: "bg-amber-100 text-amber-700",
+  machine: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  user: "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300",
+  unknown: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
+  os: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
 };
 
 const SCOPE_LABELS: Record<InstallScope, string> = {
@@ -287,7 +287,7 @@ export function MsStoreChip({ isStoreInstall }: { isStoreInstall: boolean }) {
   return (
     <span
       title="Installed via the Microsoft Store — dispatch through the Microsoft Store app (new) channel to manage it."
-      className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700"
+      className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
     >
       MS Store
     </span>
@@ -349,7 +349,7 @@ export function ManualRemediationTag({
 
   return (
     <span className={`relative inline-flex items-center gap-1 ${className}`}>
-      <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium normal-case text-rose-700">
+      <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium normal-case text-rose-700 dark:bg-rose-500/15 dark:text-rose-400">
         Not Supported
       </span>
       <button
@@ -360,7 +360,7 @@ export function ManualRemediationTag({
         }}
         aria-label="Why isn't this supported?"
         aria-expanded={open}
-        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-rose-500 transition-colors hover:text-rose-700"
+        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-rose-500 transition-colors hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
       >
         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden>
           <path
@@ -381,7 +381,7 @@ export function ManualRemediationTag({
           />
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute left-0 top-full z-30 mt-1 w-64 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs font-normal normal-case text-slate-600 shadow-lg"
+            className="absolute left-0 top-full z-30 mt-1 w-64 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs font-normal normal-case text-slate-600 shadow-lg dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
           >
             {reason}
           </div>
@@ -435,7 +435,7 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
           // clipboard unavailable (e.g. insecure context); silently ignore
         }
       }}
-      className="shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+      className="shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
     >
       {copied ? "Copied" : label}
     </button>
@@ -533,7 +533,7 @@ export function ResponsiveTable<T>({
                       if (el) el.indeterminate = !selection.allSelected && !!selection.someSelected;
                     }}
                     onChange={selection.onToggleAll}
-                    className="rounded border-slate-300"
+                    className="rounded border-slate-300 dark:border-slate-700"
                   />
                 </th>
               )}
@@ -563,7 +563,7 @@ export function ResponsiveTable<T>({
                       aria-label={selection.ariaLabel?.(row) ?? "Select row"}
                       checked={selection.isSelected(row)}
                       onChange={() => selection.onToggle(row)}
-                      className="rounded border-slate-300"
+                      className="rounded border-slate-300 dark:border-slate-700"
                     />
                   </td>
                 )}
@@ -604,7 +604,7 @@ export function ResponsiveTable<T>({
                   checked={selection.isSelected(row)}
                   onChange={() => selection.onToggle(row)}
                   onClick={(e) => e.stopPropagation()}
-                  className="mt-0.5 rounded border-slate-300"
+                  className="mt-0.5 rounded border-slate-300 dark:border-slate-700"
                 />
               )}
               <div className="min-w-0 flex-1 text-sm font-medium text-slate-800 dark:text-slate-100">

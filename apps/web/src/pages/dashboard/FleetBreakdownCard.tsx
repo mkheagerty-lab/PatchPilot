@@ -50,15 +50,15 @@ export function FleetBreakdownCard({
 
   return (
     <Card className="p-0">
-      <div className="border-b border-slate-100 px-5 py-4">
-        <h3 className="text-sm font-semibold text-slate-900">Fleet breakdown</h3>
-        <p className="mt-0.5 text-xs text-slate-500">Compliance and OS mix across the fleet</p>
+      <div className="border-b border-slate-100 dark:border-slate-800 px-5 py-4">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Fleet breakdown</h3>
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Compliance and OS mix across the fleet</p>
       </div>
       <div className="px-5 py-4">
         {isLoading ? (
-          <div className="flex h-[220px] items-center justify-center text-xs text-slate-400">Loading…</div>
+          <div className="flex h-[220px] items-center justify-center text-xs text-slate-400 dark:text-slate-500">Loading…</div>
         ) : totalDevices === 0 ? (
-          <div className="flex h-[220px] items-center justify-center text-xs text-slate-400">No devices yet.</div>
+          <div className="flex h-[220px] items-center justify-center text-xs text-slate-400 dark:text-slate-500">No devices yet.</div>
         ) : (
           <div className="space-y-4">
             <div style={{ height: 140 }}>

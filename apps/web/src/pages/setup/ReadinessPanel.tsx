@@ -8,10 +8,10 @@ import { useTenant } from "../../lib/tenant";
 import { Card, KpiCard } from "../../components/ui";
 
 const STATUS_STYLES: Record<CheckStatus, string> = {
-  pass: "bg-emerald-100 text-emerald-700",
-  warn: "bg-amber-100 text-amber-700",
-  fail: "bg-rose-100 text-rose-700",
-  pending: "bg-slate-100 text-slate-500",
+  pass: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  warn: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  fail: "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400",
+  pending: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
 };
 
 const STATUS_LABELS: Record<CheckStatus, string> = {
@@ -43,7 +43,7 @@ export function ReadinessPanel() {
 
   return (
     <div>
-      <p className="mb-4 text-sm text-slate-500">
+      <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
         Whether PatchPilot is wired up to operate against this tenant —
         consent, licensing, write posture, and GDAP. Remediation stays
         disabled until a tenant is ready and write actions are opted in.
@@ -74,12 +74,12 @@ export function ReadinessPanel() {
       </div>
 
       <div className="mb-6">
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">Checks</h2>
+        <h2 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Checks</h2>
         <Card className="p-0">
           {isLoading ? (
-            <div className="p-5 text-sm text-slate-500">Loading…</div>
+            <div className="p-5 text-sm text-slate-500 dark:text-slate-400">Loading…</div>
           ) : !report ? (
-            <div className="p-5 text-sm text-slate-500">
+            <div className="p-5 text-sm text-slate-500 dark:text-slate-400">
               Select a tenant to assess readiness.
             </div>
           ) : (
@@ -87,13 +87,13 @@ export function ReadinessPanel() {
               {report.checks.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 last:border-0"
+                  className="flex items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 px-5 py-4 last:border-0"
                 >
                   <div>
-                    <div className="text-sm font-medium text-slate-800">
+                    <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
                       {c.label}
                     </div>
-                    <div className="mt-0.5 text-xs text-slate-500">
+                    <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                       {c.detail}
                     </div>
                   </div>
@@ -106,7 +106,7 @@ export function ReadinessPanel() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">
+        <h2 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
           Enabled channels
         </h2>
         <Card>
@@ -115,14 +115,14 @@ export function ReadinessPanel() {
               {report.enabledChannels.map((ch) => (
                 <span
                   key={ch}
-                  className="rounded bg-slate-100 px-2 py-0.5 font-mono text-[11px] text-slate-600"
+                  className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-slate-600 dark:text-slate-300"
                 >
                   {ch}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               No remediation channels licensed for this tenant — read-only only.
             </p>
           )}

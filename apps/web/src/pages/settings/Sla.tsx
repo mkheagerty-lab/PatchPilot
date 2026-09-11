@@ -65,14 +65,14 @@ export function Sla() {
       />
 
       {!canWrite && (
-        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mb-5 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Your role doesn't include settings write access.
         </div>
       )}
 
       {isLoading ? (
         <Card>
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </Card>
       ) : (
         <Card className="max-w-lg">
@@ -94,18 +94,18 @@ export function Sla() {
                         [sev]: Math.max(1, Number(e.target.value) || 1),
                       }))
                     }
-                    className="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-24 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
-                  <span className="text-sm text-slate-500">days</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">days</span>
                 </div>
               </div>
             ))}
 
-            <div className="border-t border-slate-200 pt-4">
+            <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-slate-800">Verified exploit override</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">Verified exploit override</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Findings where Defender confirms active exploitation must be
                     remediated within this many days, regardless of severity —
                     whichever deadline is shorter wins.
@@ -122,9 +122,9 @@ export function Sla() {
                         verifiedExploit: Math.max(1, Number(e.target.value) || 1),
                       }))
                     }
-                    className="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-24 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
-                  <span className="text-sm text-slate-500">days</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">days</span>
                 </div>
               </div>
             </div>

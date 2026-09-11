@@ -66,7 +66,7 @@ export function SummarizeButton({ page, tenantId, windowDays, requiresTenant }: 
         onClick={() => void handleClick()}
         disabled={blocked}
         title={blocked ? "Select a single tenant to summarize this page." : "AI summary of this page"}
-        className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <SparkleIcon />
         Summarize
@@ -75,24 +75,24 @@ export function SummarizeButton({ page, tenantId, windowDays, requiresTenant }: 
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-40 mt-2 w-96 rounded-lg border border-slate-200 bg-white p-4 shadow-xl">
+          <div className="absolute right-0 top-full z-40 mt-2 w-96 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xl">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">AI Summary</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">AI Summary</span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-slate-400 transition-colors hover:text-slate-700"
+                className="text-slate-400 dark:text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-200"
                 aria-label="Close"
               >
                 <CloseIcon />
               </button>
             </div>
-            {loading && <p className="text-sm text-slate-400">Thinking…</p>}
-            {error && <p className="text-sm text-rose-600">{error}</p>}
+            {loading && <p className="text-sm text-slate-400 dark:text-slate-500">Thinking…</p>}
+            {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
             {summary && (
               <>
-                <p className="whitespace-pre-wrap text-sm text-slate-700">{summary}</p>
-                <p className="mt-3 border-t border-slate-100 pt-2 text-[11px] text-slate-400">
+                <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">{summary}</p>
+                <p className="mt-3 border-t border-slate-100 dark:border-slate-800 pt-2 text-[11px] text-slate-400 dark:text-slate-500">
                   AI-generated — verify against the data on this page.
                 </p>
               </>

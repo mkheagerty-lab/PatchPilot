@@ -11,7 +11,7 @@ import { windowsUpdatesFlow } from "./data/windowsUpdatesFlow";
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-10">
-      <h2 className="mb-3 text-base font-semibold text-slate-900">{title}</h2>
+      <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
       {children}
     </section>
   );
@@ -23,7 +23,7 @@ function CodeList({ items }: { items: string[] }) {
     <ul className="mt-2 list-disc space-y-1 pl-5">
       {items.map((item) => (
         <li key={item}>
-          <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">{item}</code>
+          <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 font-mono text-xs">{item}</code>
         </li>
       ))}
     </ul>
@@ -38,7 +38,7 @@ export function ArchitecturePage() {
         subtitle="How PatchPilot connects to the tenants it manages, and what it uses to patch them."
       />
 
-      <div className="max-w-3xl space-y-3 text-sm text-slate-600">
+      <div className="max-w-3xl space-y-3 text-sm text-slate-600 dark:text-slate-300">
         <p>
           PatchPilot is a single system an MSP runs itself, built to bridge the
           gap between vulnerability management and remediation across every
@@ -62,38 +62,38 @@ export function ArchitecturePage() {
       </div>
 
       <Section title="Prerequisites">
-        <p className="mb-4 max-w-3xl text-sm text-slate-600">
+        <p className="mb-4 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
           Two tenants are in play here, and each has its own access
           prerequisite before PatchPilot can do anything there at all.
         </p>
-        <ul className="mb-6 max-w-3xl list-disc space-y-1 pl-5 text-sm text-slate-600">
+        <ul className="mb-6 max-w-3xl list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
           {PREREQUISITES_AT_A_GLANCE.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
-        <h3 className="mb-2 text-sm font-medium text-slate-700">Home tenant</h3>
+        <h3 className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Home tenant</h3>
         <Card className="p-0">
           <dl className="divide-y divide-slate-100">
             {HOME_TENANT_PREREQUISITES.map((item) => (
               <div key={item.title} className="px-5 py-4">
-                <dt className="text-sm font-medium text-slate-800">{item.title}</dt>
-                <dd className="mt-1 text-sm text-slate-600">{item.body}</dd>
+                <dt className="text-sm font-medium text-slate-800 dark:text-slate-100">{item.title}</dt>
+                <dd className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.body}</dd>
               </div>
             ))}
           </dl>
         </Card>
-        <h3 className="mt-4 mb-2 text-sm font-medium text-slate-700">Customer tenant</h3>
+        <h3 className="mt-4 mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Customer tenant</h3>
         <Card className="p-0">
           <dl className="divide-y divide-slate-100">
             {CUSTOMER_TENANT_PREREQUISITES.map((item) => (
               <div key={item.title} className="px-5 py-4">
-                <dt className="text-sm font-medium text-slate-800">{item.title}</dt>
-                <dd className="mt-1 text-sm text-slate-600">{item.body}</dd>
+                <dt className="text-sm font-medium text-slate-800 dark:text-slate-100">{item.title}</dt>
+                <dd className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.body}</dd>
               </div>
             ))}
           </dl>
         </Card>
-        <h3 className="mt-6 mb-2 text-sm font-medium text-slate-700">
+        <h3 className="mt-6 mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">
           Entra roles and what they unlock
         </h3>
         <Card className="p-0">
@@ -102,7 +102,7 @@ export function ArchitecturePage() {
       </Section>
 
       <Section title="Remediation options, channels, and catalogs">
-        <p className="mb-4 max-w-3xl text-sm text-slate-600">
+        <p className="mb-4 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
           PatchPilot matches every finding against a set of package/script
           catalogs to work out what the actual fix is, then dispatches it
           through one of several Microsoft-owned channels. Which channel runs
@@ -117,7 +117,7 @@ export function ArchitecturePage() {
             ariaLabel="The catalogs PatchPilot resolves a finding against, the remediation channels it can dispatch through, and how each one reaches a managed device"
           />
         </Card>
-        <div className="mt-4 max-w-3xl space-y-3 text-sm text-slate-600">
+        <div className="mt-4 max-w-3xl space-y-3 text-sm text-slate-600 dark:text-slate-300">
           <p>
             Four catalogs feed a decision, not four separate features:
             winget is the default match for an app finding; Chocolatey and
@@ -142,7 +142,7 @@ export function ArchitecturePage() {
       </Section>
 
       <Section title="How the engineer and PatchPilot reach a tenant">
-        <p className="mb-4 max-w-3xl text-sm text-slate-600">
+        <p className="mb-4 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
           An engineer signs in with their own Microsoft account, bringing the
           GDAP roles that account already holds in each customer; their browser
           only ever holds a session cookie. When PatchPilot needs to do
@@ -155,7 +155,7 @@ export function ArchitecturePage() {
             ariaLabel="How the engineer and PatchPilot connect to the MSP home tenant and to customer tenants"
           />
         </Card>
-        <div className="mt-4 max-w-3xl space-y-3 text-sm text-slate-600">
+        <div className="mt-4 max-w-3xl space-y-3 text-sm text-slate-600 dark:text-slate-300">
           <p>
             Customer tenants are reached through a GDAP relationship — the
             delegated-admin agreement set up during onboarding. The token
@@ -177,7 +177,7 @@ export function ArchitecturePage() {
       </Section>
 
       <Section title="How a fix reaches a device">
-        <p className="mb-4 max-w-3xl text-sm text-slate-600">
+        <p className="mb-4 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
           Remediation runs through Defender for Endpoint's Live Response. The
           device is already enrolled in Defender and Intune, so PatchPilot has
           no agent to install — it asks Defender to run a script on the machine
@@ -189,7 +189,7 @@ export function ArchitecturePage() {
             ariaLabel="How a remediation reaches a managed device via Defender for Endpoint and Intune"
           />
         </Card>
-        <div className="mt-4 max-w-3xl space-y-3 text-sm text-slate-600">
+        <div className="mt-4 max-w-3xl space-y-3 text-sm text-slate-600 dark:text-slate-300">
           <p>
             The script is published to the customer's Live Response library once
             and reused after that — it's named by a hash of its own contents, so
@@ -211,7 +211,7 @@ export function ArchitecturePage() {
       </Section>
 
       <Section title="How Windows updates are identified and delivered">
-        <p className="mb-4 max-w-3xl text-sm text-slate-600">
+        <p className="mb-4 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
           The Windows Updates hub covers four Intune policy types for a
           tenant: feature updates and quality updates, which PatchPilot can
           create and delete, plus update rings and driver updates, which it
@@ -225,7 +225,7 @@ export function ArchitecturePage() {
             ariaLabel="How feature updates and quality updates are identified via the Windows Update catalog and delivered through an Intune policy assigned to an Entra group"
           />
         </Card>
-        <div className="mt-4 max-w-3xl space-y-3 text-sm text-slate-600">
+        <div className="mt-4 max-w-3xl space-y-3 text-sm text-slate-600 dark:text-slate-300">
           <p>
             A quality update is identified against a real catalog: Microsoft
             publishes the tenant's actual list of monthly (B) and
@@ -256,13 +256,13 @@ export function ArchitecturePage() {
         <Card className="p-0">
           <RemediationApiTable />
         </Card>
-        <p className="mt-3 max-w-3xl text-xs text-slate-500">
+        <p className="mt-3 max-w-3xl text-xs text-slate-500 dark:text-slate-400">
           Defender calls go to{" "}
-          <code className="rounded bg-slate-100 px-1 py-0.5 font-mono">
+          <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 font-mono">
             api.securitycenter.microsoft.com
           </code>
           , Intune calls to{" "}
-          <code className="rounded bg-slate-100 px-1 py-0.5 font-mono">
+          <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 font-mono">
             graph.microsoft.com
           </code>
           . Every one is made with a delegated token for a single tenant and
@@ -271,11 +271,11 @@ export function ArchitecturePage() {
       </Section>
 
       <Section title="Whitelisting requirements">
-        <p className="mb-4 max-w-3xl text-sm text-slate-600">
+        <p className="mb-4 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
           Two different networks matter here, and only one of them is under
           the MSP's control. PatchPilot's own server needs outbound access to
           the two hosts in "Microsoft APIs used", above, plus{" "}
-          <code className="rounded bg-slate-100 px-1 py-0.5 font-mono">
+          <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 font-mono">
             login.microsoftonline.com
           </code>{" "}
           for auth. Everything below is about the customer's managed
@@ -287,10 +287,10 @@ export function ArchitecturePage() {
           <dl className="divide-y divide-slate-100">
             {WHITELISTING_REQUIREMENTS.map((item) => (
               <div key={item.title} className="px-5 py-4">
-                <dt className="text-sm font-medium text-slate-800">
+                <dt className="text-sm font-medium text-slate-800 dark:text-slate-100">
                   {item.title}
                 </dt>
-                <dd className="mt-1 text-sm text-slate-600">{item.body}</dd>
+                <dd className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.body}</dd>
               </div>
             ))}
           </dl>
@@ -298,7 +298,7 @@ export function ArchitecturePage() {
       </Section>
 
       <Section title="Known limitations">
-        <p className="mb-4 max-w-3xl text-sm text-slate-600">
+        <p className="mb-4 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
           PatchPilot works entirely inside Defender's and Intune's own APIs —
           it doesn't bypass them, so it also inherits their gaps. This is what
           it can't do today.
@@ -307,10 +307,10 @@ export function ArchitecturePage() {
           <dl className="divide-y divide-slate-100">
             {KNOWN_LIMITATIONS.map((item) => (
               <div key={item.title} className="px-5 py-4">
-                <dt className="text-sm font-medium text-slate-800">
+                <dt className="text-sm font-medium text-slate-800 dark:text-slate-100">
                   {item.title}
                 </dt>
-                <dd className="mt-1 text-sm text-slate-600">{item.body}</dd>
+                <dd className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.body}</dd>
               </div>
             ))}
           </dl>

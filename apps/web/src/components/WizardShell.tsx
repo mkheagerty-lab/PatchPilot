@@ -37,21 +37,21 @@ export function WizardShell({
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative z-10 flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+      <div className="relative z-10 flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 dark:border-slate-800 px-6 py-4">
           <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold text-slate-900">
+            <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">
               {title}
             </h2>
             {subtitle && (
-              <p className="mt-0.5 truncate text-sm text-slate-500">{subtitle}</p>
+              <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            className="shrink-0 rounded-md p-1 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg
               viewBox="0 0 20 20"

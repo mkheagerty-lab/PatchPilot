@@ -40,7 +40,7 @@ const REBOOT_OPTIONS: { days: 0 | 1 | 2; label: string }[] = [
 ];
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-500 focus:outline-none";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none";
 
 function cadenceGroupLabel(cadence: QualityUpdateRelease["cadence"]): string {
   if (cadence === "B") return "Monthly (B) releases";
@@ -113,7 +113,7 @@ export function QualityUpdateOptionsPanel({
   return (
     <div className="space-y-4">
       <div>
-        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Profile Name
         </label>
         <input
@@ -125,13 +125,13 @@ export function QualityUpdateOptionsPanel({
       </div>
 
       <div>
-        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Quality update release
         </label>
         {isLoading ? (
-          <p className="text-xs text-slate-500">Loading releases from Intune…</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Loading releases from Intune…</p>
         ) : isError ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">
             <p>Failed to load releases from Intune{error instanceof Error ? `: ${error.message}` : ""}.</p>
             <button
               type="button"
@@ -142,7 +142,7 @@ export function QualityUpdateOptionsPanel({
             </button>
           </div>
         ) : releases.length === 0 ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             No expeditable releases found in this tenant's Intune quality-update catalog.
           </p>
         ) : (
@@ -175,7 +175,7 @@ export function QualityUpdateOptionsPanel({
       </div>
 
       <div>
-        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Reboot enforcement
         </label>
         <select
@@ -194,7 +194,7 @@ export function QualityUpdateOptionsPanel({
 
       {showAssignments && (
         <div>
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Assignments (optional)
           </label>
           <EntraGroupPicker
@@ -206,7 +206,7 @@ export function QualityUpdateOptionsPanel({
             disabled={disabled}
             placeholder="Search Entra groups to include…"
           />
-          <p className="mt-1 text-[11px] leading-tight text-slate-500">
+          <p className="mt-1 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
             Leave blank to fix only the checked devices below. Set a group to create one
             group-targeted Intune campaign instead — Intune paces delivery to the whole group
             itself, replacing the device checklist below.
@@ -214,7 +214,7 @@ export function QualityUpdateOptionsPanel({
           {value.groupId && (
             <>
               <div className="mt-3">
-                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Excluded group (optional)
                 </label>
                 <EntraGroupPicker
@@ -235,7 +235,7 @@ export function QualityUpdateOptionsPanel({
                   placeholder="Search Entra groups to exclude…"
                 />
               </div>
-              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-700">
+              <div className="mt-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
                 Requires the Group.Read.All scope. Tenants onboarded before this feature shipped need
                 re-consent before group assignment works here.
               </div>

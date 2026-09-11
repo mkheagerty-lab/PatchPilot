@@ -293,36 +293,36 @@ export function Branding() {
       />
 
       {!canWrite && (
-        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mb-5 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Your role doesn't include settings write access.
         </div>
       )}
 
       {isLoading ? (
         <Card>
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <Card>
-            <h3 className="mb-4 text-sm font-semibold text-slate-700">
+            <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">
               Identity
             </h3>
             <div className="mb-4">
-              <span className="mb-1 block text-sm font-medium text-slate-600">
+              <span className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
                 Product name
               </span>
-              <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
-                <span className="font-medium text-slate-700">{PRODUCT_NAME}</span>
-                <span className="ml-auto text-xs text-slate-400">Fixed</span>
+              <div className="flex items-center gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
+                <span className="font-medium text-slate-700 dark:text-slate-200">{PRODUCT_NAME}</span>
+                <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">Fixed</span>
               </div>
-              <span className="mt-1 block text-xs text-slate-400">
+              <span className="mt-1 block text-xs text-slate-400 dark:text-slate-500">
                 Product naming isn't customizable — this is enforced server-side too.
               </span>
             </div>
 
             <div className="mb-1 flex items-center justify-between">
-              <span className="block text-sm font-medium text-slate-600">Logo</span>
+              <span className="block text-sm font-medium text-slate-600 dark:text-slate-300">Logo</span>
               <button
                 type="button"
                 onClick={() => {
@@ -331,7 +331,7 @@ export function Branding() {
                   setMatchError(null);
                 }}
                 disabled={!form.logoUrl}
-                className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-md border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Reset to default
               </button>
@@ -350,20 +350,20 @@ export function Branding() {
               }}
               className={[
                 "flex flex-col items-center gap-3 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors",
-                isDragging ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50",
+                isDragging ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10" : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800",
               ].join(" ")}
             >
               <img
                 src={form.logoUrl || DEFAULT_LOGO_URL}
                 alt="Logo preview"
-                className="h-14 w-14 rounded-lg border border-slate-200 bg-white object-contain p-1"
+                className="h-14 w-14 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 object-contain p-1"
               />
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-slate-500 dark:text-slate-400">
                 Drag an image here, or
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="ml-1 font-medium text-indigo-600 hover:text-indigo-700"
+                  className="ml-1 font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
                 >
                   browse for a file
                 </button>
@@ -380,24 +380,24 @@ export function Branding() {
                 }}
               />
             </div>
-            {logoError && <p className="mt-2 text-xs text-red-600">{logoError}</p>}
+            {logoError && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{logoError}</p>}
 
             <label className="mt-3 block">
-              <span className="mb-1 block text-xs font-medium text-slate-500">
+              <span className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
                 …or use a hosted URL instead
               </span>
               <input
                 value={form.logoUrl && !form.logoUrl.startsWith("data:") ? form.logoUrl : ""}
                 onChange={(e) => update("logoUrl", e.target.value)}
                 placeholder="https://…/logo.svg"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </label>
           </Card>
 
           <Card>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-700">Colours</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Colours</h3>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -410,7 +410,7 @@ export function Branding() {
                       background: BRANDING_DEFAULTS.background,
                     }))
                   }
-                  className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  className="rounded-md border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Reset to default
                 </button>
@@ -419,29 +419,29 @@ export function Branding() {
                   onClick={handleMatchColors}
                   disabled={!form.logoUrl || matching}
                   title={!form.logoUrl ? "Upload a logo first" : undefined}
-                  className="rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {matching ? "Matching…" : "Match colours to logo"}
                 </button>
               </div>
             </div>
-            {matchError && <p className="mb-3 text-xs text-red-600">{matchError}</p>}
+            {matchError && <p className="mb-3 text-xs text-red-600 dark:text-red-400">{matchError}</p>}
             <div className="space-y-3">
               {COLOR_FIELDS.map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">{label}</span>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">{label}</span>
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
                       value={form[key] as string}
                       onChange={(e) => update(key, e.target.value)}
-                      className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm font-mono"
+                      className="w-24 rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1 text-sm font-mono"
                     />
                     <input
                       type="color"
                       value={form[key] as string}
                       onChange={(e) => update(key, e.target.value)}
-                      className="h-9 w-12 cursor-pointer rounded border border-slate-300"
+                      className="h-9 w-12 cursor-pointer rounded border border-slate-300 dark:border-slate-700"
                     />
                   </div>
                 </div>
@@ -450,10 +450,10 @@ export function Branding() {
           </Card>
 
           <Card className="lg:col-span-2">
-            <h3 className="mb-4 text-sm font-semibold text-slate-700">
+            <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">
               Preview
             </h3>
-            <div className="flex overflow-hidden rounded-lg border border-slate-200">
+            <div className="flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
               <div
                 className="flex w-48 flex-col gap-2 p-4 text-white"
                 style={{ background: form.background }}
@@ -465,7 +465,7 @@ export function Branding() {
                 />
                 <span className="text-sm font-semibold">{PRODUCT_NAME}</span>
               </div>
-              <div className="flex-1 bg-slate-50 p-5">
+              <div className="flex-1 bg-slate-50 dark:bg-slate-800 p-5">
                 <div className="flex gap-2">
                   <span
                     className="rounded-md px-3 py-1.5 text-sm font-medium text-white"

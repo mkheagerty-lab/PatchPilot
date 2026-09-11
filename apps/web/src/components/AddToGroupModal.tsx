@@ -91,12 +91,12 @@ export function AddToGroupModal({
     >
       {submit.data ? (
         <div className="space-y-4">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs leading-relaxed text-emerald-700">
+          <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-xs leading-relaxed text-emerald-700 dark:text-emerald-400">
             Added {submit.data.added} {submit.data.added === 1 ? "device" : "devices"} to "
             {submit.data.groupName}".
           </div>
           {submit.data.skipped > 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
               {submit.data.skipped} {submit.data.skipped === 1 ? "device was" : "devices were"}{" "}
               already in this group.
             </div>
@@ -112,29 +112,29 @@ export function AddToGroupModal({
       ) : (
         <div className="space-y-5">
           {isBulk && (
-            <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               {devices.map((d) => (
                 <div
                   key={d.id}
-                  className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 last:border-0"
+                  className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 px-3 py-2 last:border-0"
                 >
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-800">
+                  <span className="min-w-0 flex-1 truncate text-sm text-slate-800 dark:text-slate-100">
                     {d.hostname}
                   </span>
-                  <span className="shrink-0 text-xs text-slate-400">{d.os}</span>
+                  <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{d.os}</span>
                 </div>
               ))}
             </div>
           )}
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Group
             </label>
             <select
               value={selection}
               onChange={(e) => setSelection(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
             >
               <option value={NEW_GROUP}>+ Create new group</option>
               {groups.map((g) => (
@@ -147,11 +147,11 @@ export function AddToGroupModal({
 
           {selection === NEW_GROUP && (
             <div>
-              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 New group name
               </label>
               <input
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-500 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:border-slate-500 focus:outline-none"
                 value={newGroupName}
                 placeholder="e.g. Finance workstations"
                 onChange={(e) => setNewGroupName(e.target.value)}
@@ -160,13 +160,13 @@ export function AddToGroupModal({
           )}
 
           {!canWrite && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
               Your role doesn't include write access.
             </div>
           )}
 
           {submit.isError && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
               {submit.error.message}
             </div>
           )}
@@ -175,7 +175,7 @@ export function AddToGroupModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Cancel
             </button>

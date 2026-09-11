@@ -27,14 +27,14 @@ import {
 } from "../components/ui";
 
 const OUTCOME_STYLES: Record<AuditOutcome, string> = {
-  success: "bg-emerald-100 text-emerald-700",
-  failure: "bg-rose-100 text-rose-700",
-  partial: "bg-amber-100 text-amber-700",
-  skipped: "bg-slate-100 text-slate-600",
+  success: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  failure: "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400",
+  partial: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  skipped: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
 };
 
 function OutcomeChip({ outcome }: { outcome: AuditOutcome | null }) {
-  if (!outcome) return <span className="text-slate-400">—</span>;
+  if (!outcome) return <span className="text-slate-400 dark:text-slate-500">—</span>;
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${OUTCOME_STYLES[outcome]}`}
@@ -181,7 +181,7 @@ export function AuditLog() {
     {
       key: "when",
       header: "When (newest first)",
-      cell: (record) => <span className="whitespace-nowrap text-slate-500">{fmt(record.at)}</span>,
+      cell: (record) => <span className="whitespace-nowrap text-slate-500 dark:text-slate-400">{fmt(record.at)}</span>,
     },
     {
       key: "actor",
@@ -213,7 +213,7 @@ export function AuditLog() {
         <div>
           {record.resourceLabel ?? record.resourceId ?? "—"}
           {record.resourceType && (
-            <div className="text-xs text-slate-400">{record.resourceType}</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">{record.resourceType}</div>
           )}
         </div>
       ),
@@ -250,7 +250,7 @@ export function AuditLog() {
             <a
               href={`/api/audit/export.csv?${queryString}`}
               download
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Export CSV
             </a>
@@ -258,7 +258,7 @@ export function AuditLog() {
               type="button"
               onClick={() => refetch()}
               disabled={isFetching}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               {isFetching && !isFetchingNextPage ? "Refreshing…" : "Refresh"}
             </button>
@@ -270,7 +270,7 @@ export function AuditLog() {
         <div className="flex flex-wrap items-center gap-3">
           {/* The page's primary mode switch — visible at a glance rather than
               buried as one option inside a <select>. */}
-          <div className="inline-flex overflow-hidden rounded-lg border border-slate-200">
+          <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
             {(
               [
                 ["action", "Actions"],
@@ -284,7 +284,7 @@ export function AuditLog() {
                 className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                   filters.category === value
                     ? "bg-[var(--pp-primary)] text-white"
-                    : "bg-white text-slate-600 hover:bg-slate-50"
+                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 {label}
@@ -297,7 +297,7 @@ export function AuditLog() {
               viewBox="0 0 20 20"
               fill="currentColor"
               aria-hidden
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
             >
               <path
                 fillRule="evenodd"
@@ -310,14 +310,14 @@ export function AuditLog() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search summary, resource, actor…"
-              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300"
             />
           </div>
 
           <select
             value={filters.action}
             onChange={(e) => set("action", e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm"
           >
             <option value="all">All actions</option>
             {AUDIT_ACTION_GROUPS.map((group) => (
@@ -334,7 +334,7 @@ export function AuditLog() {
           <select
             value={filters.outcome}
             onChange={(e) => set("outcome", e.target.value as AuditOutcome | "all")}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm"
           >
             <option value="all">All outcomes</option>
             {AUDIT_OUTCOMES.map((o) => (
@@ -348,7 +348,7 @@ export function AuditLog() {
             value={filters.actor}
             onChange={(e) => set("actor", e.target.value)}
             title="Actors seen in the rows loaded so far"
-            className="max-w-[16rem] rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="max-w-[16rem] rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm"
           >
             <option value="all">All actors</option>
             {actorOptions.map((a) => (
@@ -358,22 +358,22 @@ export function AuditLog() {
             ))}
           </select>
 
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             From
             <input
               type="datetime-local"
               value={filters.from}
               onChange={(e) => set("from", e.target.value)}
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm text-slate-700 dark:text-slate-200"
             />
           </label>
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             To
             <input
               type="datetime-local"
               value={filters.to}
               onChange={(e) => set("to", e.target.value)}
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700"
+              className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm text-slate-700 dark:text-slate-200"
             />
           </label>
 
@@ -384,7 +384,7 @@ export function AuditLog() {
                 setSearch("");
                 setFilters({ ...EMPTY_FILTERS, category: filters.category });
               }}
-              className="text-xs font-medium text-slate-500 hover:text-slate-700"
+              className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             >
               Clear filters
             </button>
@@ -392,15 +392,15 @@ export function AuditLog() {
         </div>
 
         {filters.resourceId && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <span>Filtered to resource</span>
-            <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-slate-700">
+            <span className="rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 font-mono text-slate-700 dark:text-slate-200">
               {filters.resourceId}
             </span>
             <button
               type="button"
               onClick={() => set("resourceId", "")}
-              className="font-medium text-slate-500 hover:text-slate-700"
+              className="font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             >
               Clear
             </button>
@@ -408,7 +408,7 @@ export function AuditLog() {
         )}
 
         {!isAllTenants && (
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
             Showing events for this tenant only. Events that belong to no single tenant —
             catalog refreshes, tenant discovery, sign-ins that failed before a tenant was
             known — appear in the All Tenants view. A successful sign-in is attributed to the
@@ -419,11 +419,11 @@ export function AuditLog() {
 
       {isLoading ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">Loading audit events…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading audit events…</p>
         </Card>
       ) : rows.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {hasFilters
               ? "No audit events match the current filters."
               : "No audit events recorded yet."}
@@ -450,7 +450,7 @@ export function AuditLog() {
             }
           />
 
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
             Showing {rows.length} event{rows.length === 1 ? "" : "s"}
             {hasNextPage ? " — more available" : ""}.
           </p>
@@ -499,32 +499,32 @@ export function AuditLog() {
 
             {detail.summary && (
               <div className="mt-5">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   Summary
                 </div>
-                <p className="mt-1 text-sm text-slate-700">{detail.summary}</p>
+                <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">{detail.summary}</p>
               </div>
             )}
 
             {detail.detail && (
               <div className="mt-5">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   Detail
                 </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
+                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">
                   {detail.detail}
                 </p>
               </div>
             )}
 
             <div className="mt-5">
-              <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              <div className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Request payload
               </div>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 Request payloads are SHA-256 hashed, never stored.
               </p>
-              <p className="mt-1 break-all font-mono text-xs text-slate-700">
+              <p className="mt-1 break-all font-mono text-xs text-slate-700 dark:text-slate-200">
                 {detail.payloadHash ?? "— (no payload)"}
               </p>
             </div>

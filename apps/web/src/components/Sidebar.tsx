@@ -94,7 +94,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 overflow-y-auto px-3 pb-6">
         {GROUPS.map((group) => (
           <div key={group.heading} className="mb-5">
-            <div className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <div className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {group.heading}
             </div>
             {group.items
@@ -118,7 +118,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     "block rounded-md px-3 py-2 text-sm transition-colors",
                     isActive
                       ? "bg-[var(--pp-primary)]/90 text-white"
-                      : "text-slate-300 hover:bg-[var(--pp-secondary)]/10 hover:text-white",
+                      : "text-slate-300 dark:text-slate-600 hover:bg-[var(--pp-secondary)]/10 hover:text-white",
                   ].join(" ")
                 }
               >
@@ -138,7 +138,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               "block rounded-md px-3 py-2 text-sm transition-colors",
               isActive
                 ? "bg-[var(--pp-primary)]/90 text-white"
-                : "text-slate-300 hover:bg-[var(--pp-secondary)]/10 hover:text-white",
+                : "text-slate-300 dark:text-slate-600 hover:bg-[var(--pp-secondary)]/10 hover:text-white",
             ].join(" ")
           }
         >
@@ -190,7 +190,7 @@ export function Sidebar() {
           onClick={toggleCollapsed}
           aria-label="Expand sidebar"
           title="Expand sidebar"
-          className="rounded-md p-1 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+          className="rounded-md p-1 text-slate-400 dark:text-slate-500 transition-colors hover:bg-white/5 hover:text-white"
         >
           <ChevronRightIcon />
         </button>
@@ -199,7 +199,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 flex-col bg-[var(--pp-bg)] text-slate-300 print:hidden lg:flex">
+    <aside className="hidden h-screen w-64 shrink-0 flex-col bg-[var(--pp-bg)] text-slate-300 dark:text-slate-600 print:hidden lg:flex">
       <div className="flex items-center gap-2 px-5 py-5">
         <img
           src={branding?.logoUrl || DEFAULT_LOGO_URL}
@@ -212,7 +212,7 @@ export function Sidebar() {
           onClick={toggleCollapsed}
           aria-label="Collapse sidebar"
           title="Collapse sidebar"
-          className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+          className="shrink-0 rounded-md p-1 text-slate-400 dark:text-slate-500 transition-colors hover:bg-white/5 hover:text-white"
         >
           <ChevronLeftIcon />
         </button>

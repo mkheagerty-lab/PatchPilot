@@ -34,9 +34,9 @@ const WHEN_MODES: { id: WhenMode; label: string }[] = [
 ];
 
 const STATUS_STYLES: Record<PreflightStatus, string> = {
-  pass: "bg-emerald-100 text-emerald-700",
-  warn: "bg-amber-100 text-amber-700",
-  fail: "bg-rose-100 text-rose-700",
+  pass: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  warn: "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  fail: "bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400",
 };
 
 const STATUS_LABELS: Record<PreflightStatus, string> = {
@@ -133,9 +133,9 @@ export function MissingKbFixNowModal({
       <div className="space-y-4">
         {!fix.isSuccess && (
           <div>
-            <p className="mb-3 text-xs text-slate-500">{title}</p>
+            <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">{title}</p>
 
-            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               1. When
             </span>
             <div className="mb-4 grid grid-cols-2 gap-2">
@@ -147,7 +147,7 @@ export function MissingKbFixNowModal({
                   className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                     whenMode === mode.id
                       ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   {mode.label}
@@ -160,7 +160,7 @@ export function MissingKbFixNowModal({
               </div>
             )}
 
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               2. Trigger method
             </label>
             <div className="space-y-2">
@@ -175,14 +175,14 @@ export function MissingKbFixNowModal({
                     className={`flex w-full items-start justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
                       active
                         ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                        : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                     }`}
                   >
                     <div className="min-w-0">
                       <div className="text-xs font-medium">{s.label}</div>
                       <div
                         className={`mt-0.5 text-[10px] leading-tight ${
-                          active ? "text-slate-300" : "text-slate-400"
+                          active ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"
                         }`}
                       >
                         {s.useCase} · {s.latency}
@@ -194,8 +194,8 @@ export function MissingKbFixNowModal({
             </div>
 
             {channel === "expedited-quality-update" && (
-              <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3">
-                <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <div className="mt-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-3">
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Expedited quality update options
                 </div>
                 <QualityUpdateOptionsPanel
@@ -211,31 +211,31 @@ export function MissingKbFixNowModal({
         )}
 
         {!canWrite && !fix.isSuccess && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
             Your role doesn't include remediation write access.
           </div>
         )}
 
         {fix.isError && !blocked && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-400">
             {fix.error.message}
           </div>
         )}
 
         {blocked && report && (
           <div>
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+            <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-400">
               Blocked — at least one check failed.
             </div>
-            <ul className="mt-2 rounded-lg border border-slate-200">
+            <ul className="mt-2 rounded-lg border border-slate-200 dark:border-slate-800">
               {report.checks.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-start justify-between gap-3 border-b border-slate-100 px-3 py-2.5 last:border-0"
+                  className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-3 py-2.5 last:border-0"
                 >
                   <div>
-                    <div className="text-xs font-medium text-slate-800">{c.label}</div>
-                    <div className="mt-0.5 text-[11px] text-slate-500">{c.detail}</div>
+                    <div className="text-xs font-medium text-slate-800 dark:text-slate-100">{c.label}</div>
+                    <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{c.detail}</div>
                   </div>
                   <StatusChip status={c.status} />
                 </li>
@@ -246,7 +246,7 @@ export function MissingKbFixNowModal({
 
         {fix.isSuccess ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-emerald-800">
               <p className="text-sm font-medium">
                 {whenMode === "once" && scheduleAt
                   ? `Scheduled for ${scheduleAt.toLocaleString()}.`
@@ -264,7 +264,7 @@ export function MissingKbFixNowModal({
               <button
                 type="button"
                 onClick={() => setShowScript((v) => !v)}
-                className="text-xs font-medium text-slate-500 hover:text-slate-800"
+                className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
               >
                 {showScript ? "Hide" : "Show"} deployable script (remediation payload)
               </button>
@@ -280,7 +280,7 @@ export function MissingKbFixNowModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Cancel
             </button>

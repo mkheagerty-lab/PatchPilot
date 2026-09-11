@@ -92,7 +92,7 @@ export function UpdateRingsTab() {
   return (
     <div>
       {isAllTenants && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Select a single tenant from the switcher above to view update ring profiles.
         </div>
       )}
@@ -103,13 +103,13 @@ export function UpdateRingsTab() {
           value={table.search}
           onChange={(e) => table.setSearch(e.target.value)}
           placeholder="Search ring name, update mode…"
-          className="w-72 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+          className="w-72 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm"
         />
         <button
           type="button"
           onClick={exportCsv}
           disabled={table.sorted.length === 0}
-          className="ml-auto rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+          className="ml-auto rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
         >
           {table.selected.size > 0 ? `Export selected (${table.selected.size})` : "Export CSV"}
         </button>
@@ -117,30 +117,30 @@ export function UpdateRingsTab() {
 
       {isLoading ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">Loading update rings…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading update rings…</p>
         </Card>
       ) : profiles.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             No update ring profiles synced yet. Click "Sync now" above to pull Windows Update for
             Business configurations from Intune.
           </p>
         </Card>
       ) : table.sorted.length === 0 ? (
         <Card className="border-dashed">
-          <p className="text-sm text-slate-500">No rings match "{table.search.trim()}".</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">No rings match "{table.search.trim()}".</p>
         </Card>
       ) : (
         <Card className="p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 <th className="px-4 py-2.5 font-medium">
                   <input
                     type="checkbox"
                     checked={table.allVisibleSelected}
                     onChange={table.toggleSelectAll}
-                    className="rounded border-slate-300"
+                    className="rounded border-slate-300 dark:border-slate-700"
                     aria-label="Select all update rings"
                   />
                 </th>
@@ -172,28 +172,28 @@ export function UpdateRingsTab() {
             </thead>
             <tbody>
               {table.sorted.map((p) => (
-                <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={table.selected.has(p.id)}
                       onChange={() => table.toggleSelect(p.id)}
-                      className="rounded border-slate-300"
+                      className="rounded border-slate-300 dark:border-slate-700"
                       aria-label={`Select ${p.displayName}`}
                     />
                   </td>
-                  <td className="px-4 py-3 font-medium text-slate-800">{p.displayName}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{p.displayName}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                     {p.qualityUpdatesDeferralPeriodInDays != null ? `${p.qualityUpdatesDeferralPeriodInDays}d` : "—"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                     {p.featureUpdatesDeferralPeriodInDays != null ? `${p.featureUpdatesDeferralPeriodInDays}d` : "—"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{p.automaticUpdateMode ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.automaticUpdateMode ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                     <AssignmentSummary assignments={p.assignments} />
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{formatDate(p.createdAt)}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{formatDate(p.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

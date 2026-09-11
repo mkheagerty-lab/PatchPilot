@@ -131,11 +131,11 @@ export function ChatWidget() {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end print:hidden sm:bottom-6 sm:right-6">
       {open && (
-        <div className="mb-3 flex h-[70vh] max-h-[32rem] w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl sm:h-[32rem] sm:w-96">
-          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="mb-3 flex h-[70vh] max-h-[32rem] w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl sm:h-[32rem] sm:w-96">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-4 py-3">
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-slate-900">PatchPilot Assistant</div>
-              <div className="truncate text-xs text-slate-500">
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">PatchPilot Assistant</div>
+              <div className="truncate text-xs text-slate-500 dark:text-slate-400">
                 Scope: {scopeLabel}
               </div>
             </div>
@@ -144,7 +144,7 @@ export function ChatWidget() {
                 type="button"
                 onClick={startNewChat}
                 title="New chat"
-                className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-md p-1.5 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
               >
                 <PlusIcon />
               </button>
@@ -152,8 +152,8 @@ export function ChatWidget() {
                 type="button"
                 onClick={() => setView(view === "chat" ? "history" : "chat")}
                 title="Chat history"
-                className={`rounded-md p-1.5 transition-colors hover:bg-slate-100 hover:text-slate-700 ${
-                  view === "history" ? "bg-slate-100 text-slate-700" : "text-slate-400"
+                className={`rounded-md p-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 ${
+                  view === "history" ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-slate-500"
                 }`}
               >
                 <HistoryIcon />
@@ -162,7 +162,7 @@ export function ChatWidget() {
                 type="button"
                 onClick={() => setOpen(false)}
                 title="Close"
-                className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-md p-1.5 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
               >
                 <CloseIcon />
               </button>
@@ -172,24 +172,24 @@ export function ChatWidget() {
           {view === "history" ? (
             <div className="flex-1 overflow-y-auto">
               {conversations.isLoading && (
-                <p className="p-4 text-sm text-slate-400">Loading…</p>
+                <p className="p-4 text-sm text-slate-400 dark:text-slate-500">Loading…</p>
               )}
               {conversations.data?.length === 0 && (
-                <p className="p-4 text-sm text-slate-400">No conversations yet.</p>
+                <p className="p-4 text-sm text-slate-400 dark:text-slate-500">No conversations yet.</p>
               )}
               {conversations.data?.map((conv) => (
                 <button
                   key={conv.id}
                   type="button"
                   onClick={() => openHistoryConversation(conv)}
-                  className={`block w-full border-b border-slate-100 px-4 py-3 text-left transition-colors hover:bg-slate-50 ${
-                    conv.id === conversationId ? "bg-slate-50" : ""
+                  className={`block w-full border-b border-slate-100 dark:border-slate-800 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                    conv.id === conversationId ? "bg-slate-50 dark:bg-slate-800" : ""
                   }`}
                 >
-                  <div className="truncate text-sm font-medium text-slate-800">
+                  <div className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                     {conv.title ?? "New conversation"}
                   </div>
-                  <div className="mt-0.5 text-xs text-slate-400">
+                  <div className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
                     {conv.tenantId ? conv.tenantId : "All tenants"} ·{" "}
                     {new Date(conv.updatedAt).toLocaleString()}
                   </div>
@@ -200,7 +200,7 @@ export function ChatWidget() {
             <>
               <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
                 {visibleMessages.length === 0 && !sending && (
-                  <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
+                  <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3 text-sm text-slate-500 dark:text-slate-400">
                     Ask about vulnerabilities, remediation history, jobs, or the script
                     catalog for {scopeLabel}. I only see what your role and tenant access
                     already allow.
@@ -212,8 +212,8 @@ export function ChatWidget() {
                 {sending && (
                   <div className="flex justify-start">
                     <div
-                      className={`whitespace-pre-wrap rounded-lg bg-slate-100 px-3 py-2 text-sm ${
-                        streamingText ? "text-slate-800" : "text-slate-400"
+                      className={`whitespace-pre-wrap rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm ${
+                        streamingText ? "text-slate-800 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"
                       }`}
                     >
                       {streamingText || "Thinking…"}
@@ -223,7 +223,7 @@ export function ChatWidget() {
               </div>
 
               {error && (
-                <div className="border-t border-rose-100 bg-rose-50 px-4 py-2 text-xs text-rose-600">
+                <div className="border-t border-rose-100 bg-rose-50 dark:bg-rose-500/10 px-4 py-2 text-xs text-rose-600 dark:text-rose-400">
                   {error}
                 </div>
               )}
@@ -233,7 +233,7 @@ export function ChatWidget() {
                   e.preventDefault();
                   void handleSend();
                 }}
-                className="flex items-end gap-2 border-t border-slate-200 p-3"
+                className="flex items-end gap-2 border-t border-slate-200 dark:border-slate-800 p-3"
               >
                 <textarea
                   value={draft}
@@ -246,12 +246,12 @@ export function ChatWidget() {
                   }}
                   rows={1}
                   placeholder="Ask a question…"
-                  className="max-h-24 flex-1 resize-none rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
+                  className="max-h-24 flex-1 resize-none rounded-md border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm focus:border-slate-400 dark:focus:border-slate-600 focus:outline-none"
                 />
                 <button
                   type="submit"
                   disabled={sending || draft.trim().length === 0}
-                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
                 >
                   Send
                 </button>
@@ -285,7 +285,7 @@ function ChatBubble({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div className="max-w-[85%]">
-        <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-400">
+        <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
           {isUser ? engineerName : "Assistant"}
         </div>
         {toolNames.length > 0 && (
@@ -293,7 +293,7 @@ function ChatBubble({
             {toolNames.map((name, i) => (
               <span
                 key={`${name}-${i}`}
-                className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-600"
+                className="rounded-full bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-600 dark:text-sky-400"
               >
                 {name}
               </span>
@@ -303,7 +303,7 @@ function ChatBubble({
         {message.content && (
           <div
             className={`whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${
-              isUser ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-800"
+              isUser ? "bg-slate-900 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100"
             }`}
           >
             {message.content}

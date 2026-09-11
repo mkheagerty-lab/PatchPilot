@@ -132,7 +132,7 @@ export function Updates() {
           <button
             onClick={() => checkMutation.mutate()}
             disabled={checkMutation.isPending}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
           >
             {checkMutation.isPending ? "Checking…" : "Check now"}
           </button>
@@ -141,41 +141,41 @@ export function Updates() {
 
       {isLoading || !data ? (
         <Card>
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </Card>
       ) : (
         <div className="space-y-5">
           <Card className="max-w-lg">
-            <div className="mb-3 text-sm font-medium text-slate-700">Version</div>
+            <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-200">Version</div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">Running</span>
-                <span className="font-mono text-slate-700">v{data.currentVersion}</span>
+                <span className="text-slate-500 dark:text-slate-400">Running</span>
+                <span className="font-mono text-slate-700 dark:text-slate-200">v{data.currentVersion}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Latest available</span>
+                <span className="text-slate-500 dark:text-slate-400">Latest available</span>
                 <span
                   className={
                     data.updateAvailable
-                      ? "font-mono font-medium text-indigo-600"
-                      : "font-mono text-slate-700"
+                      ? "font-mono font-medium text-indigo-600 dark:text-indigo-400"
+                      : "font-mono text-slate-700 dark:text-slate-200"
                   }
                 >
                   {data.latestVersion ? `v${data.latestVersion}` : "—"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Last checked</span>
-                <span className="text-slate-700">{formatDate(data.lastCheckedAt)}</span>
+                <span className="text-slate-500 dark:text-slate-400">Last checked</span>
+                <span className="text-slate-700 dark:text-slate-200">{formatDate(data.lastCheckedAt)}</span>
               </div>
             </div>
             {data.updateAvailable && (
-              <p className="mt-3 rounded-md bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+              <p className="mt-3 rounded-md bg-indigo-50 dark:bg-indigo-500/10 px-3 py-2 text-xs text-indigo-700 dark:text-indigo-300">
                 An update to v{data.latestVersion} is available.
               </p>
             )}
             {checkMutation.isError && (
-              <p className="mt-2 text-xs text-rose-600">
+              <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">
                 {checkMutation.error instanceof ApiError
                   ? checkMutation.error.message
                   : "Could not check for updates."}
@@ -185,10 +185,10 @@ export function Updates() {
 
           {data.latestReleaseNotes && (
             <Card className="max-w-lg">
-              <div className="mb-2 text-sm font-medium text-slate-700">
+              <div className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">
                 Release notes {data.latestVersion ? `— v${data.latestVersion}` : ""}
               </div>
-              <pre className="whitespace-pre-wrap font-sans text-sm text-slate-600">
+              <pre className="whitespace-pre-wrap font-sans text-sm text-slate-600 dark:text-slate-300">
                 {data.latestReleaseNotes}
               </pre>
               {data.latestReleaseUrl && (
@@ -196,7 +196,7 @@ export function Updates() {
                   href={data.latestReleaseUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-2 inline-block text-xs font-medium text-indigo-600 hover:underline"
+                  className="mt-2 inline-block text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                 >
                   View on GitHub →
                 </a>
@@ -205,15 +205,15 @@ export function Updates() {
           )}
 
           {!canWrite && (
-            <div className="max-w-lg rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <div className="max-w-lg rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
               Your role doesn't include settings write access.
             </div>
           )}
 
           {demoMode ? (
             <Card className="max-w-lg">
-              <div className="mb-1 text-sm font-medium text-slate-700">Apply update</div>
-              <p className="text-sm text-slate-500">
+              <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">Apply update</div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Triggering an update needs a real database and the `updater` sidecar container —
                 not available in demo mode.
               </p>
@@ -221,7 +221,7 @@ export function Updates() {
           ) : (
             data.pendingRun ? (
               <Card className="max-w-lg">
-                <div className="mb-3 text-sm font-medium text-slate-700">
+                <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-200">
                   {data.pendingRun.kind === "rollback"
                     ? data.pendingRun.status === "running"
                       ? "Rollback in progress"
@@ -232,40 +232,40 @@ export function Updates() {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">
+                    <span className="text-slate-500 dark:text-slate-400">
                       {data.pendingRun.kind === "rollback" ? "Rolling back to" : "Target version"}
                     </span>
-                    <span className="font-mono text-slate-700">
+                    <span className="font-mono text-slate-700 dark:text-slate-200">
                       {data.pendingRun.fromVersion
                         ? `${withV(data.pendingRun.fromVersion)} → ${data.pendingRun.targetVersion}`
                         : data.pendingRun.targetVersion}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">
+                    <span className="text-slate-500 dark:text-slate-400">
                       {data.pendingRun.status === "running" ? "Started" : "Scheduled for"}
                     </span>
-                    <span className="text-slate-700">
+                    <span className="text-slate-700 dark:text-slate-200">
                       {formatDate(data.pendingRun.startedAt ?? data.pendingRun.scheduledAt)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Triggered by</span>
-                    <span className="text-slate-700">{data.pendingRun.triggeredBy}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Triggered by</span>
+                    <span className="text-slate-700 dark:text-slate-200">{data.pendingRun.triggeredBy}</span>
                   </div>
                 </div>
                 {data.pendingRun.status === "queued" && (
                   <button
                     onClick={() => cancelMutation.mutate(data.pendingRun!.id)}
                     disabled={!canWrite || cancelMutation.isPending}
-                    className="mt-3 rounded-md border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                    className="mt-3 rounded-md border border-rose-200 dark:border-rose-900/50 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 disabled:opacity-50"
                   >
                     {cancelMutation.isPending ? "Cancelling…" : "Cancel"}
                   </button>
                 )}
                 {data.pendingRun.status === "running" && (
                   <>
-                    <p className="mt-3 text-xs text-slate-500">
+                    <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                       The api/web/worker containers restart during this step — brief connection
                       errors here are expected.
                     </p>
@@ -273,12 +273,12 @@ export function Updates() {
                      *  to this row every few seconds while it runs, so this fills in live as
                      *  the 5s poll above picks up each flush — not just once at the end. */}
                     <div className="mt-3">
-                      <div className="mb-1 text-xs font-medium text-slate-500">Live output</div>
+                      <div className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">Live output</div>
                       <pre
                         ref={(el) => {
                           if (el) el.scrollTop = el.scrollHeight;
                         }}
-                        className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-slate-50 p-2 text-[11px] text-slate-600"
+                        className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-slate-50 dark:bg-slate-800 p-2 text-[11px] text-slate-600 dark:text-slate-300"
                       >
                         {data.pendingRun.output || "Waiting for the updater to start…"}
                       </pre>
@@ -288,9 +288,9 @@ export function Updates() {
               </Card>
             ) : (
               <Card className="max-w-lg">
-                <div className="mb-3 text-sm font-medium text-slate-700">Apply update</div>
+                <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-200">Apply update</div>
                 {!data.updateAvailable ? (
-                  <p className="text-sm text-slate-500">You're already on the latest version.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">You're already on the latest version.</p>
                 ) : (
                   <>
                     <div className="mb-3 flex gap-2">
@@ -302,7 +302,7 @@ export function Updates() {
                           className={`rounded-md px-3 py-1.5 text-xs font-medium ${
                             whenMode === mode
                               ? "bg-slate-900 text-white"
-                              : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                              : "border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                           }`}
                         >
                           {mode === "now" ? "Run now" : "Schedule"}
@@ -329,7 +329,7 @@ export function Updates() {
                           : "Schedule update"}
                     </button>
                     {triggerError && (
-                      <p className="mt-2 text-xs text-rose-600">{describeTriggerError(triggerError)}</p>
+                      <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{describeTriggerError(triggerError)}</p>
                     )}
                   </>
                 )}
@@ -339,19 +339,19 @@ export function Updates() {
 
           {!demoMode && data.history.length > 0 && (
             <Card className="max-w-lg">
-              <div className="mb-3 text-sm font-medium text-slate-700">History</div>
+              <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-200">History</div>
               <div className="space-y-3">
                 {data.history.map((run) => (
-                  <div key={run.id} className="border-t border-slate-100 pt-3 first:border-0 first:pt-0">
+                  <div key={run.id} className="border-t border-slate-100 dark:border-slate-800 pt-3 first:border-0 first:pt-0">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-mono text-slate-700">
+                      <span className="font-mono text-slate-700 dark:text-slate-200">
                         {run.fromVersion ? `${withV(run.fromVersion)} → ${run.targetVersion}` : run.targetVersion}
                       </span>
                       <span
                         className={
                           run.status === "succeeded"
-                            ? "text-xs font-medium text-emerald-600"
-                            : "text-xs font-medium text-rose-600"
+                            ? "text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                            : "text-xs font-medium text-rose-600 dark:text-rose-400"
                         }
                       >
                         {run.status === "succeeded"
@@ -361,15 +361,15 @@ export function Updates() {
                           : "Failed"}
                       </span>
                     </div>
-                    <div className="mt-0.5 text-xs text-slate-500">
+                    <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                       {formatDate(run.finishedAt)} · triggered by {run.triggeredBy}
                     </div>
                     {run.output && (
                       <details className="mt-1">
-                        <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-700">
+                        <summary className="cursor-pointer text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
                           View output
                         </summary>
-                        <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-slate-50 p-2 text-[11px] text-slate-600">
+                        <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-slate-50 dark:bg-slate-800 p-2 text-[11px] text-slate-600 dark:text-slate-300">
                           {run.output}
                         </pre>
                       </details>
@@ -382,7 +382,7 @@ export function Updates() {
                         <button
                           type="button"
                           onClick={() => setPendingRollback(run)}
-                          className="mt-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
+                          className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:underline"
                         >
                           Roll back to this version
                         </button>
@@ -402,17 +402,17 @@ export function Updates() {
             onClick={() => !rollbackMutation.isPending && setPendingRollback(null)}
             aria-hidden
           />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="relative z-10 w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Roll back to {pendingRollback.targetVersion}?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               This reverts application code only — any database changes made since{" "}
               {pendingRollback.targetVersion} are not undone. The updater sidecar applies this the
               same way it applies a forward update.
             </p>
             {rollbackMutation.isError && (
-              <p className="mt-2 text-xs text-rose-600">
+              <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">
                 {describeTriggerError(rollbackMutation.error)}
               </p>
             )}
@@ -421,7 +421,7 @@ export function Updates() {
                 type="button"
                 onClick={() => setPendingRollback(null)}
                 disabled={rollbackMutation.isPending}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
               >
                 Cancel
               </button>
