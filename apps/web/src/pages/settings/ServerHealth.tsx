@@ -4,27 +4,24 @@ import { ResourcesPanel } from "./ResourcesPanel";
 import { ServicesPanel } from "./ServicesPanel";
 import { WorkersPanel } from "./WorkersPanel";
 import { SchedulersPanel } from "./SchedulersPanel";
+import { ContainersPanel } from "./ContainersPanel";
 
-type Tab = "resources" | "services" | "workers" | "schedulers";
+type Tab = "resources" | "services" | "workers" | "schedulers" | "containers";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "resources", label: "Resources" },
   { id: "services", label: "Services" },
   { id: "workers", label: "Workers" },
   { id: "schedulers", label: "Schedulers" },
+  { id: "containers", label: "Containers" },
 ];
 
 /**
  * Settings > Server Health — operational visibility into PatchPilot's own
  * production infrastructure (host resources, DB/Redis, queues/workers,
- * recurring schedules), plus confirmed restart actions for the api and
- * worker processes. Tab-bar shell modeled on SetupHealth.tsx.
- *
- * Phase 1 only (see the Server Health plan): everything here is read via
- * mechanisms that already exist, and the only mutations are self/cross-process
- * restarts. Restarting individual infra containers or the whole compose stack
- * needs the `updater` sidecar's Docker socket access and is a deliberate
- * Phase 2 fast-follow, not built here.
+ * recurring schedules), plus confirmed restart actions for the api/worker
+ * processes (Phase 1), individual infra containers, and the whole compose
+ * stack (Phase 2). Tab-bar shell modeled on SetupHealth.tsx.
  */
 export function ServerHealth() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -58,6 +55,7 @@ export function ServerHealth() {
       {tab === "services" && <ServicesPanel />}
       {tab === "workers" && <WorkersPanel />}
       {tab === "schedulers" && <SchedulersPanel />}
+      {tab === "containers" && <ContainersPanel />}
     </div>
   );
 }

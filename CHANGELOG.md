@@ -17,8 +17,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   healthy/stuck status for every enabled recurring schedule. Admins can restart
   the api or worker process directly from the page, each gated behind a
   confirmation dialog (`settings:write` only — visible read-only to every other
-  role). Restarting an individual infra container or the whole compose stack is
-  a deferred follow-up, not part of this page yet.
+  role). A new Containers tab adds confirmed restart actions for individual
+  infra containers (caddy, web, api, worker, backup, ollama, postgres, redis)
+  and the whole compose stack, queued through the `updater` sidecar the same
+  way self-updates already are — also `settings:write` only.
 - Windows Update Policies: existing Quality Update, Feature Update, Update
   Ring, and Driver Update rows across all four tabs are now clickable,
   opening a detail drawer with the full policy settings (assignments,

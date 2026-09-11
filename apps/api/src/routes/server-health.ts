@@ -1,8 +1,14 @@
 import type { FastifyInstance } from "fastify";
-import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { z } from "zod";
+import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
 import { audit } from "@patchpilot/graph";
-import { MISSED_FIRE_GRACE_MS, STALE_TIMEOUT_MS, WORKER_RESTART_CHANNEL } from "@patchpilot/shared";
+import {
+  isRestartableContainer,
+  MISSED_FIRE_GRACE_MS,
+  STALE_TIMEOUT_MS,
+  WORKER_RESTART_CHANNEL,
+} from "@patchpilot/shared";
 import { config } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
 import { connection, remediationQueue, reportQueue, scheduleQueue } from "../queue.js";
@@ -12,23 +18,55 @@ import { sampleCpuPercent, sampleDisk, sampleMemory } from "../host-metrics.js";
 
 /**
  * Settings > Server Health: live host resource graphs, DB/Redis/queue/scheduler
- * status tiles, and confirmed restart actions for the api and worker processes.
+ * status tiles, confirmed restart actions for the api and worker processes
+ * (Phase 1, synchronous — see restart-api/restart-worker below), and confirmed
+ * restart actions for individual infra containers and the whole compose stack
+ * (Phase 2, queued — see restart-container/restart-stack below).
  *
- * Phase 1 only (see the Server Health plan) — restarting individual infra
- * containers or the whole compose stack needs the `updater` sidecar's Docker
- * socket access and is a deliberate fast-follow, not built here.
+ * Phase 2's two mutations don't restart anything themselves: they only have
+ * `settings:write`, not the Docker socket, so they insert a row into
+ * `server_control_requests` and reply 202. The `updater` sidecar (the only
+ * container with both Docker socket access and a full repo checkout — see
+ * infra/updater/run.sh) polls that table the same way it already polls
+ * `update_runs`, and actually runs `docker compose restart`.
  *
  * Every GET here is `settings:read` (every role, including reader — this is a
- * status page). Both restart POSTs are `settings:write` (admin only), matching
- * every other risky action in Settings (Updates run-now/rollback, demo-mode
- * enable).
+ * status page). Every POST is `settings:write` (admin only), matching every
+ * other risky action in Settings (Updates run-now/rollback, demo-mode enable).
  *
  * DEMO_MODE never touches real Postgres/Redis/BullMQ connections (they're
  * lazily-connected placeholders — see config.ts) so every GET here returns a
  * clearly-labelled simulated reading instead of hanging or throwing, same
- * spirit as routes/status.ts's `/api/health`. Both restart actions 503 in
- * DEMO_MODE — there is no real process for them to restart.
+ * spirit as routes/status.ts's `/api/health`. Every restart action 503s in
+ * DEMO_MODE — there is no real process/container/updater for it to act on.
  */
+
+/** Terminal-history control requests to return to the client — same
+ *  convention as update-settings.ts's HISTORY_LIMIT. */
+const CONTROL_HISTORY_LIMIT = 20;
+
+async function findPendingControlRequest() {
+  if (config.DEMO_MODE) return null;
+  const [row] = await db
+    .select()
+    .from(tables.serverControlRequests)
+    .where(inArray(tables.serverControlRequests.status, ["queued", "running"]))
+    .orderBy(tables.serverControlRequests.createdAt)
+    .limit(1);
+  return row ?? null;
+}
+
+async function loadControlHistory() {
+  if (config.DEMO_MODE) return [];
+  return db
+    .select()
+    .from(tables.serverControlRequests)
+    .where(inArray(tables.serverControlRequests.status, ["succeeded", "failed"]))
+    .orderBy(desc(tables.serverControlRequests.createdAt))
+    .limit(CONTROL_HISTORY_LIMIT);
+}
+
+const RestartContainerBody = z.object({ target: z.string() });
 
 export async function serverHealthRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", async (req, reply) => {
@@ -212,6 +250,99 @@ export async function serverHealthRoutes(app: FastifyInstance): Promise<void> {
         responseStatus: 202,
       });
       return reply.code(202).send({ restarting: true });
+    },
+  );
+
+  app.get("/api/server-health/control-requests", async () => {
+    if (config.DEMO_MODE) {
+      return { demoMode: true, pendingRequest: null, history: [] };
+    }
+    const [pendingRequest, history] = await Promise.all([
+      findPendingControlRequest(),
+      loadControlHistory(),
+    ]);
+    return { demoMode: false, pendingRequest, history };
+  });
+
+  app.post(
+    "/api/server-health/restart-container",
+    { preHandler: requirePermission("settings:write") },
+    async (req, reply) => {
+      if (config.DEMO_MODE) {
+        return reply.code(503).send({
+          error: "demo_unsupported",
+          detail: "Restarting a container needs the updater sidecar. Set DEMO_MODE=false.",
+        });
+      }
+      const parsed = RestartContainerBody.safeParse(req.body ?? {});
+      if (!parsed.success || !isRestartableContainer(parsed.data.target)) {
+        return reply.code(400).send({ error: "invalid_target" });
+      }
+      const { target } = parsed.data;
+
+      const pending = await findPendingControlRequest();
+      if (pending) {
+        return reply
+          .code(409)
+          .send({ error: "control_request_already_pending", pendingRequest: pending });
+      }
+
+      const [row] = await db
+        .insert(tables.serverControlRequests)
+        .values({ action: "restart-container", target, requestedBy: req.currentUser!.upn })
+        .returning();
+
+      await audit({
+        engineer: req.currentUser!.upn,
+        endpoint: "/api/server-health/restart-container",
+        method: "POST",
+        action: "server:restart-container",
+        resourceType: "server-control-request",
+        resourceId: target,
+        resourceLabel: target,
+        summary: `Requested a restart of the ${target} container`,
+        outcome: "success",
+        responseStatus: 202,
+      });
+      return reply.code(202).send(row);
+    },
+  );
+
+  app.post(
+    "/api/server-health/restart-stack",
+    { preHandler: requirePermission("settings:write") },
+    async (req, reply) => {
+      if (config.DEMO_MODE) {
+        return reply.code(503).send({
+          error: "demo_unsupported",
+          detail: "Restarting the stack needs the updater sidecar. Set DEMO_MODE=false.",
+        });
+      }
+      const pending = await findPendingControlRequest();
+      if (pending) {
+        return reply
+          .code(409)
+          .send({ error: "control_request_already_pending", pendingRequest: pending });
+      }
+
+      const [row] = await db
+        .insert(tables.serverControlRequests)
+        .values({ action: "restart-stack", requestedBy: req.currentUser!.upn })
+        .returning();
+
+      await audit({
+        engineer: req.currentUser!.upn,
+        endpoint: "/api/server-health/restart-stack",
+        method: "POST",
+        action: "server:restart-stack",
+        resourceType: "server-control-request",
+        resourceId: "stack",
+        resourceLabel: "stack",
+        summary: "Requested a restart of the whole server stack",
+        outcome: "success",
+        responseStatus: 202,
+      });
+      return reply.code(202).send(row);
     },
   );
 }

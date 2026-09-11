@@ -22,6 +22,12 @@ INTERVAL="${POLL_INTERVAL_SECONDS:-15}"
 # can never touch its own container, regardless of whether a future release's
 # compose diff happens to also change the updater block.
 SERVICES="caddy web migrate api worker backup ollama postgres redis"
+# Same list minus `migrate`: used by the Settings > Server Health >
+# Containers "Restart entire stack" action below. A plain `docker compose
+# restart` (unlike the `up -d --build` above) re-runs an already-exited
+# container's entrypoint instead of leaving a one-shot job alone, which
+# would silently re-run database migrations if `migrate` were included here.
+STACK_SERVICES="caddy web api worker backup ollama postgres redis"
 
 echo "[updater] starting — polling every ${INTERVAL}s"
 
@@ -128,6 +134,87 @@ while true; do
       # alone matters far more than the diagnostic log for that one run.
       psql "$DATABASE_URL" -q -c "UPDATE update_runs SET status='$(sql_escape "$STATUS")', finished_at=now() WHERE id='$(sql_escape "$RUN_ID")';" \
         || echo "[updater] WARNING: status-only write-back also failed for run $RUN_ID — it will stay stuck at 'running' until fixed manually." >&2
+    fi
+  fi
+
+  # ---- server control requests (Settings > Server Health > Containers) ----
+  # Same claim-and-run shape as update_runs above, just against a different
+  # table/action set — see the comment on serverControlRequests in
+  # packages/db/src/schema.ts for why this is a dedicated table too.
+  CROW=$(psql "$DATABASE_URL" -Aqtc "
+    UPDATE server_control_requests SET status='running', started_at=now()
+    WHERE id = (
+      SELECT id FROM server_control_requests
+      WHERE status='queued'
+      ORDER BY created_at ASC LIMIT 1
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING id || '|' || action || '|' || coalesce(target, '');" 2>/dev/null || true)
+
+  # Same "UPDATE 0" guard as $ROW above.
+  case "$CROW" in
+    *"|"*) ;;
+    *) CROW="" ;;
+  esac
+
+  if [ -n "$CROW" ]; then
+    CONTROL_ID="${CROW%%|*}"
+    CREST="${CROW#*|}"
+    ACTION="${CREST%%|*}"
+    TARGET="${CREST#*|}"
+    echo "[updater] claimed control request $CONTROL_ID -> $ACTION ${TARGET:+($TARGET)}"
+
+    CLOGFILE=$(mktemp)
+    (
+      cd "$REPO_DIR" && case "$ACTION" in
+        restart-stack)
+          echo "== Restarting whole stack ==" &&
+          docker compose -f infra/docker-compose.yml restart $STACK_SERVICES
+          ;;
+        restart-container)
+          # Hardcoded allowlist as defense in depth on top of the api's own
+          # isRestartableContainer check
+          # (packages/shared/src/server-control.ts) — this script is the
+          # last line of defense against an arbitrary shell argument
+          # reaching `docker compose restart`.
+          case "$TARGET" in
+            caddy|web|api|worker|backup|ollama|postgres|redis)
+              echo "== Restarting $TARGET ==" &&
+              docker compose -f infra/docker-compose.yml restart "$TARGET"
+              ;;
+            *)
+              echo "Refusing to restart unrecognized target: $TARGET" >&2
+              exit 1
+              ;;
+          esac
+          ;;
+        *)
+          echo "Unknown server control action: $ACTION" >&2
+          exit 1
+          ;;
+      esac
+    ) >"$CLOGFILE" 2>&1 &
+    CONTROL_PID=$!
+
+    while kill -0 "$CONTROL_PID" 2>/dev/null; do
+      sleep 3
+      CPARTIAL=$(tail -c 20000 "$CLOGFILE" 2>/dev/null | sanitize_output || true)
+      # Best-effort, same as the update_runs flush above — a restart of
+      # postgres itself as part of this very action can transiently fail
+      # this write; the final write-back below is the one that must succeed.
+      psql "$DATABASE_URL" -q -c "UPDATE server_control_requests SET output='$(sql_escape "$CPARTIAL")' WHERE id='$(sql_escape "$CONTROL_ID")';" \
+        >/dev/null 2>&1 || true
+    done
+
+    wait "$CONTROL_PID" && CSTATUS=succeeded || CSTATUS=failed
+    COUT=$(tail -c 20000 "$CLOGFILE" 2>/dev/null | sanitize_output || true)
+    rm -f "$CLOGFILE"
+
+    echo "[updater] control request $CONTROL_ID finished: $CSTATUS"
+    if ! psql "$DATABASE_URL" -q -c "UPDATE server_control_requests SET status='$(sql_escape "$CSTATUS")', completed_at=now(), output='$(sql_escape "$COUT")' WHERE id='$(sql_escape "$CONTROL_ID")';"; then
+      echo "[updater] WARNING: write-back with output failed for control request $CONTROL_ID — retrying status-only so it doesn't get stranded at 'running'." >&2
+      psql "$DATABASE_URL" -q -c "UPDATE server_control_requests SET status='$(sql_escape "$CSTATUS")', completed_at=now() WHERE id='$(sql_escape "$CONTROL_ID")';" \
+        || echo "[updater] WARNING: status-only write-back also failed for control request $CONTROL_ID — it will stay stuck at 'running' until fixed manually." >&2
     fi
   fi
 

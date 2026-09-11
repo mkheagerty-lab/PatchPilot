@@ -1787,3 +1787,25 @@ export interface ServerHealthJobsSummary {
   demoMode: boolean;
   stuckCount: number;
 }
+
+/** A row from `server_control_requests` (Settings > Server Health > Containers,
+ *  Phase 2) — returned by GET /api/server-health/control-requests and by the
+ *  restart-container/restart-stack POSTs. */
+export interface ServerHealthControlRequest {
+  id: string;
+  action: "restart-container" | "restart-stack";
+  target: string | null;
+  status: "queued" | "running" | "succeeded" | "failed";
+  output: string | null;
+  requestedBy: string;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+/** GET /api/server-health/control-requests. */
+export interface ServerHealthControlRequests {
+  demoMode: boolean;
+  pendingRequest: ServerHealthControlRequest | null;
+  history: ServerHealthControlRequest[];
+}

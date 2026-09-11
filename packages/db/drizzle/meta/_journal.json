@@ -414,6 +414,13 @@
       "when": 1789040950367,
       "tag": "0058_breezy_proudstar",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1789128705416,
+      "tag": "0059_yummy_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }
