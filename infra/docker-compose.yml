@@ -165,7 +165,6 @@ services:
       REPO_DIR: /opt/patchpilot
       POLL_INTERVAL_SECONDS: "15"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - ..:/opt/patchpilot
       # Host OS-patching config the updater manages directly (Settings ->
       # Server Health -> Resources). Each source path is a directory that
@@ -180,6 +179,14 @@ services:
       # in practice even though the mount itself is rw.
       - /etc/apt/apt.conf.d:/etc/apt/apt.conf.d:rw
       - /etc/docker:/etc/docker:rw
+      # Deliberately no separate /var/run/docker.sock:/var/run/docker.sock
+      # bind mount. run.sh talks to the daemon via this directory mount
+      # instead (DOCKER_HOST=unix:///host-run/docker.sock) — a FILE-level
+      # socket mount pins to one inode and goes stale forever if
+      # docker.socket itself is ever restarted (e.g. a docker-ce package
+      # upgrade), even though this DIRECTORY-level mount always reflects
+      # whatever socket file currently lives in the host's /var/run. See the
+      # long comment at the top of run.sh.
       - /var/run:/host-run:ro
       - /var/log/unattended-upgrades:/host-unattended-log:ro
     depends_on:
