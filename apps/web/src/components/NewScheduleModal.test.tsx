@@ -25,7 +25,7 @@ vi.mock("../lib/api", async (importOriginal) => {
 
 function engineer(overrides: Partial<Engineer> = {}): Engineer {
   return {
-    upn: "engineer@blackiron.example",
+    upn: "engineer@meridianmsp.example",
     displayName: "Test Engineer",
     homeTenantId: "tenant-1",
     role: "admin",
@@ -95,7 +95,7 @@ describe("NewScheduleModal", () => {
       channel: "live-response",
       target: {},
       enabled: true,
-      engineer: "someone@blackiron.example",
+      engineer: "someone@meridianmsp.example",
       createdAt: new Date().toISOString(),
     };
 

@@ -100,7 +100,7 @@ describe("system actors", () => {
     for (const actor of Object.values(SYSTEM_ACTORS)) {
       expect(isSystemActor(actor)).toBe(true);
     }
-    expect(isSystemActor("engineer@blackiron.example")).toBe(false);
+    expect(isSystemActor("engineer@meridianmsp.example")).toBe(false);
     // A UPN can't contain a colon, which is what makes the prefix collision-proof.
     expect(isSystemActor("anonymous")).toBe(false);
   });
@@ -111,7 +111,7 @@ describe("system actors", () => {
   });
 
   it("returns a real UPN unchanged", () => {
-    expect(systemActorLabel("engineer@blackiron.example")).toBe("engineer@blackiron.example");
+    expect(systemActorLabel("engineer@meridianmsp.example")).toBe("engineer@meridianmsp.example");
   });
 });
 

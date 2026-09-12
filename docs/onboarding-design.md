@@ -475,10 +475,11 @@ with an inline confirm step (not a native `confirm()`) explaining that it
 loads fictional sample data only and can't be undone from that screen.
 
 **Fixture-naming policy.** This redesign also replaced the demo tenant's
-display name (previously "Black Iron (MSP)") and the seeded demo engineer's
-UPN (previously `demo.engineer@blackiron.example`) — PatchPilot's own pilot
-MSP's real name had leaked into what's supposed to be a fully generic
-sandbox. Every fixture in `demo-data.ts` must use invented names only —
+display name (previously the real pilot MSP's own name) and the seeded demo
+engineer's UPN (previously `demo.engineer@` + the real pilot MSP's domain) —
+PatchPilot's own pilot MSP's real name had leaked into what's supposed to be
+a fully generic sandbox. Every fixture in `demo-data.ts` must use invented
+names only —
 never the MSP's own name, a pilot customer's name, or any other real
 organization — and email-shaped fixtures should keep using the RFC 2606
 reserved `.example` TLD (as `@meridianmsp.example` now does) so a stray

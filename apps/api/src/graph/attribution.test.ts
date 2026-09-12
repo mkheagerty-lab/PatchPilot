@@ -58,7 +58,7 @@ function baseJob(overrides: Record<string, unknown> = {}) {
     software: "Google Chrome",
     packageId: "Google.Chrome",
     channel: "live-response" as const,
-    engineer: "engineer@blackiron.example",
+    engineer: "engineer@meridianmsp.example",
     queuedAt: hoursAgo(2),
     startedAt: hoursAgo(1.5),
     finishedAt: hoursAgo(1),
@@ -79,7 +79,7 @@ describe("attributeClears", () => {
       jobId: "job-1",
       deviceId: "device-1",
       deviceHostname: "CON-LT-001",
-      engineer: "engineer@blackiron.example",
+      engineer: "engineer@meridianmsp.example",
       channel: "live-response",
       contributingJobs: 1,
     });
@@ -129,7 +129,7 @@ describe("attributeClears", () => {
       deviceId: "device-2",
       cveId: finding.cveId,
       software: finding.software,
-      engineer: "hand.fixed@blackiron.example",
+      engineer: "hand.fixed@meridianmsp.example",
       markedAt: hoursAgo(3),
     };
     const tx = fakeTx({
@@ -145,7 +145,7 @@ describe("attributeClears", () => {
       attribution: "manual",
       deviceId: "device-2",
       deviceHostname: "CON-DT-009",
-      engineer: "hand.fixed@blackiron.example",
+      engineer: "hand.fixed@meridianmsp.example",
       jobId: null,
       fixStartedAt: manual.markedAt,
       fixFinishedAt: manual.markedAt,

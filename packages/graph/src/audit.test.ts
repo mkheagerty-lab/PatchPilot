@@ -9,7 +9,7 @@ import {
 
 const record = (over: Partial<AuditRecord> = {}): AuditRecord => ({
   id: "11111111-1111-4111-8111-111111111111",
-  engineer: "engineer@blackiron.example",
+  engineer: "engineer@meridianmsp.example",
   actorType: "user",
   tenantId: "contoso-tenant-id",
   category: "action",
@@ -122,7 +122,7 @@ describe("matchesAuditQuery", () => {
   it("matches the actor exactly, including system sentinels", () => {
     expect(matchesAuditQuery(record({ engineer: "system:worker" }), { actor: "system:worker" }))
       .toBe(true);
-    expect(matchesAuditQuery(record(), { actor: "someone.else@blackiron.example" })).toBe(false);
+    expect(matchesAuditQuery(record(), { actor: "someone.else@meridianmsp.example" })).toBe(false);
   });
 
   it("treats the action filter as a set, and excludes rows with no action", () => {
@@ -144,7 +144,7 @@ describe("matchesAuditQuery", () => {
   it("searches summary, label, action, endpoint and actor, case-insensitively", () => {
     expect(matchesAuditQuery(record(), { q: "GOOGLE chrome" })).toBe(true);
     expect(matchesAuditQuery(record(), { q: "ws-014" })).toBe(true);
-    expect(matchesAuditQuery(record(), { q: "blackiron" })).toBe(true);
+    expect(matchesAuditQuery(record(), { q: "meridianmsp" })).toBe(true);
     expect(matchesAuditQuery(record(), { q: "firefox" })).toBe(false);
   });
 });
