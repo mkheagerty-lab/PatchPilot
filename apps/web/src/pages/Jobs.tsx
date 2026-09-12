@@ -12,7 +12,7 @@ import {
   type Schedule,
   type Vulnerability,
 } from "../lib/api";
-import { useCan } from "../lib/auth";
+import { useCan, useEngineer } from "../lib/auth";
 import { useTenant } from "../lib/tenant";
 import { Card, PageHeader } from "../components/ui";
 import { downloadCsv } from "../lib/csv";
@@ -86,6 +86,7 @@ interface PendingDelete {
 export function Jobs() {
   const { activeTenantId } = useTenant();
   const canWrite = useCan("operations:write");
+  const { demoMode } = useEngineer();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -694,7 +695,11 @@ export function Jobs() {
     <div>
       <PageHeader
         title="Jobs"
-        subtitle="Every remediation run for this tenant, newest first. In demo mode jobs progress through queued → running → succeeded on a timer — no Microsoft API is called. Expand a row to see the simulated output."
+        subtitle={
+          demoMode
+            ? "Every remediation run for this tenant, newest first. In demo mode jobs progress through queued → running → succeeded on a timer — no Microsoft API is called. Expand a row to see the simulated output."
+            : "Every remediation run for this tenant, newest first. Expand a row to see the transcript."
+        }
         actions={
           <button
             type="button"
