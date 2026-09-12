@@ -14,7 +14,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
-    "@azure/msal-node": "^2.16.2",
+    "@azure/msal-node": "^6.0.0",
     "@fastify/cookie": "^11.0.1",
     "@fastify/cors": "^10.0.1",
     "@fastify/rate-limit": "^10.2.1",
