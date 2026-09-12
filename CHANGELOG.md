@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.16.0] - 2026-09-12
+
 - Fixed: the `updater` sidecar never restarted itself as part of a self-update,
   so any change to its own poll loop (e.g. the restart-container/restart-stack
   support added in v0.15.0) silently never took effect on an already-running
