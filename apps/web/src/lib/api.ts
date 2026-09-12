@@ -1834,3 +1834,54 @@ export interface ServerHealthContainerStats {
   demoMode: boolean;
   containers: ServerHealthContainerStat[];
 }
+
+/** GET/POST /api/settings/host-patching (Settings > Server Health >
+ *  Resources) — the two opt-in OS-patching toggles the `updater` sidecar
+ *  pushes out to the host (infra/updater/run.sh). Both default false: a POST
+ *  with dockerAutoUpdateEnabled true and dockerLiveRestoreEnabled false is
+ *  rejected 400 "live_restore_required". */
+export interface HostPatchingSettings {
+  demoMode: boolean;
+  autoRebootEnabled: boolean;
+  autoRebootTimeUtc: string;
+  dockerAutoUpdateEnabled: boolean;
+  dockerLiveRestoreEnabled: boolean;
+}
+
+/** GET /api/server-health/host-status (Settings > Server Health > Resources)
+ *  — the VM's own OS-patching state, sampled by the updater sidecar from
+ *  /var/run/reboot-required, the unattended-upgrades log, and `docker info`.
+ *  Distinct from container_stats: this is about the host, not a container. */
+export interface ServerHealthHostStatus {
+  demoMode: boolean;
+  rebootRequired: boolean;
+  rebootRequiredPackages: string | null;
+  lastUnattendedUpgradeAt: string | null;
+  dockerLiveRestoreActive: boolean | null;
+  sampledAt: string | null;
+  stale: boolean;
+}
+
+/** A row from `host_reboot_requests` (Settings > Server Health > Resources'
+ *  "Restart Server (OS reboot)" action) — returned by GET
+ *  /api/server-health/host-reboot-requests and the reboot-host POST.
+ *  Deliberately separate from ServerHealthControlRequest above: that table
+ *  restarts containers, this one reboots the whole VM. 'issued' means the
+ *  updater has handed off to `systemctl reboot` and may itself be about to
+ *  go down — 'confirmed' is written by the process that comes back up. */
+export interface ServerHealthHostRebootRequest {
+  id: string;
+  status: "queued" | "issuing" | "issued" | "confirmed" | "failed";
+  output: string | null;
+  requestedBy: string;
+  createdAt: string;
+  issuedAt: string | null;
+  confirmedAt: string | null;
+}
+
+/** GET /api/server-health/host-reboot-requests. */
+export interface ServerHealthHostRebootRequests {
+  demoMode: boolean;
+  pendingRequest: ServerHealthHostRebootRequest | null;
+  history: ServerHealthHostRebootRequest[];
+}

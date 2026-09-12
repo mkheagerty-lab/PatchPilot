@@ -4,7 +4,7 @@
 # and must not depend on Redis being alive across the very rebuild cycle it's
 # about to trigger. Plain shell + psql + the docker CLI is the whole job.
 FROM docker:27-cli
-RUN apk add --no-cache git postgresql-client
+RUN apk add --no-cache git postgresql-client jq
 COPY infra/updater/run.sh /updater/run.sh
 RUN chmod +x /updater/run.sh
 ENTRYPOINT ["/bin/sh", "/updater/run.sh"]

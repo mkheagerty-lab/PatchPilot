@@ -145,6 +145,12 @@ export const AUDIT_RESOURCE_TYPES = [
   // (resourceId is the container name) and a whole-stack restart
   // (resourceId is the literal "stack").
   "server-control-request",
+  // A row in `host_reboot_requests` (Settings > Server Health > Resources) —
+  // the manual "Restart Server (OS reboot)" action. Separate from
+  // "server-control-request" above: that table restarts containers, this one
+  // reboots the whole VM. resourceId is the request row's id, resourceLabel
+  // the literal "host".
+  "host-reboot-request",
 ] as const;
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
 
@@ -393,6 +399,13 @@ export const AUDIT_ACTIONS = [
   // updater sidecar polls and executes out-of-band (see infra/updater/run.sh).
   "server:restart-container",
   "server:restart-stack",
+  // Settings > Server Health > Resources: the opt-in OS auto-reboot /
+  // Docker Engine auto-update / Docker live-restore toggles (see
+  // apps/api/src/routes/host-patching-settings.ts).
+  "server:host-patching-updated",
+  // Queued, not immediate — same "hand off to the updater sidecar" shape as
+  // server:restart-stack, but reboots the whole VM, not just containers.
+  "server:os-reboot",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -541,6 +554,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "server:restart-worker": "Worker restarted",
   "server:restart-container": "Container restart requested",
   "server:restart-stack": "Full stack restart requested",
+  "server:host-patching-updated": "Host patching settings updated",
+  "server:os-reboot": "Server (OS) reboot requested",
 };
 
 /**
@@ -739,6 +754,8 @@ export const AUDIT_ACTION_GROUPS: ReadonlyArray<{
       "server:restart-worker",
       "server:restart-container",
       "server:restart-stack",
+      "server:host-patching-updated",
+      "server:os-reboot",
     ],
   },
 ];

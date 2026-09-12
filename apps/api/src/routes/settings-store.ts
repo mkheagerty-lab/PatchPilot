@@ -23,4 +23,12 @@ export const demoSettings: Record<string, Record<string, unknown>> = {
     latestPublishedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     lastCheckedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
   },
+  // Off by default, same as a real fresh deploy — see
+  // routes/host-patching-settings.ts.
+  "host-patching": {
+    autoRebootEnabled: false,
+    autoRebootTimeUtc: "03:30",
+    dockerAutoUpdateEnabled: false,
+    dockerLiveRestoreEnabled: false,
+  },
 };

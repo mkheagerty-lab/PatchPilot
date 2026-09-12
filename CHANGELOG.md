@@ -12,6 +12,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Settings > Server Health > Resources now shows the host's own OS-patching
+  state: whether a reboot is pending (and which packages triggered it), when
+  unattended-upgrades last ran, and whether Docker's live-restore is active.
+- Added an opt-in OS auto-reboot window (server/UTC time) and opt-in Docker
+  Engine auto-patching, gated behind Docker live-restore being enabled first
+  so a Docker Engine update can't restart every container at once. Both are
+  off by default — nothing changes for an existing instance until an admin
+  opts in.
+- Added a "Restart Server (OS reboot)" action, distinct from the existing
+  "Restart entire stack" — this reboots the whole virtual machine (OS and
+  kernel), not just the containers.
+
 ## [0.16.0] - 2026-09-12
 
 - Fixed: the `updater` sidecar never restarted itself as part of a self-update,

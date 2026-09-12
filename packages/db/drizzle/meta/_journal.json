@@ -435,6 +435,13 @@
       "when": 1789177296328,
       "tag": "0061_breezy_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1789190682867,
+      "tag": "0062_boring_snowbird",
+      "breakpoints": true
     }
   ]
 }

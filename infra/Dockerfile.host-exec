@@ -1,0 +1,7 @@
+# Inert privileged escape hatch — see infra/docker-compose.yml's host-exec
+# service comment. util-linux provides nsenter, the only binary this image
+# needs; CMD is a deliberate no-op, since the real command is always supplied
+# by `docker compose run` from a hardcoded literal in infra/updater/run.sh.
+FROM alpine:3.20
+RUN apk add --no-cache util-linux
+CMD ["true"]

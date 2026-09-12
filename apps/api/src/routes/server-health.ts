@@ -5,6 +5,7 @@ import { db, tables } from "@patchpilot/db";
 import { audit } from "@patchpilot/graph";
 import {
   CONTAINER_STATS_STALE_MS,
+  HOST_STATUS_STALE_MS,
   isRestartableContainer,
   MISSED_FIRE_GRACE_MS,
   RESTARTABLE_CONTAINERS,
@@ -67,6 +68,31 @@ async function loadControlHistory() {
     .where(inArray(tables.serverControlRequests.status, ["succeeded", "failed"]))
     .orderBy(desc(tables.serverControlRequests.createdAt))
     .limit(CONTROL_HISTORY_LIMIT);
+}
+
+/** Terminal-history host reboot requests to return to the client — same
+ *  convention as CONTROL_HISTORY_LIMIT above. */
+const HOST_REBOOT_HISTORY_LIMIT = 20;
+
+async function findPendingHostReboot() {
+  if (config.DEMO_MODE) return null;
+  const [row] = await db
+    .select()
+    .from(tables.hostRebootRequests)
+    .where(inArray(tables.hostRebootRequests.status, ["queued", "issuing", "issued"]))
+    .orderBy(tables.hostRebootRequests.createdAt)
+    .limit(1);
+  return row ?? null;
+}
+
+async function loadHostRebootHistory() {
+  if (config.DEMO_MODE) return [];
+  return db
+    .select()
+    .from(tables.hostRebootRequests)
+    .where(inArray(tables.hostRebootRequests.status, ["confirmed", "failed"]))
+    .orderBy(desc(tables.hostRebootRequests.createdAt))
+    .limit(HOST_REBOOT_HISTORY_LIMIT);
 }
 
 const RestartContainerBody = z.object({ target: z.string() });
@@ -273,6 +299,90 @@ export async function serverHealthRoutes(app: FastifyInstance): Promise<void> {
     ]);
     return { demoMode: false, pendingRequest, history };
   });
+
+  app.get("/api/server-health/host-status", async () => {
+    if (config.DEMO_MODE) {
+      return {
+        demoMode: true,
+        rebootRequired: false,
+        rebootRequiredPackages: null,
+        lastUnattendedUpgradeAt: null,
+        dockerLiveRestoreActive: false,
+        sampledAt: null,
+        stale: true,
+      };
+    }
+    const [row] = await db.select().from(tables.hostStatus).where(eq(tables.hostStatus.id, "host"));
+    if (!row) {
+      return {
+        demoMode: false,
+        rebootRequired: false,
+        rebootRequiredPackages: null,
+        lastUnattendedUpgradeAt: null,
+        dockerLiveRestoreActive: null,
+        sampledAt: null,
+        stale: true,
+      };
+    }
+    return {
+      demoMode: false,
+      rebootRequired: row.rebootRequired,
+      rebootRequiredPackages: row.rebootRequiredPackages,
+      lastUnattendedUpgradeAt: row.lastUnattendedUpgradeAt ? row.lastUnattendedUpgradeAt.toISOString() : null,
+      dockerLiveRestoreActive: row.dockerLiveRestoreActive,
+      sampledAt: row.sampledAt.toISOString(),
+      stale: Date.now() - row.sampledAt.getTime() > HOST_STATUS_STALE_MS,
+    };
+  });
+
+  app.get("/api/server-health/host-reboot-requests", async () => {
+    if (config.DEMO_MODE) {
+      return { demoMode: true, pendingRequest: null, history: [] };
+    }
+    const [pendingRequest, history] = await Promise.all([
+      findPendingHostReboot(),
+      loadHostRebootHistory(),
+    ]);
+    return { demoMode: false, pendingRequest, history };
+  });
+
+  app.post(
+    "/api/server-health/reboot-host",
+    { preHandler: requirePermission("settings:write") },
+    async (req, reply) => {
+      if (config.DEMO_MODE) {
+        return reply.code(503).send({
+          error: "demo_unsupported",
+          detail: "Rebooting the server needs the updater sidecar. Set DEMO_MODE=false.",
+        });
+      }
+      const pending = await findPendingHostReboot();
+      if (pending) {
+        return reply
+          .code(409)
+          .send({ error: "host_reboot_already_pending", pendingRequest: pending });
+      }
+
+      const [row] = await db
+        .insert(tables.hostRebootRequests)
+        .values({ requestedBy: req.currentUser!.upn })
+        .returning();
+
+      await audit({
+        engineer: req.currentUser!.upn,
+        endpoint: "/api/server-health/reboot-host",
+        method: "POST",
+        action: "server:os-reboot",
+        resourceType: "host-reboot-request",
+        resourceId: row!.id,
+        resourceLabel: "host",
+        summary: "Requested a full server (OS) reboot",
+        outcome: "success",
+        responseStatus: 202,
+      });
+      return reply.code(202).send(row);
+    },
+  );
 
   app.post(
     "/api/server-health/restart-container",
