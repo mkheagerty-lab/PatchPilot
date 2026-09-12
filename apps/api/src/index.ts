@@ -9,6 +9,7 @@ import { startCatalogRefresh } from "./catalog/auto-refresh.js";
 import { startChocolateyCatalogRefresh } from "./catalog/chocolatey-auto-refresh.js";
 import { startPostureSnapshots } from "./posture/auto-snapshot.js";
 import { startUpdateAutoCheck } from "./updates/auto-check.js";
+import { startSelfProcessStats } from "./self-process-stats.js";
 import { registerAlertingResolver } from "./alerting-config.js";
 
 registerAlertingResolver();
@@ -69,6 +70,11 @@ const stopPostureSnapshots = startPostureSnapshots();
 // No-op only when UPDATE_CHECK_INTERVAL_HOURS=0.
 const stopUpdateAutoCheck = startUpdateAutoCheck();
 
+// Settings > Server Health > Processes: self-samples this process's own
+// CPU/memory in local dev, where nothing else runs `docker stats` against
+// it. No-op in production (inside the real container) or DEMO_MODE.
+const stopSelfProcessStats = startSelfProcessStats("api");
+
 // Restart on pairing: POST /api/onboarding/pair (routes/onboarding-pairing.ts)
 // publishes here once it has stored a fresh Entra app registration, so this
 // process (which may not be the one that served that request) picks up the
@@ -108,6 +114,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
     stopChocolateyCatalogRefresh();
     stopPostureSnapshots();
     stopUpdateAutoCheck();
+    stopSelfProcessStats();
     app
       .close()
       .then(() => process.exit(0))

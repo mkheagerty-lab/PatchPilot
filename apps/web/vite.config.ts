@@ -2,6 +2,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwind from "@tailwindcss/vite";
+import { selfProcessStatsPlugin } from "./vite-plugins/self-process-stats";
 
 // E2E_API_PORT/E2E_WEB_PORT let the Playwright config point this dev server
 // (and its proxy) at an isolated, DEMO_MODE-only API instance instead of a
@@ -13,7 +14,7 @@ const apiPort = process.env.E2E_API_PORT || "4000";
 const webPort = Number(process.env.E2E_WEB_PORT) || 5173;
 
 export default defineConfig({
-  plugins: [react(), tailwind()],
+  plugins: [react(), tailwind(), selfProcessStatsPlugin()],
   server: {
     port: webPort,
     strictPort: !!process.env.E2E_WEB_PORT,

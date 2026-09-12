@@ -1,14 +1,6 @@
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  api,
-  ApiError,
-  type ServerHealthJobsSummary,
-  type ServerHealthQueues,
-} from "../../lib/api";
-import { useCan } from "../../lib/auth";
+import { useQuery } from "@tanstack/react-query";
+import { api, type ServerHealthJobsSummary, type ServerHealthQueues } from "../../lib/api";
 import { Card, KpiCard } from "../../components/ui";
-import { ConfirmDialog } from "../../components/ConfirmDialog";
 
 const POLL_INTERVAL_MS = 5_000;
 
@@ -17,19 +9,6 @@ const QUEUE_LABELS: Record<string, string> = {
   schedules: "Schedules",
   reports: "Reports",
 };
-
-/** apps/worker/src/index.ts's DEMO_MODE 503 message, mirrored client-side —
- *  same convention `describeTriggerError` uses in Updates.tsx. */
-function describeRestartError(err: unknown): string {
-  if (err instanceof ApiError) {
-    const code = (err.data as { error?: string } | undefined)?.error;
-    if (code === "demo_unsupported") {
-      return "Restarting a process needs a real process manager — not available in demo mode.";
-    }
-    return err.message;
-  }
-  return "Could not restart the process.";
-}
 
 function WorkerLivenessPill({ workers }: { workers: number | null }) {
   if (workers === null) {
@@ -55,20 +34,14 @@ function WorkerLivenessPill({ workers }: { workers: number | null }) {
 
 /**
  * Settings > Server Health > Workers — BullMQ queue depth, worker-process
- * liveness, the stuck-jobs tile, and the two confirmed restart actions.
- *
- * Restarting the api self-restarts the process serving this very request
- * (see restart-after-reply.ts) — the POST still resolves normally first, so
- * closing the dialog on success is correct; a brief connection blip is
- * expected right after, same as Updates.tsx's own apply-update note.
- * Restarting the worker just publishes a Redis message and replies
- * immediately; the api process itself is untouched.
+ * liveness, and the stuck-jobs tile. Read-only: restarting the api or worker
+ * used to be a dedicated action here (self-`process.exit()`, relying on
+ * Docker's restart policy to bring it back), but that's the same end result
+ * as the Containers tab's queued/audited restart-container for the "api" and
+ * "worker" targets — removed to leave one consistent, tracked restart path
+ * instead of two.
  */
 export function WorkersPanel() {
-  const qc = useQueryClient();
-  const canWrite = useCan("settings:write");
-  const [confirmTarget, setConfirmTarget] = useState<"api" | "worker" | null>(null);
-
   const { data: queues, isLoading: queuesLoading, error: queuesError } = useQuery({
     queryKey: ["server-health", "queues"],
     queryFn: () => api.get<ServerHealthQueues>("/api/server-health/queues"),
@@ -80,21 +53,6 @@ export function WorkersPanel() {
     queryFn: () => api.get<ServerHealthJobsSummary>("/api/server-health/jobs-summary"),
     refetchInterval: POLL_INTERVAL_MS,
   });
-
-  const restartApiMutation = useMutation({
-    mutationFn: () => api.post("/api/server-health/restart-api", {}),
-    onSuccess: () => setConfirmTarget(null),
-  });
-
-  const restartWorkerMutation = useMutation({
-    mutationFn: () => api.post("/api/server-health/restart-worker", {}),
-    onSuccess: () => {
-      setConfirmTarget(null);
-      void qc.invalidateQueries({ queryKey: ["server-health", "queues"] });
-    },
-  });
-
-  const activeMutation = confirmTarget === "api" ? restartApiMutation : restartWorkerMutation;
 
   if (queuesLoading && !queues) {
     return (
@@ -117,13 +75,7 @@ export function WorkersPanel() {
       {queues.demoMode && (
         <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Demo mode: no real BullMQ connection is dialled — queue counts and worker liveness below
-          are placeholders, and restart actions are unavailable.
-        </div>
-      )}
-
-      {!canWrite && (
-        <div className="mb-4 max-w-lg rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-          Your role doesn't include settings write access — restart actions are hidden.
+          are placeholders.
         </div>
       )}
 
@@ -168,52 +120,6 @@ export function WorkersPanel() {
           </tbody>
         </table>
       </Card>
-
-      {canWrite && (
-        <div className="mt-6 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setConfirmTarget("api")}
-            className="rounded-md border border-rose-200 dark:border-rose-900/50 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm font-medium text-rose-600 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10"
-          >
-            Restart API
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmTarget("worker")}
-            className="rounded-md border border-rose-200 dark:border-rose-900/50 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm font-medium text-rose-600 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10"
-          >
-            Restart Worker
-          </button>
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={confirmTarget !== null}
-        tone="destructive"
-        title={confirmTarget === "api" ? "Restart the API?" : "Restart the Worker?"}
-        description={
-          confirmTarget === "api" ? (
-            <>
-              This process (serving the page you're looking at right now) will exit and be
-              respawned by Docker Compose — a few seconds of downtime. Any in-flight request,
-              including this one, may see a brief connection error.
-            </>
-          ) : (
-            <>
-              The worker process will exit and be respawned by Docker Compose. Any remediation job
-              it's currently running will be interrupted; queued jobs are unaffected and resume once
-              it's back.
-            </>
-          )
-        }
-        confirmLabel={confirmTarget === "api" ? "Restart API" : "Restart Worker"}
-        pendingLabel="Restarting…"
-        pending={activeMutation.isPending}
-        error={activeMutation.isError ? describeRestartError(activeMutation.error) : null}
-        onConfirm={() => activeMutation.mutate()}
-        onCancel={() => setConfirmTarget(null)}
-      />
     </div>
   );
 }

@@ -24,3 +24,10 @@ export const MISSED_FIRE_GRACE_MS = 10 * 60_000;
  * exact same cutoff.
  */
 export const STALE_TIMEOUT_MS = 2 * 60 * 60_000;
+
+/**
+ * How stale a container_stats row may be before the Processes tab treats a
+ * container as stopped/mid-restart rather than just between updater polls.
+ * ~3x the updater's default sampling cadence (run.sh's $INTERVAL, 15s).
+ */
+export const CONTAINER_STATS_STALE_MS = 45_000;

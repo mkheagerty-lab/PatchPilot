@@ -18,9 +18,14 @@ set -eu
 # services (caddy, backup) the next time this script recreates them.
 REPO_DIR="${REPO_DIR:-/opt/patchpilot}"
 INTERVAL="${POLL_INTERVAL_SECONDS:-15}"
-# Every compose service EXCEPT this one (`updater`) — so the rebuild command
-# can never touch its own container, regardless of whether a future release's
-# compose diff happens to also change the updater block.
+# Every compose service EXCEPT this one (`updater`) — restarting itself
+# mid-command here would kill this very process before it can write the run's
+# outcome back to the DB. `updater` is rebuilt/restarted separately, as the
+# LAST step below, once that write-back is already durable — see the comment
+# there for why skipping it stranded a real restart-container request at
+# 'queued' forever on 2026-09-12 (the running process pre-dated the
+# server_control_requests loop entirely, and self-update had no way to ever
+# refresh it).
 SERVICES="caddy web migrate api worker backup ollama postgres redis"
 # Same list minus `migrate`: used by the Settings > Server Health >
 # Containers "Restart entire stack" action below. A plain `docker compose
@@ -56,6 +61,81 @@ sql_escape() {
 # guaranteeing every write-back is valid UTF-8.
 sanitize_output() {
   tr -cd '\11\12\15\40-\176'
+}
+
+# Same 8 containers as STACK_SERVICES above — used by the container_stats
+# sampler below (Settings > Server Health > Processes).
+CONTAINER_STATS_SERVICES="caddy web api worker backup ollama postgres redis"
+
+# Samples `docker stats` for whichever of the 8 managed containers are
+# currently running and upserts one row per container into container_stats.
+# Not a claim-and-run job like the two loops above — just periodic sampling,
+# so no locking/status columns, just a plain upsert per cycle.
+sample_container_stats() {
+  RUNNING=$(docker ps --format '{{.Names}}' 2>/dev/null || true)
+  TARGETS=""
+  for svc in $CONTAINER_STATS_SERVICES; do
+    CNAME="patchpilot-${svc}-1"
+    case "$RUNNING" in
+      *"$CNAME"*) TARGETS="$TARGETS $CNAME" ;;
+    esac
+  done
+  # Nothing up right now (e.g. mid restart-stack) — `docker stats` with no
+  # args samples EVERY container on the host, not what we want here.
+  [ -z "$TARGETS" ] && return 0
+
+  # No jq in this image — plain pipe-delimited parsing via --format, same
+  # style as the rest of this script.
+
+  # `docker ps -s` adds writable-layer + virtual image size to the normal ps
+  # output. Queried once for every running container (not filtered to
+  # $TARGETS — `--filter name=X` would mean one call per container), then
+  # matched by name below.
+  PS_INFO=$(docker ps -s --format '{{.Names}}|{{.Image}}|{{.Size}}' 2>/dev/null || true)
+
+  # `docker inspect` takes multiple names as positional args and prints one
+  # formatted line per container. Its {{.Name}} output has a leading "/"
+  # (e.g. "/patchpilot-redis-1") — matched against below with that prefix.
+  # The {{if .State.Health}} guard covers containers with no HEALTHCHECK
+  # defined (everything except postgres/redis/ollama, see docker-compose.yml).
+  INSPECT_INFO=$(docker inspect --format '{{.Name}}|{{.RestartCount}}|{{.State.StartedAt}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' $TARGETS 2>/dev/null || true)
+
+  docker stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}' $TARGETS 2>/dev/null |
+    while IFS='|' read -r NAME CPU MEM NET BLOCK; do
+      SVC="${NAME#patchpilot-}"
+      SVC="${SVC%-*}"
+      CPU_NUM=$(printf '%s' "$CPU" | tr -d '%')
+
+      PS_LINE=$(printf '%s\n' "$PS_INFO" | grep "^${NAME}|" || true)
+      IMAGE=$(printf '%s' "$PS_LINE" | cut -d'|' -f2)
+      DISK_SIZE=$(printf '%s' "$PS_LINE" | cut -d'|' -f3)
+
+      INSPECT_LINE=$(printf '%s\n' "$INSPECT_INFO" | grep "^/${NAME}|" || true)
+      RESTART_COUNT=$(printf '%s' "$INSPECT_LINE" | cut -d'|' -f2)
+      STARTED_AT=$(printf '%s' "$INSPECT_LINE" | cut -d'|' -f3)
+      HEALTH=$(printf '%s' "$INSPECT_LINE" | cut -d'|' -f4)
+
+      [ -z "$IMAGE" ] && IMAGE="unknown"
+      [ -z "$DISK_SIZE" ] && DISK_SIZE="—"
+      [ -z "$HEALTH" ] && HEALTH="none"
+      [ -z "$RESTART_COUNT" ] && RESTART_COUNT="0"
+
+      if [ -n "$STARTED_AT" ]; then
+        STARTED_AT_SQL="'$(sql_escape "$STARTED_AT")'"
+      else
+        STARTED_AT_SQL="NULL"
+      fi
+
+      psql "$DATABASE_URL" -q -c "
+        INSERT INTO container_stats (container, cpu_percent, mem_usage, net_io, block_io, sampled_at, image, disk_size, health, started_at, restart_count)
+        VALUES ('$(sql_escape "$SVC")', '$(sql_escape "$CPU_NUM")', '$(sql_escape "$MEM")', '$(sql_escape "$NET")', '$(sql_escape "$BLOCK")', now(), '$(sql_escape "$IMAGE")', '$(sql_escape "$DISK_SIZE")', '$(sql_escape "$HEALTH")', $STARTED_AT_SQL, '$(sql_escape "$RESTART_COUNT")')
+        ON CONFLICT (container) DO UPDATE SET
+          cpu_percent = EXCLUDED.cpu_percent, mem_usage = EXCLUDED.mem_usage,
+          net_io = EXCLUDED.net_io, block_io = EXCLUDED.block_io, sampled_at = EXCLUDED.sampled_at,
+          image = EXCLUDED.image, disk_size = EXCLUDED.disk_size, health = EXCLUDED.health,
+          started_at = EXCLUDED.started_at, restart_count = EXCLUDED.restart_count;
+      " >/dev/null 2>&1 || true
+    done
 }
 
 while true; do
@@ -135,6 +215,18 @@ while true; do
       psql "$DATABASE_URL" -q -c "UPDATE update_runs SET status='$(sql_escape "$STATUS")', finished_at=now() WHERE id='$(sql_escape "$RUN_ID")';" \
         || echo "[updater] WARNING: status-only write-back also failed for run $RUN_ID — it will stay stuck at 'running' until fixed manually." >&2
     fi
+
+    # Rebuild/restart `updater` itself last, now that the run's outcome is
+    # already written back above — this container can only safely replace
+    # itself once nothing left in this invocation needs to survive past it.
+    # Without this, every self-update deploys new code to disk that this
+    # already-running process never picks up (a `while true` shell loop
+    # doesn't re-read its own source), so any change to this script — a new
+    # claim-and-run block, a bug fix — silently never takes effect until
+    # someone restarts the updater container by hand.
+    echo "[updater] restarting updater to pick up whatever this run just deployed"
+    (cd "$REPO_DIR" && docker compose -f infra/docker-compose.yml --env-file .env up -d --build updater) \
+      >/dev/null 2>&1 || echo "[updater] WARNING: self-restart failed — updater is still running pre-$TAG code." >&2
   fi
 
   # ---- server control requests (Settings > Server Health > Containers) ----
@@ -217,6 +309,11 @@ while true; do
         || echo "[updater] WARNING: status-only write-back also failed for control request $CONTROL_ID — it will stay stuck at 'running' until fixed manually." >&2
     fi
   fi
+
+  # ---- container stats (Settings > Server Health > Processes) ----
+  # Not a claim-and-run job — nothing to claim, just periodic sampling at the
+  # existing $INTERVAL cadence, run after both claim blocks above.
+  sample_container_stats
 
   sleep "$INTERVAL"
 done

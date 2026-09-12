@@ -8,7 +8,6 @@ import {
   CREDENTIALS_ROTATED_CHANNEL,
   STALE_TIMEOUT_MS,
   SYSTEM_ACTORS,
-  WORKER_RESTART_CHANNEL,
   sanitizeDbTextBounded,
 } from "@patchpilot/shared";
 import { sendAlertEmail } from "@patchpilot/shared/alerting";
@@ -25,6 +24,7 @@ import { startBackupWatchdog } from "./backup-watchdog.js";
 import { closeBrowser } from "./reports/browser.js";
 import { startReportWorker } from "./reports/worker.js";
 import { startReportRetention } from "./reports/retention.js";
+import { startSelfProcessStats } from "./self-process-stats.js";
 import { logger } from "./logger.js";
 
 const log = logger.child({ module: "worker" });
@@ -408,22 +408,6 @@ if (!env.DEMO_MODE) {
   });
 }
 
-// Restart on demand: POST /api/server-health/restart-worker (an admin action,
-// confirmed in the UI) publishes here. Deliberately a separate channel from
-// CREDENTIALS_ROTATED_CHANNEL above — that one is also subscribed to by
-// apps/api, so reusing it would restart the api too. A dedicated
-// duplicate() connection, same reasoning as the credentials subscriber.
-{
-  const workerRestartSubscriber = connection.duplicate();
-  workerRestartSubscriber.on("error", (err) => log.error({ err }, "worker restart subscriber error"));
-  await workerRestartSubscriber.subscribe(WORKER_RESTART_CHANNEL);
-  workerRestartSubscriber.on("message", (channel) => {
-    if (channel !== WORKER_RESTART_CHANNEL) return;
-    log.info("restart requested via Server Health — exiting so the process manager restarts us");
-    process.exit(0);
-  });
-}
-
 // Recurring-schedule firing: reconciles enabled DB schedules into BullMQ cron
 // job-schedulers and fans each fire out into remediation jobs (no-op in demo).
 const stopScheduler = startScheduler();
@@ -440,12 +424,18 @@ const stopBackupWatchdog = startBackupWatchdog();
 const stopReportWorker = startReportWorker();
 const stopReportRetention = startReportRetention();
 
+// Settings > Server Health > Processes: self-samples this process's own
+// CPU/memory in local dev, where nothing else runs `docker stats` against
+// it. No-op in production (inside the real container) or DEMO_MODE.
+const stopSelfProcessStats = startSelfProcessStats("worker");
+
 process.on("SIGTERM", async () => {
   clearInterval(sweepTimer);
   stopBackupWatchdog();
   await stopScheduler();
   stopReportRetention();
   await stopReportWorker();
+  stopSelfProcessStats();
   await worker.close();
   // No-op unless a report was actually rendered — getBrowser() is lazy, so a
   // worker that only ran remediations never spawned a Chromium to close.

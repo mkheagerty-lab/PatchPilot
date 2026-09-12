@@ -16,7 +16,7 @@ import {
   type AuditQuery,
   type AuditRecord,
 } from "../lib/api";
-import { useTenant } from "../lib/tenant";
+import { ALL_TENANTS, useTenant } from "../lib/tenant";
 import {
   Card,
   DetailRow,
@@ -84,17 +84,28 @@ const EMPTY_FILTERS: AuditQuery = {
 };
 
 export function AuditLog() {
-  const { activeTenantId, isAllTenants, tenants } = useTenant();
-  // resourceId is deep-link only (e.g. the Dashboard activity feed) — read
-  // once on load rather than kept in sync with the URL like Devices/Jobs/
-  // Catalog do for their filters, since nothing else on this page writes it.
+  const { activeTenantId, isAllTenants, setActiveTenantId, tenants } = useTenant();
+  // resourceId/q are deep-link only (e.g. the Dashboard activity feed, Server
+  // Health > Containers) — read once on load rather than kept in sync with the
+  // URL like Devices/Jobs/Catalog do for their filters, since nothing else on
+  // this page writes them.
   const [urlParams] = useSearchParams();
   const [filters, setFilters] = useState<AuditQuery>(() => ({
     ...EMPTY_FILTERS,
     resourceId: urlParams.get("resourceId") ?? "",
+    q: urlParams.get("q") ?? EMPTY_FILTERS.q,
   }));
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => urlParams.get("q") ?? "");
   const [detail, setDetail] = useState<AuditRecord | null>(null);
+
+  // Deep links to system-level events (server restarts, catalog refreshes —
+  // anything with no single owning tenant, see the tenant-scoping note below)
+  // need the aggregate view: those rows carry tenantId=null and are otherwise
+  // invisible from whichever tenant happens to be active.
+  useEffect(() => {
+    if (urlParams.get("scope") === "all") setActiveTenantId(ALL_TENANTS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Every keystroke is a server round-trip on an unbounded table, so the search
   // box is debounced rather than bound straight to the query key.
