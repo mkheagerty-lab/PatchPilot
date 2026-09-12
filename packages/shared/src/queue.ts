@@ -37,15 +37,6 @@ export const CREDENTIALS_ROTATED_CHANNEL = "patchpilot:credentials-rotated";
 export const CUSTOM_DOMAINS_CHANGED_CHANNEL = "patchpilot:custom-domains-changed";
 
 /**
- * Redis pub/sub channel published by apps/api/src/routes/server-health.ts's
- * "restart worker" action (an admin action, confirmed in the UI). apps/worker
- * -only restart signal — unlike CREDENTIALS_ROTATED_CHANNEL above, apps/api
- * does not subscribe to this one, so restarting the worker never also
- * restarts the api mid-request.
- */
-export const WORKER_RESTART_CHANNEL = "patchpilot:worker-restart";
-
-/**
  * The recurring-schedule queue *contract*. The worker owns the cron reconciler and
  * fan-out consumer (see apps/worker/src/scheduler.ts); the api is a producer only —
  * a "Run now" action enqueues a single "fire" job so an engineer can exercise a

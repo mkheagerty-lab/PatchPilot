@@ -421,6 +421,20 @@
       "when": 1789128705416,
       "tag": "0059_yummy_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1789171017041,
+      "tag": "0060_acoustic_blue_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1789177296328,
+      "tag": "0061_breezy_white_queen",
+      "breakpoints": true
     }
   ]
 }

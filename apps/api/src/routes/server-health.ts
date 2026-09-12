@@ -4,26 +4,24 @@ import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, tables } from "@patchpilot/db";
 import { audit } from "@patchpilot/graph";
 import {
+  CONTAINER_STATS_STALE_MS,
   isRestartableContainer,
   MISSED_FIRE_GRACE_MS,
+  RESTARTABLE_CONTAINERS,
   STALE_TIMEOUT_MS,
-  WORKER_RESTART_CHANNEL,
 } from "@patchpilot/shared";
 import { config } from "../config.js";
 import { requirePermission } from "../auth/rbac.js";
-import { connection, remediationQueue, reportQueue, scheduleQueue } from "../queue.js";
+import { remediationQueue, reportQueue, scheduleQueue } from "../queue.js";
 import { pingSessionRedisTimed } from "../session-store.js";
-import { exitAfterReply } from "../restart-after-reply.js";
 import { sampleCpuPercent, sampleDisk, sampleMemory } from "../host-metrics.js";
 
 /**
  * Settings > Server Health: live host resource graphs, DB/Redis/queue/scheduler
- * status tiles, confirmed restart actions for the api and worker processes
- * (Phase 1, synchronous — see restart-api/restart-worker below), and confirmed
- * restart actions for individual infra containers and the whole compose stack
- * (Phase 2, queued — see restart-container/restart-stack below).
+ * status tiles, and confirmed restart actions for individual infra containers
+ * and the whole compose stack (see restart-container/restart-stack below).
  *
- * Phase 2's two mutations don't restart anything themselves: they only have
+ * These mutations don't restart anything themselves: they only have
  * `settings:write`, not the Docker socket, so they insert a row into
  * `server_control_requests` and reply 202. The `updater` sidecar (the only
  * container with both Docker socket access and a full repo checkout — see
@@ -39,6 +37,11 @@ import { sampleCpuPercent, sampleDisk, sampleMemory } from "../host-metrics.js";
  * clearly-labelled simulated reading instead of hanging or throwing, same
  * spirit as routes/status.ts's `/api/health`. Every restart action 503s in
  * DEMO_MODE — there is no real process/container/updater for it to act on.
+ *
+ * This used to also have synchronous restart-api/restart-worker actions
+ * (self-`process.exit()`, relying on Docker's restart policy) — removed as
+ * a duplicate of restart-container's "api"/"worker" targets, which do the
+ * same job via one consistent, tracked, queued path instead of two.
  */
 
 /** Terminal-history control requests to return to the client — same
@@ -199,59 +202,66 @@ export async function serverHealthRoutes(app: FastifyInstance): Promise<void> {
     return { demoMode: false, stuckCount: rows[0]?.count ?? 0 };
   });
 
-  app.post(
-    "/api/server-health/restart-api",
-    { preHandler: requirePermission("settings:write") },
-    async (req, reply) => {
-      if (config.DEMO_MODE) {
-        return reply.code(503).send({
-          error: "demo_unsupported",
-          detail: "Restarting the api needs a real process manager. Set DEMO_MODE=false.",
-        });
-      }
-      await audit({
-        engineer: req.currentUser!.upn,
-        endpoint: "/api/server-health/restart-api",
-        method: "POST",
-        action: "server:restart-api",
-        resourceType: "server-process",
-        resourceId: "api",
-        resourceLabel: "api",
-        summary: "Restarted the api process",
-        outcome: "success",
-        responseStatus: 202,
-      });
-      reply.code(202).send({ restarting: true });
-      exitAfterReply(reply);
-    },
-  );
-
-  app.post(
-    "/api/server-health/restart-worker",
-    { preHandler: requirePermission("settings:write") },
-    async (req, reply) => {
-      if (config.DEMO_MODE) {
-        return reply.code(503).send({
-          error: "demo_unsupported",
-          detail: "Restarting the worker needs a real process manager. Set DEMO_MODE=false.",
-        });
-      }
-      await connection.publish(WORKER_RESTART_CHANNEL, "restart").catch(() => undefined);
-      await audit({
-        engineer: req.currentUser!.upn,
-        endpoint: "/api/server-health/restart-worker",
-        method: "POST",
-        action: "server:restart-worker",
-        resourceType: "server-process",
-        resourceId: "worker",
-        resourceLabel: "worker",
-        summary: "Restarted the worker process",
-        outcome: "success",
-        responseStatus: 202,
-      });
-      return reply.code(202).send({ restarting: true });
-    },
-  );
+  app.get("/api/server-health/container-stats", async () => {
+    if (config.DEMO_MODE) {
+      return {
+        demoMode: true,
+        containers: RESTARTABLE_CONTAINERS.map((container) => ({
+          container,
+          cpuPercent: null,
+          memUsage: "—",
+          netIo: "—",
+          blockIo: "—",
+          sampledAt: null,
+          stale: true,
+          image: null,
+          diskSize: null,
+          health: null,
+          startedAt: null,
+          restartCount: null,
+        })),
+      };
+    }
+    const rows = await db.select().from(tables.containerStats);
+    const byContainer = new Map(rows.map((r) => [r.container, r] as const));
+    const now = Date.now();
+    return {
+      demoMode: false,
+      containers: RESTARTABLE_CONTAINERS.map((container) => {
+        const row = byContainer.get(container);
+        if (!row) {
+          return {
+            container,
+            cpuPercent: null,
+            memUsage: "—",
+            netIo: "—",
+            blockIo: "—",
+            sampledAt: null,
+            stale: true,
+            image: null,
+            diskSize: null,
+            health: null,
+            startedAt: null,
+            restartCount: null,
+          };
+        }
+        return {
+          container,
+          cpuPercent: row.cpuPercent,
+          memUsage: row.memUsage,
+          netIo: row.netIo,
+          blockIo: row.blockIo,
+          sampledAt: row.sampledAt.toISOString(),
+          stale: now - row.sampledAt.getTime() > CONTAINER_STATS_STALE_MS,
+          image: row.image,
+          diskSize: row.diskSize,
+          health: row.health,
+          startedAt: row.startedAt ? row.startedAt.toISOString() : null,
+          restartCount: row.restartCount,
+        };
+      }),
+    };
+  });
 
   app.get("/api/server-health/control-requests", async () => {
     if (config.DEMO_MODE) {

@@ -8,6 +8,7 @@ import type {
   DeviceExclusionJustification,
   InstallScope,
   RemediationAction,
+  RestartableContainer,
   Role,
   UserStatus,
 } from "@patchpilot/shared";
@@ -1808,4 +1809,28 @@ export interface ServerHealthControlRequests {
   demoMode: boolean;
   pendingRequest: ServerHealthControlRequest | null;
   history: ServerHealthControlRequest[];
+}
+
+/** One container's row in GET /api/server-health/container-stats (Settings >
+ *  Server Health > Processes) — `memUsage`/`netIo`/`blockIo` are raw display
+ *  strings straight from `docker stats`, never parsed into bytes. */
+export interface ServerHealthContainerStat {
+  container: RestartableContainer;
+  cpuPercent: number | null;
+  memUsage: string;
+  netIo: string;
+  blockIo: string;
+  sampledAt: string | null;
+  stale: boolean;
+  image: string | null;
+  diskSize: string | null;
+  health: string | null;
+  startedAt: string | null;
+  restartCount: number | null;
+}
+
+/** GET /api/server-health/container-stats. */
+export interface ServerHealthContainerStats {
+  demoMode: boolean;
+  containers: ServerHealthContainerStat[];
 }

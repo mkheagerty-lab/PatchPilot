@@ -1172,6 +1172,40 @@ export const serverControlRequests = pgTable(
   (t) => [index("server_control_requests_status_idx").on(t.status)],
 );
 
+// ---- container stats (Settings -> Server Health -> Processes) ----
+// Single latest-snapshot-per-container, upserted every updater poll cycle —
+// deliberately not append-only; history is kept client-side only, same
+// choice ResourcesPanel.tsx already made for host CPU/Memory/Disk.
+// Populated by infra/updater/run.sh via `docker stats --no-stream` — apps/api
+// has no Docker socket access (see host-metrics.ts).
+export const containerStats = pgTable("container_stats", {
+  // One of RESTARTABLE_CONTAINERS — plain text + app-level validation, not a
+  // pgEnum, same convention as serverControlRequests.target.
+  container: text("container").primaryKey(),
+  // Percent of *host* CPU — no service sets cpus:/mem_limit:, so this is
+  // what `docker stats` already reports with no limit configured.
+  cpuPercent: doublePrecision("cpu_percent").notNull(),
+  // Raw "<used> / <total>" strings straight from `docker stats --format`,
+  // e.g. "182MiB / 15.6GiB" — display-only, never parsed into bytes. The
+  // right-hand number is the HOST's total memory, not a container cap.
+  memUsage: text("mem_usage").notNull(),
+  netIo: text("net_io").notNull(),
+  blockIo: text("block_io").notNull(),
+  sampledAt: timestamp("sampled_at", { withTimezone: true }).notNull(),
+  // Below: from `docker ps -s`/`docker inspect`, not `docker stats` — sampled
+  // in the same updater cycle but nullable, since a container with no
+  // healthcheck defined has no health status (see infra/Caddyfile note) and
+  // an older row written before this migration has none of these yet.
+  image: text("image"),
+  // "<writable-layer size> (virtual <total image size>)" straight from
+  // `docker ps -s --format`, e.g. "1.2kB (virtual 245MB)" — display-only.
+  diskSize: text("disk_size"),
+  // "healthy" | "unhealthy" | "starting" | "none" (no healthcheck defined).
+  health: text("health"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  restartCount: integer("restart_count"),
+});
+
 // ---- custom domains (Setup -> App Registration "Custom domain" section) ----
 // One row per additional hostname this instance should accept logins/OAuth
 // callbacks on, on top of the deploy-time PUBLIC_URL. "subdomain" rows are a

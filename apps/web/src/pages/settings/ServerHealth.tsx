@@ -6,14 +6,12 @@ import { WorkersPanel } from "./WorkersPanel";
 import { SchedulersPanel } from "./SchedulersPanel";
 import { ContainersPanel } from "./ContainersPanel";
 
-type Tab = "resources" | "services" | "workers" | "schedulers" | "containers";
+type Tab = "resources" | "workers" | "containers";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "resources", label: "Resources" },
-  { id: "services", label: "Services" },
-  { id: "workers", label: "Workers" },
-  { id: "schedulers", label: "Schedulers" },
-  { id: "containers", label: "Containers" },
+  { id: "workers", label: "Workers & Schedulers" },
+  { id: "containers", label: "Services & Containers" },
 ];
 
 /**
@@ -52,10 +50,33 @@ export function ServerHealth() {
       </div>
 
       {tab === "resources" && <ResourcesPanel />}
-      {tab === "services" && <ServicesPanel />}
-      {tab === "workers" && <WorkersPanel />}
-      {tab === "schedulers" && <SchedulersPanel />}
-      {tab === "containers" && <ContainersPanel />}
+      {tab === "workers" && (
+        <div className="space-y-8">
+          <WorkersPanel />
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Schedules
+            </h3>
+            <SchedulersPanel />
+          </div>
+        </div>
+      )}
+      {tab === "containers" && (
+        <div className="space-y-8">
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Services
+            </h3>
+            <ServicesPanel />
+          </div>
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Containers
+            </h3>
+            <ContainersPanel />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

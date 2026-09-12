@@ -12,6 +12,60 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fixed: the `updater` sidecar never restarted itself as part of a self-update,
+  so any change to its own poll loop (e.g. the restart-container/restart-stack
+  support added in v0.15.0) silently never took effect on an already-running
+  instance — a queued restart request would sit at 'queued' forever with no
+  error. It now rebuilds/restarts itself as the last step of each self-update
+  run, once that run's outcome is already written back.
+- Fixed: Server Health restart actions (restart-api/-worker/-container/-stack)
+  write audit rows with no tenant, since they're infra-level events — but the
+  Audit Log page defaults to whichever tenant is active, so those rows never
+  showed up for anyone who hadn't manually switched to "All Tenants". The
+  Containers tab now links straight to a pre-filtered, All-Tenants-scoped
+  Audit Log view instead of a page that looked empty.
+- Server Health tab reshuffle: Workers + Schedulers merged into one
+  "Workers & Schedulers" tab, and Services + Containers merged into one
+  "Services & Containers" tab — none of these needed a top-level tab each.
+  The Workers tab's own Restart API/Restart Worker buttons were removed —
+  they and the Containers tab's restart-container action both end up
+  restarting the same api/worker process (self-exit + Docker's restart
+  policy vs. a queued, audited `docker compose restart`), so only the
+  Containers tab's tracked path remains. The now-unreachable
+  `restart-api`/`restart-worker` API routes, and the worker's dedicated
+  restart-pubsub subscriber, were removed too.
+- Containers tab: added Path and Port columns (from `infra/docker-compose.yml`
+  and `infra/Caddyfile`) so it's clear which containers are reachable, and how.
+  Also added Runtime and Status columns — Runtime shows "Docker" or "pnpm"
+  depending on how that container is actually being sampled right now (every
+  managed container runs in Docker in production; api/worker run on the host
+  in local dev instead — see the self-reporting bullet below), and Status
+  shows "Running"/"Not reporting" once a container has reported in, or a
+  plain "—" for one that simply isn't running in this environment. An earlier
+  version of this work added a separate, Task-Manager-style "Processes" tab
+  with per-container CPU/Memory/Network/Disk-IO detail; it was replaced with
+  these two columns instead, since granular metrics for containers with no
+  data available just read as broken rather than informative.
+- Added `infra/updater/dev-sample.sh` (`pnpm infra:dev:sample`): a dev-only
+  stand-in for the `updater` sidecar's `container_stats` sampler, which never
+  runs in local dev at all (api/web/worker run on the host, not in Docker).
+  Without it postgres/redis/ollama — which really are healthy local
+  containers — never showed a Runtime/Status in the Containers table. This
+  script samples those three via `docker stats`/`docker ps -s`/`docker
+  inspect` against the `patchpilot-dev-*` container names and upserts the
+  same rows the real sidecar would, so the table shows genuine local data
+  during development.
+- The `api`, `worker`, and `web` processes now self-report their own
+  CPU%/memory into the same `container_stats` table on a 15s cadence when
+  running on the host, as they do in local dev (see `dev-sample.sh` above) —
+  no-op in production, where the `updater` sidecar already samples the real
+  container, or in DEMO_MODE. For `web` this runs as a dev-only Vite plugin
+  (`apps/web/vite-plugins/self-process-stats.ts`, `apply: "serve"`, so it
+  never runs against a production build's static output) that samples the
+  Vite dev server process itself. `caddy`/`backup` still show no
+  Runtime/Status locally, since neither runs in any form outside production —
+  see `infra/docker-compose.dev.yml`.
+
 ## [0.15.0] - 2026-09-11
 
 - New Settings > Server Health page: live CPU/Memory/Disk graphs, PostgreSQL/Redis

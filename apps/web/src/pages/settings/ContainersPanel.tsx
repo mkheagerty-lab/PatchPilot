@@ -1,13 +1,58 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RESTARTABLE_CONTAINERS, type RestartableContainer } from "@patchpilot/shared";
-import { api, ApiError, type ServerHealthControlRequest, type ServerHealthControlRequests } from "../../lib/api";
+import { CONTAINER_INFO, RESTARTABLE_CONTAINERS, type RestartableContainer } from "@patchpilot/shared";
+import {
+  api,
+  ApiError,
+  type ServerHealthContainerStat,
+  type ServerHealthContainerStats,
+  type ServerHealthControlRequest,
+  type ServerHealthControlRequests,
+} from "../../lib/api";
 import { useCan } from "../../lib/auth";
 import { Card } from "../../components/ui";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 
 const POLL_INTERVAL_MS = 3_000;
+const STATS_POLL_INTERVAL_MS = 15_000;
 const HISTORY_ROWS = 5;
+
+/**
+ * "Docker" vs "pnpm" is derived from the data, not hardcoded per container
+ * name — in production every RESTARTABLE_CONTAINERS entry runs as a real
+ * Docker container, but in local dev api/worker self-report instead (see
+ * apps/api/src/self-process-stats.ts). A row with an `image` came from the
+ * updater's `docker stats`/`docker inspect` sampling; one without it but with
+ * a sample came from self-reporting; no sample at all means we don't know.
+ */
+function describeRuntime(stat: ServerHealthContainerStat | undefined): string {
+  if (!stat || stat.sampledAt === null) return "—";
+  return stat.image !== null ? "Docker" : "pnpm";
+}
+
+/** Deliberately plain and non-alarming — a container with no data (e.g. one
+ *  that only ever runs in production, not in this dev instance) reads as
+ *  "unknown", not "down". */
+function StatusCell({ stat }: { stat: ServerHealthContainerStat | undefined }) {
+  if (!stat || stat.sampledAt === null) {
+    return <span className="text-slate-400 dark:text-slate-500">—</span>;
+  }
+  if (stat.stale) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+        Not reporting
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      Running
+    </span>
+  );
+}
 
 /** Restarting the api or worker containers this way (unlike Workers tab's
  *  restart-api/restart-worker) goes through the updater's queue, same as
@@ -75,6 +120,15 @@ export function ContainersPanel() {
     refetchInterval: POLL_INTERVAL_MS,
   });
 
+  // Runtime/Status columns below — best-effort only, so a failure here never
+  // blocks the restart controls above from rendering.
+  const { data: statsData } = useQuery({
+    queryKey: ["server-health", "container-stats"],
+    queryFn: () => api.get<ServerHealthContainerStats>("/api/server-health/container-stats"),
+    refetchInterval: STATS_POLL_INTERVAL_MS,
+  });
+  const statsByContainer = new Map(statsData?.containers.map((s) => [s.container, s] as const));
+
   const invalidate = () => void qc.invalidateQueries({ queryKey: ["server-health", "control-requests"] });
 
   const restartContainerMutation = useMutation({
@@ -134,11 +188,28 @@ export function ContainersPanel() {
         </div>
       )}
 
+      {/* These requests carry no tenant, so the Audit Log's default tenant-scoped
+          view shows none of them — the link forces the aggregate view (see the
+          tenant-scoping note on that page) so "View in Audit Log" isn't a
+          dead end. */}
+      <div className="mb-4">
+        <Link
+          to="/audit?scope=all&q=server:"
+          className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:underline"
+        >
+          View server restart history in Audit Log →
+        </Link>
+      </div>
+
       <Card className="p-0">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-800 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
               <th className="px-5 py-3">Container</th>
+              <th className="px-5 py-3">Path</th>
+              <th className="px-5 py-3">Port</th>
+              <th className="px-5 py-3">Runtime</th>
+              <th className="px-5 py-3">Status</th>
               {canWrite && <th className="px-5 py-3" />}
             </tr>
           </thead>
@@ -146,6 +217,12 @@ export function ContainersPanel() {
             {RESTARTABLE_CONTAINERS.map((name) => (
               <tr key={name} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
                 <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{name}</td>
+                <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{CONTAINER_INFO[name].path}</td>
+                <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{CONTAINER_INFO[name].port}</td>
+                <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{describeRuntime(statsByContainer.get(name))}</td>
+                <td className="px-5 py-3">
+                  <StatusCell stat={statsByContainer.get(name)} />
+                </td>
                 {canWrite && (
                   <td className="px-5 py-3 text-right">
                     <button

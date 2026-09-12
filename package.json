@@ -15,6 +15,7 @@
     "test": "turbo run test",
     "infra:dev:up": "docker compose -f infra/docker-compose.dev.yml up -d",
     "infra:dev:down": "docker compose -f infra/docker-compose.dev.yml down",
+    "infra:dev:sample": "sh infra/updater/dev-sample.sh",
     "infra:up": "docker compose -f infra/docker-compose.yml --env-file .env up -d --build",
     "infra:down": "docker compose -f infra/docker-compose.yml --env-file .env down",
     "db:generate": "pnpm --filter @patchpilot/db generate",
