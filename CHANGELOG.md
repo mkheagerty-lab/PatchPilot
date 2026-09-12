@@ -12,6 +12,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fixed: the `updater` sidecar's self-restart (added in v0.16.0) deadlocked
+  every time it ran — recreating `updater` requires dockerd to stop the
+  container running the very shell that issued the command, which ignores
+  the resulting SIGTERM as an unhandled PID 1, hangs for ~10s, then gets
+  SIGKILLed mid-recreate, often leaving the replacement stuck `Created` but
+  never started. The self-restart now runs from `host-exec` (host PID
+  namespace) instead, so the client process isn't killed along with the
+  container it's replacing. Live-caught on the very first real self-restart
+  in production (v0.16.0 -> v0.17.0).
+
 ## [0.17.0] - 2026-09-12
 
 - Settings > Server Health > Resources now shows the host's own OS-patching
