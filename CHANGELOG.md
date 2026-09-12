@@ -12,6 +12,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Added: test coverage for `apps/api/src/auth` (CSRF/state validation,
+  session-fixation defense, provisioning gate, RBAC enforcement) — 36 tests
+  across the module's 6 files, the one real gap in an otherwise well-tested
+  codebase. Test-only, no production code changes.
+- Added: `SECURITY.md` with a private vulnerability-reporting path for the
+  public repo.
+- Removed: the stale Phase-1 handover doc (`Claudeinstructions.txt`), which
+  still claimed no-Azure as non-negotiable despite the Bicep Azure deploy
+  option added since.
+- Fixed: scrubbed a real customer/tenant name that had leaked into code and
+  test comments.
+
 ## [0.17.2] - 2026-09-12
 
 - Fixed: the `updater` sidecar's `/var/run/docker.sock` bind mount is
