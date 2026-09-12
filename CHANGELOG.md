@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.17.0] - 2026-09-12
+
 - Settings > Server Health > Resources now shows the host's own OS-patching
   state: whether a reboot is pending (and which packages triggered it), when
   unattended-upgrades last ran, and whether Docker's live-restore is active.
