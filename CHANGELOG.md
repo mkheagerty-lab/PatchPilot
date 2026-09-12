@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.17.1] - 2026-09-12
+
 - Fixed: the `updater` sidecar's self-restart (added in v0.16.0) deadlocked
   every time it ran — recreating `updater` requires dockerd to stop the
   container running the very shell that issued the command, which ignores
