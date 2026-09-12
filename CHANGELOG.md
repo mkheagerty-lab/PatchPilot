@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.18.0] - 2026-09-12
+
 - Added: test coverage for `apps/api/src/auth` (CSRF/state validation,
   session-fixation defense, provisioning gate, RBAC enforcement) — 36 tests
   across the module's 6 files, the one real gap in an otherwise well-tested
