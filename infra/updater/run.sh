@@ -382,8 +382,27 @@ while true; do
     # doesn't re-read its own source), so any change to this script — a new
     # claim-and-run block, a bug fix — silently never takes effect until
     # someone restarts the updater container by hand.
+    # Routed through host-exec's nsenter (host PID namespace) rather than run
+    # directly from this shell: recreating `updater` means dockerd must stop
+    # *this very container* first, which sends SIGTERM to this shell as PID 1
+    # — but an unhandled PID 1 has the kernel's default signal disposition
+    # exempted, so the SIGTERM is silently ignored and this shell stays
+    # blocked waiting on the docker-compose child below, which is itself
+    # waiting for that same stop to finish. Deadlock, resolved only by
+    # dockerd's ~10s SIGKILL fallback, which tears down this container's
+    # whole PID namespace — this shell and the in-flight docker-compose
+    # client together, wherever it happened to be, often leaving the
+    # replacement stuck at "Created" and never started. Running the recreate
+    # from host-exec's own container instead keeps that client process alive
+    # in a separate cgroup, unaffected by this one being torn down mid-
+    # operation. --no-deps: $SERVICES above already brought every dependency
+    # (postgres included) up to date; nothing about updater's own restart
+    # needs to re-check them.
     echo "[updater] restarting updater to pick up whatever this run just deployed"
-    (cd "$REPO_DIR" && docker compose -f infra/docker-compose.yml --env-file .env up -d --build updater) \
+    (cd "$REPO_DIR" && docker compose -f infra/docker-compose.yml --env-file .env build host-exec) \
+      >/dev/null 2>&1 || true
+    (cd "$REPO_DIR" && docker compose -f infra/docker-compose.yml --env-file .env run --rm host-exec \
+        nsenter -t 1 -m -u -n -i -- sh -c "cd '$REPO_DIR' && docker compose -f infra/docker-compose.yml --env-file .env up -d --no-deps --build updater") \
       >/dev/null 2>&1 || echo "[updater] WARNING: self-restart failed — updater is still running pre-$TAG code." >&2
   fi
 
