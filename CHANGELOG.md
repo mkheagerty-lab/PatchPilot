@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+## [0.17.2] - 2026-09-12
+
 - Fixed: the `updater` sidecar's `/var/run/docker.sock` bind mount is
   file-level, so it went stale forever if `docker.socket` itself was ever
   restarted (e.g. a `docker-ce` package upgrade) — even though
