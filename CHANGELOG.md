@@ -12,6 +12,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fixed: the `updater` sidecar's `/var/run/docker.sock` bind mount is
+  file-level, so it went stale forever if `docker.socket` itself was ever
+  restarted (e.g. a `docker-ce` package upgrade) — even though
+  `docker.service` restarting alone (as when toggling Docker live-restore)
+  never triggered it. Every direct `docker`/`docker compose` call from
+  `updater`'s own shell then failed silently, including the self-update and
+  host-reboot mechanisms. `updater` now reaches the daemon through its
+  existing `/var/run:/host-run:ro` directory mount instead, which always
+  reflects the host's current socket. Live-caught on `patchpilot-vm` after a
+  forced `docker-ce` reinstall broke a real host-reboot request.
+
 ## [0.17.1] - 2026-09-12
 
 - Fixed: the `updater` sidecar's self-restart (added in v0.16.0) deadlocked

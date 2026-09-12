@@ -12,6 +12,22 @@
 # across the very rebuild cycle it triggers (which briefly restarts redis).
 set -eu
 
+# /var/run/docker.sock:/var/run/docker.sock (see the `updater` service in
+# infra/docker-compose.yml) is a FILE-level bind mount — it pins this
+# container to whatever inode the socket had at container-creation time.
+# If docker.socket itself is ever restarted (confirmed: a `docker-ce`
+# package upgrade/reinstall does this, even though it leaves
+# docker.service alone), the host recreates that inode and every direct
+# `docker`/`docker compose` call below starts failing with "Cannot connect
+# to the Docker daemon" — permanently, until this container is recreated.
+# /var/run:/host-run:ro is a DIRECTORY-level bind mount (already present,
+# for reboot-required checking below) which always reflects the host's
+# current /var/run contents, socket included — so every call in this
+# script goes through it instead. Live-confirmed on patchpilot-vm
+# 2026-09-12 after a real docker.socket restart broke the file-level mount
+# while this one kept working.
+export DOCKER_HOST="unix:///host-run/docker.sock"
+
 # Must equal the checkout's real path on the HOST, not just inside this
 # container — see the long comment on the `updater` service in
 # infra/docker-compose.yml for why a mismatch here breaks bind-mounted
