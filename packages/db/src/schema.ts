@@ -1206,6 +1206,53 @@ export const containerStats = pgTable("container_stats", {
   restartCount: integer("restart_count"),
 });
 
+// ---- host status (Settings -> Server Health -> Resources) ----
+// Singleton row (id always 'host') for the VM itself, not a container — OS
+// patching state that `container_stats` above has no room for. Same
+// latest-snapshot-only philosophy: sampled every updater poll from
+// /var/run/reboot-required, the unattended-upgrades log, and `docker info`.
+export const hostStatus = pgTable("host_status", {
+  id: text("id").primaryKey(),
+  rebootRequired: boolean("reboot_required").notNull(),
+  // Raw /var/run/reboot-required.pkgs contents, e.g. "linux-image-6.8.0-...".
+  rebootRequiredPackages: text("reboot_required_packages"),
+  lastUnattendedUpgradeAt: timestamp("last_unattended_upgrade_at", { withTimezone: true }),
+  // Actual daemon state (`docker info`), not the desired-state toggle in
+  // settings["host-patching"] — the two can disagree until the next
+  // dockerd restart the updater triggers.
+  dockerLiveRestoreActive: boolean("docker_live_restore_active"),
+  sampledAt: timestamp("sampled_at", { withTimezone: true }).notNull(),
+});
+
+// ---- host reboot requests (Settings -> Server Health -> Resources) ----
+// Deliberately separate from serverControlRequests above: that table writes
+// its outcome after the action completes, but a full OS reboot kills the
+// very process that would write it. This writes status='issued' BEFORE the
+// point of no return, and the updater process that comes back up after the
+// reboot reconciles it to 'confirmed' as its first act — surviving to do
+// that reconciliation is itself the success signal.
+export const hostRebootStatusEnum = pgEnum("host_reboot_status", [
+  "queued",
+  "issuing",
+  "issued",
+  "confirmed",
+  "failed",
+]);
+
+export const hostRebootRequests = pgTable(
+  "host_reboot_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    status: hostRebootStatusEnum("status").notNull().default("queued"),
+    requestedBy: text("requested_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    output: text("output"),
+  },
+  (t) => [index("host_reboot_requests_status_idx").on(t.status)],
+);
+
 // ---- custom domains (Setup -> App Registration "Custom domain" section) ----
 // One row per additional hostname this instance should accept logins/OAuth
 // callbacks on, on top of the deploy-time PUBLIC_URL. "subdomain" rows are a

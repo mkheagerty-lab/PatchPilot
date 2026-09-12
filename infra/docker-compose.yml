@@ -167,9 +167,44 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ..:/opt/patchpilot
+      # Host OS-patching config the updater manages directly (Settings ->
+      # Server Health -> Resources). Each source path is a directory that
+      # already exists on every supported Ubuntu image before PatchPilot is
+      # ever installed — never mount a specific file here (e.g.
+      # /var/run/reboot-required itself): the same silent-mkdir bind-mount
+      # behavior that caused the 2026-09-05 incident above would otherwise
+      # permanently break the kernel's own ability to re-signal a pending
+      # reboot on this host. The updater only ever writes its own
+      # 51-patchpilot-managed file under apt.conf.d and the live-restore key
+      # under daemon.json — everything else in these directories is read-only
+      # in practice even though the mount itself is rw.
+      - /etc/apt/apt.conf.d:/etc/apt/apt.conf.d:rw
+      - /etc/docker:/etc/docker:rw
+      - /var/run:/host-run:ro
+      - /var/log/unattended-upgrades:/host-unattended-log:ro
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - patchpilot
+
+  # Inert privileged escape hatch the updater launches on demand (via `docker
+  # compose run`) to run a single hardcoded command in the host's own
+  # namespaces — e.g. `systemctl reboot`, `systemctl restart docker` — using
+  # nsenter, since the updater's own container has no host PID 1 access.
+  # `command: ["true"]` makes it a no-op if ever started directly; the real
+  # command always comes from a literal in infra/updater/run.sh, never from
+  # DB/request input. Excluded from run.sh's $SERVICES/$STACK_SERVICES so
+  # ordinary self-updates and "restart entire stack" never touch it, and
+  # restart: "no" so it never lingers running.
+  host-exec:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.host-exec
+    restart: "no"
+    privileged: true
+    pid: host
+    command: ["true"]
     networks:
       - patchpilot
 

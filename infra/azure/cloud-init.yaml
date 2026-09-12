@@ -18,6 +18,18 @@ packages:
 # instead of a dead connection for the ~10 minutes the real stack takes to
 # build — see the pp-placeholder container started below.
 write_files:
+  # Pre-created so a fresh VM's very first apt run already reflects the
+  # managed-file convention, rather than waiting ~15s for the updater's first
+  # poll. Not load-bearing — the bind mount in docker-compose.yml makes this
+  # safe either way — just belt-and-braces. Both toggles stay off until an
+  # admin opts in via Settings > Server Health > Resources, so this starts
+  # as a no-op comment-only file; see infra/updater/run.sh's
+  # rewrite_apt_managed_dropin().
+  - path: /etc/apt/apt.conf.d/51-patchpilot-managed
+    permissions: '0644'
+    content: |
+      // Managed by PatchPilot — DO NOT EDIT BY HAND. Rewritten every ~15s by
+      // the `updater` sidecar from Settings > Server Health > Resources.
   - path: /opt/patchpilot-placeholder/index.html
     permissions: '0644'
     content: |

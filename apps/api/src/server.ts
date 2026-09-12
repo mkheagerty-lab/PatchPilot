@@ -40,6 +40,7 @@ import { notificationSettingsRoutes } from "./routes/notification-settings.js";
 import { entitlementSettingsRoutes } from "./routes/entitlement-settings.js";
 import { updateSettingsRoutes } from "./routes/update-settings.js";
 import { serverHealthRoutes } from "./routes/server-health.js";
+import { hostPatchingSettingsRoutes } from "./routes/host-patching-settings.js";
 import { aiRoutes } from "./routes/ai.js";
 import { intuneAppsRoutes } from "./routes/intune-apps.js";
 import { storeAppsRoutes } from "./routes/store-apps.js";
@@ -211,6 +212,7 @@ export async function buildServer() {
   await app.register(entitlementSettingsRoutes);
   await app.register(updateSettingsRoutes);
   await app.register(serverHealthRoutes);
+  await app.register(hostPatchingSettingsRoutes);
   await app.register(aiRoutes);
   await app.register(intuneAppsRoutes);
   await app.register(storeAppsRoutes);

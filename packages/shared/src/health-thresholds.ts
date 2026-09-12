@@ -31,3 +31,11 @@ export const STALE_TIMEOUT_MS = 2 * 60 * 60_000;
  * ~3x the updater's default sampling cadence (run.sh's $INTERVAL, 15s).
  */
 export const CONTAINER_STATS_STALE_MS = 45_000;
+
+/**
+ * How stale a host_status row may be before the Resources tab treats the
+ * host's reboot/patching state as unknown rather than just between updater
+ * polls. Same cadence reasoning as CONTAINER_STATS_STALE_MS above — both are
+ * sampled in the same run.sh loop iteration.
+ */
+export const HOST_STATUS_STALE_MS = 45_000;

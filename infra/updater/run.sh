@@ -138,6 +138,157 @@ sample_container_stats() {
     done
 }
 
+# ---- host patching (Settings > Server Health > Resources) ----
+# Desired state lives in settings["host-patching"] (apps/api/src/routes/
+# host-patching-settings.ts); these two functions push it out to the host
+# every loop iteration — cheap and idempotent, same philosophy as
+# sample_container_stats' unconditional upsert above. Both toggles default
+# off (no row yet = every coalesce below falls back to the off/default
+# value), so a fresh deploy changes nothing on the host until an admin opts
+# in via Settings.
+
+APT_DROPIN=/etc/apt/apt.conf.d/51-patchpilot-managed
+
+# Fully owns $APT_DROPIN — never opens 50-unattended-upgrades (Ubuntu's own
+# shipped file). apt.conf.d list-type options like Allowed-Origins APPEND
+# across fragments rather than replace, so a separate always-rewritten file
+# is sufficient; omitting a block entirely when its toggle is off is
+# equivalent to (and simpler than) commenting it out.
+rewrite_apt_managed_dropin() {
+  HP=$(psql "$DATABASE_URL" -Aqtc "
+    SELECT coalesce(value->>'autoRebootEnabled', 'false') || '|' ||
+           coalesce(value->>'autoRebootTimeUtc', '03:30') || '|' ||
+           coalesce(value->>'dockerAutoUpdateEnabled', 'false')
+    FROM settings WHERE key = 'host-patching';" 2>/dev/null || true)
+
+  AUTO_REBOOT="${HP%%|*}"
+  REST="${HP#*|}"
+  REBOOT_TIME="${REST%%|*}"
+  DOCKER_AUTO_UPDATE="${REST#*|}"
+
+  # Defensive fallback if the stored value is ever malformed — never write a
+  # value unattended-upgrades might reject.
+  case "$REBOOT_TIME" in
+    [0-2][0-9]:[0-5][0-9]) ;;
+    *) REBOOT_TIME="03:30" ;;
+  esac
+
+  {
+    echo "// Managed by PatchPilot — DO NOT EDIT BY HAND."
+    echo "// Rewritten every ~${INTERVAL}s by the updater sidecar from"
+    echo "// Settings > Server Health > Resources. Deliberately separate"
+    echo "// from Ubuntu's own 50-unattended-upgrades, which is never edited."
+    if [ "$AUTO_REBOOT" = "true" ]; then
+      echo "Unattended-Upgrade::Automatic-Reboot \"true\";"
+      echo "Unattended-Upgrade::Automatic-Reboot-WithUsers \"true\";"
+      echo "Unattended-Upgrade::Automatic-Reboot-Time \"${REBOOT_TIME}\";"
+    fi
+    if [ "$DOCKER_AUTO_UPDATE" = "true" ]; then
+      echo ""
+      echo "Unattended-Upgrade::Allowed-Origins {"
+      # \$ so the shell never expands this — the literal text
+      # "${distro_codename}" is an APT config variable, substituted by APT
+      # itself (not by this script) when it parses the file on the host.
+      echo "    \"Docker:\${distro_codename}\";"
+      echo "};"
+    fi
+  } >"${APT_DROPIN}.tmp" 2>/dev/null && mv "${APT_DROPIN}.tmp" "$APT_DROPIN" || true
+}
+
+DAEMON_JSON=/etc/docker/daemon.json
+
+# Merges (never clobbers) the live-restore key into daemon.json — an admin
+# may have hand-set other keys over SSH (e.g. a registry mirror). Only acts
+# when the desired value actually differs from the current one, since
+# restarting dockerd briefly stops every container on the host, including
+# this one (restart: unless-stopped brings it back).
+sync_docker_daemon_json() {
+  DESIRED=$(psql "$DATABASE_URL" -Aqtc "
+    SELECT coalesce(value->>'dockerLiveRestoreEnabled', 'false')
+    FROM settings WHERE key = 'host-patching';" 2>/dev/null || true)
+  case "$DESIRED" in
+    true) DESIRED_JSON=true ;;
+    *) DESIRED_JSON=false ;;
+  esac
+
+  [ -f "$DAEMON_JSON" ] || echo '{}' >"$DAEMON_JSON" 2>/dev/null || true
+  CURRENT=$(jq -r '."live-restore" // false' "$DAEMON_JSON" 2>/dev/null || echo false)
+  [ "$CURRENT" = "$DESIRED_JSON" ] && return 0
+
+  echo "[updater] docker live-restore: $CURRENT -> $DESIRED_JSON"
+  if jq --argjson v "$DESIRED_JSON" '. + {"live-restore": $v}' "$DAEMON_JSON" >"${DAEMON_JSON}.tmp" 2>/dev/null; then
+    mv "${DAEMON_JSON}.tmp" "$DAEMON_JSON"
+    (cd "$REPO_DIR" && docker compose -f infra/docker-compose.yml --env-file .env build host-exec) \
+      >/dev/null 2>&1 || true
+    (cd "$REPO_DIR" && docker compose -f infra/docker-compose.yml --env-file .env run --rm host-exec \
+      nsenter -t 1 -m -u -n -i -- systemctl restart docker) >/dev/null 2>&1 \
+      || echo "[updater] WARNING: dockerd restart for live-restore change may have failed." >&2
+  else
+    echo "[updater] WARNING: failed to update $DAEMON_JSON — leaving live-restore unchanged." >&2
+    rm -f "${DAEMON_JSON}.tmp"
+  fi
+}
+
+# Reads /host-run/reboot-required (existence only) + its .pkgs sibling, the
+# newest unattended-upgrades log's mtime, and the daemon's actual
+# live-restore state — then upserts the singleton host_status row. Plain
+# periodic sampling like sample_container_stats above, not a claim-and-run
+# job.
+sample_host_status() {
+  if [ -f /host-run/reboot-required ]; then
+    REBOOT_REQUIRED=true
+    REBOOT_PKGS=$(cat /host-run/reboot-required.pkgs 2>/dev/null | tr '\n' ' ' | sanitize_output || true)
+  else
+    REBOOT_REQUIRED=false
+    REBOOT_PKGS=""
+  fi
+
+  LAST_LOG=$(ls -t /host-unattended-log/unattended-upgrades*.log 2>/dev/null | head -n1 || true)
+  if [ -n "$LAST_LOG" ]; then
+    LAST_LOG_EPOCH=$(stat -c '%Y' "$LAST_LOG" 2>/dev/null || true)
+  else
+    LAST_LOG_EPOCH=""
+  fi
+
+  LIVE_RESTORE=$(docker info --format '{{.LiveRestoreEnabled}}' 2>/dev/null || true)
+  case "$LIVE_RESTORE" in
+    true) LIVE_RESTORE_SQL=true ;;
+    false) LIVE_RESTORE_SQL=false ;;
+    *) LIVE_RESTORE_SQL=NULL ;;
+  esac
+
+  if [ -n "$REBOOT_PKGS" ]; then
+    PKGS_SQL="'$(sql_escape "$REBOOT_PKGS")'"
+  else
+    PKGS_SQL="NULL"
+  fi
+
+  if [ -n "$LAST_LOG_EPOCH" ]; then
+    LAST_UPGRADE_SQL="to_timestamp($LAST_LOG_EPOCH)"
+  else
+    LAST_UPGRADE_SQL="NULL"
+  fi
+
+  psql "$DATABASE_URL" -q -c "
+    INSERT INTO host_status (id, reboot_required, reboot_required_packages, last_unattended_upgrade_at, docker_live_restore_active, sampled_at)
+    VALUES ('host', $REBOOT_REQUIRED, $PKGS_SQL, $LAST_UPGRADE_SQL, $LIVE_RESTORE_SQL, now())
+    ON CONFLICT (id) DO UPDATE SET
+      reboot_required = EXCLUDED.reboot_required, reboot_required_packages = EXCLUDED.reboot_required_packages,
+      last_unattended_upgrade_at = EXCLUDED.last_unattended_upgrade_at, docker_live_restore_active = EXCLUDED.docker_live_restore_active,
+      sampled_at = EXCLUDED.sampled_at;
+  " >/dev/null 2>&1 || true
+}
+
+# Reconcile any host reboot request left at 'issued' by the invocation that
+# triggered an OS reboot right before the VM went down. Nothing writes
+# 'confirmed' from inside that invocation — `systemctl reboot` can (and
+# should) kill it first — so this process simply being alive at all, on the
+# other side of the reboot, is the success signal. Must run before the loop
+# claims anything new.
+psql "$DATABASE_URL" -q -c "
+  UPDATE host_reboot_requests SET status='confirmed', confirmed_at=now()
+  WHERE status='issued';" >/dev/null 2>&1 || true
+
 while true; do
   # -q suppresses the "UPDATE n" command-completion tag. Without it, when
   # this UPDATE...RETURNING matches zero rows (the normal case: nothing
@@ -185,7 +336,14 @@ while true; do
         echo "== Checking out $TAG ==" &&
         git checkout --force "$TAG" &&
         echo "== Building and restarting containers ==" &&
-        docker compose -f infra/docker-compose.yml --env-file .env up -d --build $SERVICES
+        docker compose -f infra/docker-compose.yml --env-file .env up -d --build $SERVICES &&
+        # host-exec is deliberately excluded from $SERVICES (never started by
+        # a normal deploy — see infra/docker-compose.yml), but its image
+        # still needs to track this checkout since the host-reboot/
+        # live-restore-restart paths below `docker compose run` it on demand.
+        # Best-effort: a failed image rebuild here shouldn't fail the whole
+        # update run — those paths just retry the build themselves.
+        { docker compose -f infra/docker-compose.yml --env-file .env build host-exec || true; }
       }
     ) >"$LOGFILE" 2>&1 &
     BUILD_PID=$!
@@ -310,10 +468,54 @@ while true; do
     fi
   fi
 
+  # ---- host patching config + status (Settings > Server Health > Resources) ----
+  # Plain periodic push/sample, same cadence as container stats below — run
+  # after both claim blocks above, before the (also plain periodic)
+  # container stats sampler.
+  rewrite_apt_managed_dropin
+  sync_docker_daemon_json
+  sample_host_status
+
   # ---- container stats (Settings > Server Health > Processes) ----
   # Not a claim-and-run job — nothing to claim, just periodic sampling at the
   # existing $INTERVAL cadence, run after both claim blocks above.
   sample_container_stats
+
+  # ---- host reboot requests (Settings > Server Health > Resources) ----
+  # Deliberately the LAST action every loop iteration: everything else this
+  # tick has already been written back by the time this runs, since an OS
+  # reboot is the most disruptive thing this script can do. See
+  # packages/db/src/schema.ts's hostRebootRequests comment for why this is a
+  # dedicated table/status flow rather than server_control_requests above.
+  HR_ID=$(psql "$DATABASE_URL" -Aqtc "
+    UPDATE host_reboot_requests SET status='issuing'
+    WHERE id = (
+      SELECT id FROM host_reboot_requests
+      WHERE status='queued'
+      ORDER BY created_at ASC LIMIT 1
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING id;" 2>/dev/null || true)
+
+  if [ -n "$HR_ID" ]; then
+    echo "[updater] claimed host reboot request $HR_ID"
+    (cd "$REPO_DIR" && docker compose -f infra/docker-compose.yml --env-file .env build host-exec) \
+      >/dev/null 2>&1 || echo "[updater] WARNING: host-exec build failed for reboot request $HR_ID — proceeding anyway." >&2
+
+    # Write 'issued' BEFORE the reboot itself — this is the point of no
+    # return. `systemctl reboot` can (and should) tear this container down
+    # before the next line executes; the pre-loop reconciliation step above
+    # is what closes this out to 'confirmed' once the host comes back.
+    psql "$DATABASE_URL" -q -c "UPDATE host_reboot_requests SET status='issued', issued_at=now() WHERE id='$(sql_escape "$HR_ID")';" \
+      >/dev/null 2>&1 || true
+
+    if ! (cd "$REPO_DIR" && docker compose -f infra/docker-compose.yml --env-file .env run --rm host-exec \
+        nsenter -t 1 -m -u -n -i -- systemctl reboot) >/dev/null 2>&1; then
+      echo "[updater] WARNING: issuing host reboot for request $HR_ID failed." >&2
+      psql "$DATABASE_URL" -q -c "UPDATE host_reboot_requests SET status='failed', output='nsenter systemctl reboot failed' WHERE id='$(sql_escape "$HR_ID")';" \
+        >/dev/null 2>&1 || true
+    fi
+  fi
 
   sleep "$INTERVAL"
 done
