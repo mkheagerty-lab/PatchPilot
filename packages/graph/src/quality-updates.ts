@@ -44,7 +44,7 @@ export interface QualityUpdateCatalogItem {
   id: string;
   displayName?: string;
   /**
-   * NOT a KB number, despite the name — confirmed live against BLACK IRON this
+   * NOT a KB number, despite the name — confirmed live against the pilot tenant this
    * holds an OS build string (e.g. `"10.0.22621.1265"`) or is empty on
    * pre-2023 items. The real, per-Windows-version KB numbers (`"KB5041580"`)
    * only live inside `productRevisions[].knowledgeBaseArticle.articleId`.
@@ -110,7 +110,7 @@ export interface ListCatalogItemsInput {
  * from `listQualityUpdateCatalogItems` indistinguishable from "this tenant's
  * catalog is genuinely empty", which surfaced in the UI as a false "No
  * expeditable releases found" even though the tenant's real Intune catalog had
- * releases. Live-observed against BLACK IRON: identical KB, identical device,
+ * releases. Live-observed against the pilot tenant: identical KB, identical device,
  * failed once then succeeded minutes later with no code change — a transport
  * blip, not an empty catalog. Callers that want a soft "not found" (e.g. no
  * catalog item synced yet) already get that from a `null`/empty *result*, not
@@ -146,7 +146,7 @@ async function* iterateCatalogPages(
  * Looks up the Intune Windows Update catalog item matching a Defender missing-KB
  * id.
  *
- * Live-verified against BLACK IRON that the obvious server-side filter —
+ * Live-verified against the pilot tenant that the obvious server-side filter —
  * `kbArticleId eq '<kbId>'` — is doubly broken: Graph 400s on the bare property
  * name next to `isof()` (a derived-type property reference needs the full cast
  * path), and even cast-qualified, `kbArticleId` never holds a KB number anyway
@@ -193,7 +193,7 @@ export async function listQualityUpdateCatalogItems(
  * embedded in a catalog item's `displayName` (e.g. `"09/10/2024 - 2024.09 B
  * SecurityUpdate for Windows 10 and later"`). No typed/structured cadence
  * field exists anywhere in the catalog schema — this is the only signal.
- * BLACK IRON's synced catalog has only ever shown "B"-labeled items live; the
+ * The pilot tenant's synced catalog has only ever shown "B"-labeled items live; the
  * "OOB" naming pattern below is inferred from Microsoft's published release
  * conventions, not live-observed — reconfirm against a real OOB item (or
  * current Microsoft Learn docs) the first time one appears, and treat
@@ -209,7 +209,7 @@ export function parseReleaseCadence(item: QualityUpdateCatalogItem): "B" | "OOB"
 /**
  * Parses the `MM/DD/YYYY` date prefix off a catalog item's `displayName`
  * (e.g. `"08/11/2026 - 2026.08 B SecurityUpdate..."`). `releaseDateTime` is
- * in fact populated in synced data (confirmed live against BLACK IRON, and
+ * in fact populated in synced data (confirmed live against the pilot tenant, and
  * now also used verbatim as the `qualityUpdateRelease` value in
  * `createAndAssignQualityUpdateProfile` below) — this displayName parse
  * remains the release-picker's date source purely for historical reasons,
@@ -300,7 +300,7 @@ export interface CreateAndAssignProfileInput {
    * The matched catalog item's own `id` (not `kbArticleId`). Despite its
    * name, `expeditedUpdateSettings.qualityUpdateRelease` does NOT accept this
    * id directly — Graph 400s on it with an opaque, non-diagnostic error.
-   * Live-verified against BLACK IRON: it wants the item's `releaseDateTime`
+   * Live-verified against the pilot tenant: it wants the item's `releaseDateTime`
    * (ISO 8601) instead. `createAndAssignQualityUpdateProfile` re-fetches the
    * catalog to resolve `catalogItemId` -> `releaseDateTime` before building
    * the create request.
@@ -323,7 +323,7 @@ interface QualityUpdateProfile {
 /**
  * Resolves a catalog item's `id` to its `releaseDateTime` — the value Graph
  * actually wants in `expeditedUpdateSettings.qualityUpdateRelease` (live-verified
- * against BLACK IRON; the item's own `id` 400s there with an opaque error).
+ * against the pilot tenant; the item's own `id` 400s there with an opaque error).
  * Re-walks the catalog rather than a direct by-id GET because
  * `windowsUpdateCatalogItems/{id}` also 400s (same derived-type-cast class of
  * issue as the other endpoints in this file) — the isof-filtered list is the

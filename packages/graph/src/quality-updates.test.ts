@@ -275,7 +275,7 @@ describe("createAndAssignQualityUpdateProfile", () => {
     return [{ "@odata.type": "#microsoft.graph.groupAssignmentTarget", groupId: "group-1" }];
   }
 
-  it("sends the catalog item's releaseDateTime as qualityUpdateRelease, not its id — Graph 400s on the raw id (live-verified against BLACK IRON)", async () => {
+  it("sends the catalog item's releaseDateTime as qualityUpdateRelease, not its id — Graph 400s on the raw id (live-verified against the pilot tenant)", async () => {
     graphGetMock.mockResolvedValueOnce({
       ok: true,
       status: 200,

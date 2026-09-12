@@ -392,7 +392,7 @@ export function detectInstallScope(
  * (UWP/MSIX) install rather than a traditional Win32 one: a disk path under
  * `...\WindowsApps\...`, a registry path under the AppModel per-user
  * package registration hive (`...\Microsoft\Windows\CurrentVersion\
- * AppModel\...`), or (live-verified against BLACK IRON — Defender doesn't
+ * AppModel\...`), or (live-verified against the pilot tenant — Defender doesn't
  * always report a real file path for MSIX packages) a "Microsoft Store:
  * Get-AppxPackage ..." descriptor string standing in for one.
  *

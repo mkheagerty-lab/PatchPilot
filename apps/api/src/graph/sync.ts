@@ -113,7 +113,7 @@ export interface PagedResult<T> {
  * firing one `/recommendations/{id}/vulnerabilities` read per candidate recommendation)
  * backs off and retries instead of throwing and having the caller's best-effort
  * `catch` silently drop that recommendation's CVEs for the sync — live-observed
- * against BLACK IRON's tenant, where the OS recommendation's own read landed on a
+ * against the pilot tenant, where the OS recommendation's own read landed on a
  * 429 and `osVulnerabilityBackfill` came back 0 even though the recommendation
  * genuinely had 999 CVEs.
  *
@@ -1814,7 +1814,7 @@ interface GetMissingKbsRow {
 /**
  * Normalizes getmissingkbs's `cveAddressed` field, which Defender has been
  * observed returning as a bare count instead of a CVE-id array for some KBs
- * (live-verified against BLACK IRON — see missing-kbs.ts's matching
+ * (live-verified against the pilot tenant — see missing-kbs.ts's matching
  * Array.isArray guard on the read side).
  */
 export function normalizeCveAddressed(

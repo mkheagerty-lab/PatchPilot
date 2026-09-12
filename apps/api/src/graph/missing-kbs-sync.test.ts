@@ -14,7 +14,7 @@ describe("normalizeCveAddressed", () => {
   });
 
   it("falls back to a count when Defender returns a bare number instead of an array", () => {
-    // Live-verified against BLACK IRON: getmissingkbs returned cveAddressed: 1
+    // Live-verified against the pilot tenant: getmissingkbs returned cveAddressed: 1
     // for a real KB, which crashed `new Set(row.cveIds)` before this guard.
     expect(normalizeCveAddressed(1)).toEqual({ cveIds: [], cveCount: 1 });
   });

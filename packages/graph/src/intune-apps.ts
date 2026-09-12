@@ -294,7 +294,7 @@ export interface UpdateMobileAppMetadataInput {
  * (Name/Description). Assignment changes go through assignMobileApp
  * separately, since Graph models them as different resources.
  *
- * Live-verified against BLACK IRON: Graph rejects any PATCH whose body
+ * Live-verified against the pilot tenant: Graph rejects any PATCH whose body
  * includes `installExperience` with "The property 'InstallExperience'
  * cannot be patched" — unconditionally, regardless of whether the value
  * actually changes. Install Behaviour (runAsAccount) is fixed at creation

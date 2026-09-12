@@ -348,7 +348,7 @@ describe("GET /api/missing-kbs/:id/quality-update-releases", () => {
     // Regression: a transient Graph failure (expired token, 429, 5xx) used to
     // come back from listQualityUpdateCatalogItems as a silently swallowed
     // empty array, indistinguishable from "this tenant's catalog genuinely has
-    // no releases" — live-observed against BLACK IRON as a false "No
+    // no releases" — live-observed against the pilot tenant as a false "No
     // expeditable releases found" for a KB Intune's own UI showed did have
     // releases for.
     listReleasesMock.mockRejectedValue(new GraphError(503, "failed to list quality-update catalog (HTTP 503)"));

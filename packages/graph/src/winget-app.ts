@@ -34,7 +34,7 @@ interface CreatedMobileApp {
  * `packageIdentifier` and `installExperience.runAsAccount` — everything else
  * is metadata editable later via updateMobileAppMetadata.
  *
- * Live-verified against BLACK IRON: v1.0 rejects this create with "Invalid
+ * Live-verified against the pilot tenant: v1.0 rejects this create with "Invalid
  * OData type specified" — `winGetApp` is a beta-only entity type, unlike
  * `win32LobApp` (Phase 2), which v1.0 does support. Must use the beta host.
  *
@@ -42,7 +42,7 @@ interface CreatedMobileApp {
  * per the Phase 1 root-cause finding — see task #20 history) stalls Intune's
  * server-side content resolution indefinitely. A Store-resolved id from the
  * `manifestSearch` endpoint (e.g. "9NZVDKPMR9RD" for Mozilla Firefox) does
- * NOT have this problem — live-verified against BLACK IRON: create + publish
+ * NOT have this problem — live-verified against the pilot tenant: create + publish
  * succeeded in well under `waitForAppPublished`'s 90s default timeout. This is
  * exactly the distinction the "Microsoft Store app (new)" channel exists for.
  */

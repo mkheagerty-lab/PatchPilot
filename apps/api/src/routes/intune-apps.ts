@@ -241,7 +241,7 @@ export async function intuneAppsRoutes(app: FastifyInstance): Promise<void> {
    * patch metadata only, assignment only, or both.
    *
    * Install Behaviour (runAsAccount) is deliberately not editable here —
-   * live-verified against BLACK IRON, Graph rejects any PATCH whose body
+   * live-verified against the pilot tenant, Graph rejects any PATCH whose body
    * includes installExperience at all, unconditionally. It's fixed at
    * creation time, same as Publisher.
    */
