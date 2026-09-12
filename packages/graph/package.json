@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@azure/msal-node": "^2.16.2",
+    "@azure/msal-node": "^6.0.0",
     "@patchpilot/db": "workspace:*",
     "@patchpilot/shared": "workspace:*",
     "drizzle-orm": "^0.38.3",
