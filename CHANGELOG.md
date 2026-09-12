@@ -12,6 +12,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## Unreleased
 
+- Fix the Jobs page subtitle incorrectly claiming remediations are simulated with no Microsoft API call, even on live (non-demo) tenants.
+
 ## [0.18.0] - 2026-09-12
 
 - Added: test coverage for `apps/api/src/auth` (CSRF/state validation,
